@@ -165,8 +165,8 @@
     en lowercase.
     Exemple pour MFT: 
       MFTECmd_MFT_dedup_LastModified0x10
-        .operation = "modification"
-        .suboperation = "modification_SI"
+        .operation = "file_modification"
+        .suboperation = "file_modification_SI"
     
     Exemple pour Prefetch:
         PECmd_Prefect_dedup_LastRun
