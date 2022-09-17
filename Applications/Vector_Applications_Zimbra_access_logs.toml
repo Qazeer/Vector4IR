@@ -1,6 +1,6 @@
 # Description: Process Zimbra access log files (Apache / NCSA combined format).
-#              Filename should match: *access_log*.
-#              Default path on disk: /opt/zimbra/log/access_log*.
+#              Filename should match: "*access_log*"
+#              Default path on disk: /opt/zimbra/log/access_log*
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-01

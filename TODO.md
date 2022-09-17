@@ -166,7 +166,7 @@
     Exemple pour MFT: 
       MFTECmd_MFT_dedup_LastModified0x10
         .operation = "file_modification"
-        .suboperation = "file_modification_SI"
+        .suboperation = "file_modification_si"
     
     Exemple pour Prefetch:
         PECmd_Prefect_dedup_LastRun

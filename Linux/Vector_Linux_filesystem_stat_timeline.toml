@@ -1,5 +1,5 @@
 # Description: Process Linux filesystem stat timeline.
-#              Filename should match: "*stat_timeline*.log".
+#              Filename should match: "*stat_timeline*.log"
 #              Timeline can be generated with: find <DIRECTORY> -xdev -print0 | xargs -0 stat -c 'crtime="%w" crtime_epoch="%W" mtime="%y" mtime_epoch="%Y" ctime="%z" ctime_epoch="%Z" atime="%x" atime="%X" size_bytes="%s" userID="%u" username="%U" groupID="%g" groupname="%G" access="%a" access_pretty="%A" filetype="%F" filename="%n" filename_deref="%N"'
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0
