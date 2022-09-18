@@ -1,0 +1,247 @@
+# Description: Process Linux auditd logs.
+#              Filename should match: "*audit.log*"
+#              Default path on disk: /var/log/audit/audit.log*
+# Author(s): Adapted from Kier Davis work, Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = linux_auditd & sourcetype = "linux_event".
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = linux_auditd & sourcetype = "linux_event".
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.Linux_auditd_input]
+  type = "file"
+  ignore_checkpoints = true
+  include = ["${INPUT_FOLDER:?The input folder containing the Linux auditd log files is required}/*audit.log*"]
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.Linux_auditd_parser]
+  type = "remap"
+  inputs = ["Linux_auditd_input"]
+  source = '''  
+    # Extract the three main parts of the event: prefix (type), kernel message, and eventual enrichment fields.
+    # The \x1d byte is AUDIT_INTERP_SEPERATOR. Auditd inserts this at the end of the kernel string and before the trailing "enrichment fields".
+    # type=DAEMON_START msg=audit(1645739550.304:4075): op=start ver=3.0.6 format=enriched kernel=5.4.0-kali4-amd64 auid=4294967295 pid=1289 uid=0 ses=4294967295 subj=unconfined  res=success\x1dAUID="unset" UID="root"
+    # "type=DAEMON_START"
+    # => auditd_prefix
+    # "msg=audit(1645739550.304:4075): op=start ver=3.0.6 format=enriched kernel=5.4.0-kali4-amd64 auid=4294967295 pid=1289 uid=0 ses=4294967295 subj=unconfined  res=success"
+    # => kernel_message
+    # "AUID="unset" UID="root""
+    # => auditd_enrichment
+    match_log_main = parse_regex!(.message, r'^(?P<auditd_prefix>.*)\smsg=(?P<kernel_message>audit\(.*?)(\x1d|$)(?P<auditd_enrichment>.*)$')
+    . |= parse_key_value!(match_log_main.auditd_prefix, accept_standalone_key: false)
+    kernel_message = match_log_main.kernel_message || ""
+    auditd_enrichment = match_log_main.auditd_enrichment || ""
+    
+    # Extract the unique event_id (timestamp and a sequence number) from the msg field record. 
+    # "msg=audit(1645739550.304:4075): op=start ver=3.0.6 format=enriched kernel=5.4.0-kali4-amd64 auid=4294967295 pid=1289 uid=0 ses=4294967295 subj=unconfined  res=success"
+    # "1645739550.304:4075"
+    # => event_id
+    # "op=start ver=3.0.6 format=enriched kernel=5.4.0-kali4-amd64 auid=4294967295 pid=1289 uid=0 ses=4294967295 subj=unconfined  res=success""
+    # => kernel_message_kernel_message_fields
+    match_kernel_event_id = parse_regex!(kernel_message, r'^audit\((?P<event_id>.*)\):\s*(?P<kernel_message_kernel_message_fields>.*)$')
+    .event_id = match_kernel_event_id.event_id || ""
+
+    # Extract and parse the timestamp and sequence number from the unique id.
+    match_kernel_timestamp_sequencenb = parse_regex!(.event_id, r'^(?P<timestamp>[0-9.]+):(?P<sequencenb>\d+)')
+    .parsed_timestamp = parse_timestamp!(match_kernel_timestamp_sequencenb.timestamp, "%s%.f")
+    .timestamp = .parsed_timestamp || now()
+    .sequence_number = parse_int!(match_kernel_timestamp_sequencenb.sequencenb, 10)
+    .kernel_message_raw = match_kernel_event_id.kernel_message_kernel_message_fields || kernel_message
+    
+    # Extract individual fields from the kernel message.
+    # "op=start ver=3.0.6 format=enriched kernel=5.4.0-kali4-amd64 auid=4294967295 pid=1289 uid=0 ses=4294967295 subj=unconfined  res=success"
+    # The kernel_message_raw of the kernel message is a key-value-pair string.
+    # However it may contain _another_ embedded key-value-pair string as the value of the 'msg' key.
+    match_kernel_message_fields, err = parse_regex(.kernel_message_raw, r'^(?P<prefix>.*)\smsg=\x27(?P<quoted>[^\x27]*)\x27(?P<suffix>.*)$')
+    if (err == null) {
+      if (match_kernel_message_fields.prefix != "") {
+        . |= parse_key_value!(match_kernel_message_fields.prefix, accept_standalone_key: false)
+      }
+      if (match_kernel_message_fields.quoted != "") {
+        . |= parse_key_value!(match_kernel_message_fields.quoted, accept_standalone_key: false)
+      }
+      if (match_kernel_message_fields.suffix != "") {
+        . |= parse_key_value!(match_kernel_message_fields.suffix, accept_standalone_key: false)
+      }
+    } else if (.kernel_message_raw != "") {
+      . |= parse_key_value!(.kernel_message_raw, accept_standalone_key: false)
+    }
+    
+    # SOCKADDR event auditd enrichment comes in the form: "SADDR={ saddr_fam=netlink nlnk-fam=16 nlnk-pid=0 }"
+    # Specific parsing is applied to extract the key-values fields from SADDR.
+    if (.type == "SOCKADDR" && auditd_enrichment != "") {
+        match_sockaddr_enrichment, err = parse_regex(auditd_enrichment, r'^(?P<prefix>.*)SADDR=\{\s?(?P<bracketed>.*)\s?\}\s?(?P<suffix>.*)$')
+        if (err == null) {
+          if (match_sockaddr_enrichment.prefix != "") {
+            . |= parse_key_value!(match_sockaddr_enrichment.prefix, accept_standalone_key: false)
+          }
+          if (match_sockaddr_enrichment.bracketed != "") {
+            . |= parse_key_value!(match_sockaddr_enrichment.bracketed, accept_standalone_key: false)
+          }
+          if (match_sockaddr_enrichment.suffix != "") {
+            . |= parse_key_value!(match_sockaddr_enrichment.suffix, accept_standalone_key: false)
+          }
+        } else {
+          .auditd_enrichment = auditd_enrichment
+        }
+    } else if (auditd_enrichment != "") {
+      . |= parse_key_value!(auditd_enrichment, accept_standalone_key: false)
+    }
+
+    # Decode hex-encoded fields for specific event.
+    # PROCTITLE -> proctitle field.
+    # USER_CMD -> cmd field.
+    # TTY -> data field.
+    if (.type == "PROCTITLE" || .type == "USER_CMD" || .type == "TTY") {
+      ascii_table = [" ", "<SOH>", "<STX>", "<ETX>", "<EOT>", "<ENQ>", "<ACK>", "<BEL>", "<BS>", "<HT>", "<LF>", "<VT>", "<FF>", "<CR>", "<SO>", "<SI>", "<DLE>", "<DC1>", "<DC2>", "<DC3>", "<DC4>", "<NAK>", "<SYN>", "<ETB>", "<CAN>", "<EM>", "<SUB>", "<ESC>", "<FS>", "<GS>", "<RS>", "<US>", " ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_", "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~"]
+        
+      field_to_decode = ""
+      field_decoded = ""
+
+      if (.type == "PROCTITLE" && exists(.proctitle)) {
+        field_to_decode = .proctitle
+      } else if (.type == "USER_CMD" && exists(.cmd)) {
+        field_to_decode = .cmd
+      } else if (.type == "TTY" && exists(.data)) {
+        field_to_decode = .data
+      }
+
+      all_char_hex = parse_regex_all!(field_to_decode, r'(?P<char_hex>[0-9A-F]{2})')
+      map_values(all_char_hex) -> |value| {
+          field_decoded = field_decoded + to_string!(get!(ascii_table, path: [parse_int!(value.char_hex, 16)]))
+      }
+
+      if (.type == "PROCTITLE" && exists(.proctitle)) {
+        .proctitle_decoded = field_decoded
+      } else if (.type == "USER_CMD" && exists(.cmd)) {
+        .cmd_decoded = field_decoded
+      } else if (.type == "TTY" && exists(.data)) {
+        .data_decoded = field_decoded
+      }
+    }
+
+    # Merge and if necessary decode hex-encoded arguments for EXECVE events. 
+    # EXECVE can get quite complexe to parse, with each argument in an individual field that may or may not be hex-encoded.
+    # For example: type=EXECVE msg=audit(1633393396.320:468354): argc=4 a0="date" a1="-d" a2=6E6F77202D2031343632302E3931207365636F6E6473 a3="+%s"
+    if (.type == "EXECVE" && exists(.argc) && .argc != "1") {
+      ascii_table = [" ", "<SOH>", "<STX>", "<ETX>", "<EOT>", "<ENQ>", "<ACK>", "<BEL>", "<BS>", "<HT>", "<LF>", "<VT>", "<FF>", "<CR>", "<SO>", "<SI>", "<DLE>", "<DC1>", "<DC2>", "<DC3>", "<DC4>", "<NAK>", "<SYN>", "<ETB>", "<CAN>", "<EM>", "<SUB>", "<ESC>", "<FS>", "<GS>", "<RS>", "<US>", " ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_", "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~"]
+
+      arguments = []
+        
+      for_each(.) -> |key, value| {
+        # If the key is for an argument (a1, a2, ...).
+        match_arg_index, err = parse_regex(key, r'^a(?P<index>\d+)$')
+        if (err == null) {
+          # If the value match an hex-encoded string. Non hex-encoded arguments are not in double quotes (a0="cut" versus a1=2D6420 for example).
+          if (match(string!(value), r'^[0-9A-F]+$')) {
+            arg_value_all_char_hex = parse_regex_all!(value, r'(?P<char_hex>[0-9A-F]{2})')
+            arg_value_decoded = ""
+            map_values(arg_value_all_char_hex) -> |arg_value_char| {
+                arg_value_decoded = arg_value_decoded + to_string!(get!(ascii_table, path: [parse_int!(arg_value_char.char_hex, 16)]))
+            }
+            arguments = set!(value: arguments, path: [match_arg_index.index], data: arg_value_decoded)
+          } else {
+            arguments = set!(value: arguments, path: [match_arg_index.index], data: value)
+          }
+        }
+      }
+
+      # Finally join the arguments, that are ordered by their index, to the full_command field.
+      .full_command = ""
+      map_values(arguments) -> |value| {
+        if (.full_command == "") {
+          .full_command = value
+        } else {
+          .full_command = .full_command + " " + value
+        }
+      }
+    }
+    
+    # Coerce basic types.
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+
+    # Delete irrelevant default fields
+    del(.file)
+    del(.message)
+    del(.source_type)
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "linux_auditd"
+    .sourcetype = "linux_event"
+  '''
+
+# If the parsing component failed, the message field will still be present.
+[transforms.Linux_auditd_check_result]
+  type = "remap"
+  inputs = ["Linux_auditd_parser"]
+  source = '''
+    if (exists(.message)) {
+      log("Parsing of the following event failed: " + to_string!(.message), level: "error")
+    }
+  '''
+
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.Linux_auditd_blackhole_sink]
+#   type = "blackhole"
+#   inputs = ["Linux_auditd_check_result"]
+
+# Sink to send processed logs to the console, for debugging.
+# [sinks.Linux_auditd_console_sink]
+#   type = "console"
+#   inputs = ["Linux_auditd_check_result"]
+#   target = "stdout"
+#   encoding.codec = "json"
+  
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.Linux_auditd_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["Linux_auditd_check_result"]
+#   mode="bulk"
+#   # bulk.action = "create"
+#   bulk.index = "${INDEX:?An index name must be specified for ELK / Splunk index}"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_USERNAME:?ELK_USERNAME is required}"
+#   auth.password = "${ELK_PASSWORD:?ELK_PASSWORD is required}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+# Sink transform to send processed logs to a Splunk instance.
+# [s4inks.Linux_auditd_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["Linux_auditd_check_result"]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"
