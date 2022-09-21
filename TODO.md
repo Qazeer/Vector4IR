@@ -103,6 +103,9 @@
       # Temporary folder used by Vector.
       data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
    
+  - Variable INPUT_FOLDER : 
+    "${INPUT_FOLDER:?The input folder containing the XXX files is required. Add '**' to process the specified folder recursively (exemple: \"C:\\logs\" or folder \"C:\\logs\\**\")}
+  
   - Renommage de variable d'environnement:
       
       CASE -> INDEX (car plus d'index spécifique, toujours le même : rajout des fields source et sourcetype)

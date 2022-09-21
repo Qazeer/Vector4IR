@@ -1,0 +1,159 @@
+# Description: Process Linux Authorization (auth) logs (syslog AUTH and AUTHPRIV facilities).
+#              Filename should match: [Debian / Ubuntu] "*auth.log*" or [RedHat / CentOS] "secure*"
+#              Default path on disk: /var/log/auth.log* or /var/log/secure*
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = linux_auth & sourcetype = "linux_event".
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = linux_auth & sourcetype = "linux_event".
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.Linux_auth_input__auth_log]
+  type = "file"
+  ignore_checkpoints = true
+  include = ["${INPUT_FOLDER:?The input folder containing the Linux auth log files is required. Add '**' to process the specified folder recursively (exemple: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*auth.log*"]
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[sources.Linux_auth_input__secure]
+  type = "file"
+  ignore_checkpoints = true
+  include = ["${INPUT_FOLDER:?The input folder containing the Linux auth log files is required. Add '**' to process the specified folder recursively (exemple: \"C:\\logs\" or folder \"C:\\logs\\**\")}/secure*"]
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.Linux_auth_parser]
+  type = "remap"
+  inputs = [
+    "Linux_auth_input__auth_log",
+    "Linux_auth_input__secure"
+  ]
+  source = '''
+    parsed, err = parse_linux_authorization(.message)
+    if (err != null) {
+      log("Parsing of the following event failed: '" + to_string!(.message) + "'", level: "error")
+    } else {
+      . = parsed
+
+      if (.appname == "sshd") {
+        # Match authentication sucess or failures in the following form:
+        # Accepted password for root from 1.2.3.4 port 44028 ssh2
+        # Accepted publickey for root from 1.2.3.4 port 37172 ssh2: RSA SHA256:Pm3oADN56laDADCZ5FAQXpiuQSG7GSQ/PDAO7SPlz9
+        # Failed password for root from 2.3.4.5 port 54147 ssh2
+        # Failed password for invalid user baduser from 11.22.33.44 port 58513 ssh2
+        if (match_ssh_auth_main, err = parse_regex(.message, r'^(?P<ssh_result>.*)\s(?P<ssh_method>.*)\sfor(\sinvalid\suser)?\s(?P<ssh_user>.*)\sfrom\s(?P<ssh_srchost>.*)\sport\s(?P<ssh_srcport>.*)\sssh(\d)(:\s(?P<ssh_pubkey>.*))?$'); err == null) {
+          .ssh_operation = "login"
+          .ssh_method = downcase!(match_ssh_auth_main.ssh_method)
+          .ssh_result = downcase!(match_ssh_auth_main.ssh_result)
+          .ssh_user = match_ssh_auth_main.ssh_user
+          .ssh_srchost = match_ssh_auth_main.ssh_srchost
+          .ssh_srcport = match_ssh_auth_main.ssh_srcport
+          if (match_ssh_auth_main.ssh_pubkey != null && match_ssh_auth_main.ssh_pubkey != "") {
+            .ssh_pubkey = match_ssh_auth_main.ssh_pubkey
+          }
+        # Match authentication sucess or failures in the following form:
+        # Invalid user baduser from 11.22.33.44 port 58513
+        } else if (match_ssh_auth_invalid_user, err = parse_regex(.message, r'^Invalid\suser\s(?P<ssh_user>.*)\sfrom\s(?P<ssh_srchost>.*)\sport\s(?P<ssh_srcport>.*)'); err == null) {
+          .ssh_operation = "login"
+          .ssh_result = "failed"
+          .ssh_user = match_ssh_auth_invalid_user.ssh_user
+          .ssh_srchost = match_ssh_auth_invalid_user.ssh_srchost
+          .ssh_srcport = match_ssh_auth_invalid_user.ssh_srcport
+        }
+      } else if (.appname == "sudo") {
+        # Match sudo commands in the following form:
+        # Oct 21 00:01:36 server3 sudo:     root : TTY=unknown ; PWD=/root ; USER=root ; COMMAND=/usr/bin/python3 test.py
+        if (match_sudo_command, err = parse_regex(.message, r'^(?P<user>.*)\s:\sTTY=(?P<tty>.*)\s;\sPWD=(?P<pwd>.*)\s;\sUSER=(?P<sudo_user>.*)\s;\sCOMMAND=(?P<command>.*)$'); err == null) {
+          .user = match_sudo_command.user
+          .tty = match_sudo_command.tty
+          .pwd = match_sudo_command.pwd
+          .sudo_user = match_sudo_command.sudo_user
+          .sudo_command = match_sudo_command.command
+        }
+      }
+    
+      # Fix the timezone as parse_linux_authorization uses the timezone of the current system while the timezone of the original system (the one that emitted the logs) may be different.
+      # Issue opened on GitHub: https://github.com/vectordotdev/vector/issues/14492
+      new_timestamp, err = to_timestamp(format_timestamp!(.timestamp, format: "%FT%T") + "${UTC_OFFSET:?"The offset of (the local time of the original system - the local time of the current system) to UTC is required. Exemple: original system timezone UTC+1, current system timezone UTC+2, offset to specify: 1-2 => -01:00. Expected format [+ | -]HH:MM."}")
+      if (err == null) {
+        .timestamp = new_timestamp
+      } else {
+        log("Correction of the timestamp offset to UTC failed: " + err, level: "error")
+      }
+
+      # Workaround to determine the correct event timestamp.
+      # As linux auth logs do not incorporate a timestamp, parse_linux_authorization 
+      # "resolves the year for messages that don't include it.
+      # If the current month is January, and the message is for December, it will take the previous year.
+      # Otherwise, take the current year".
+      # This check verify that the timestamp is not in the future. If so, a year is substracted from the timestamp.
+      if (to_float(.timestamp) > to_float(now())) {
+        previous_year = to_string(to_int!(format_timestamp!(.timestamp, format: "%Y")) - 1)
+        .timestamp = to_timestamp!(previous_year + slice!(format_timestamp!(.timestamp, format: "%+"), start: 4))
+      }
+
+      # Add the metadata fields following the parsing.
+      .sourcehost = .hostname
+      .host = .sourcehost
+      del(.hostname)
+      .source = "syslog_auth"
+      .sourcetype = "linux_event"
+    }
+  '''
+
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+[sinks.Linux_auth_blackhole_sink]
+  type = "blackhole"
+  inputs = ["Linux_auth_parser"]
+
+# Sink to send processed logs to the console, for debugging.
+# [sinks.Linux_auth_console_sink]
+#   type = "console"
+#   inputs = ["Linux_auth_parser"]
+#   target = "stdout"
+#   encoding.codec = "json"
+  
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.Linux_auth_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["Linux_auth_parser"]
+#   mode="bulk"
+#   # bulk.action = "create"
+#   bulk.index = "${INDEX:?An index name must be specified for ELK / Splunk index}"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_USERNAME:?ELK_USERNAME is required}"
+#   auth.password = "${ELK_PASSWORD:?ELK_PASSWORD is required}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.Linux_auth_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["Linux_auth_parser"]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"
