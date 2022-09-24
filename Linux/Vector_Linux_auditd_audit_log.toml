@@ -9,12 +9,12 @@
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
 #   INDEX = "<INDEX>"
 #   SOURCE_HOST = "<SOURCE_HOST>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = linux_auditd & sourcetype = "linux_event".
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = "linux_auditd" & sourcetype = "linux_artefact".
 #   ELK_IP = "<IP>"
 #   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
 #   ELK_USERNAME = "<USERNAME>"
 #   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = linux_auditd & sourcetype = "linux_event".
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "linux_auditd" & sourcetype = "linux_artefact".
 #   SPLUNK_IP = "<IP>"
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
@@ -194,7 +194,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
     .source = "linux_auditd"
-    .sourcetype = "linux_event"
+    .sourcetype = "linux_artefact"
   '''
 
 # If the parsing component failed, the message field will still be present.
