@@ -1,0 +1,843 @@
+# Description: Winlogbeat configuration to parse EVTX files to JSON.
+# Usage: winlogbeat.exe -e -c "Winlogbeat_EVTX_to_JSON_all.yml" -E EVTX_FOLDER="<INPUT_EVTX_FOLDER>" -E OUTPUT_FOLDER="<OUTPUT_JSON_FOLDER>" -E OUTPUT_FILENAME="<OUTPUT_JSON_FILENAME>"
+# Authors: Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   EVTX_FOLDER = "<INPUT_EVTX_FOLDER>"
+#   OUTPUT_FOLDER = "<OUTPUT_JSON_FOLDER>"
+#   OUTPUT_FILENAME = "<OUTPUT_JSON_FILENAME>"
+
+# Powershell code snippet to craft the below list:
+# Get-ChildItem -Path "<EVTX_FOLDER>\*.evtx" | ForEach-Object {
+#    $msg =
+#@"
+#  - name: "`${EVTX_FOLDER}\\$($_.Name)"
+#    no_more_events: stop
+#"@
+#    Write-Host $msg
+#}
+
+winlogbeat.event_logs:
+  - name: "${EVTX_FOLDER}\\Application.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\HardwareEvents.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Internet Explorer.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Key Management Service.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-AppV-Client%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-AppV-Client%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-AppV-Client%4Virtual Applications.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Client-License-Flexible-Platform%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Client-Licensing-Platform%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Rdms-UI%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Rdms-UI%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-User Experience Virtualization-Agent Driver%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-User Experience Virtualization-App Agent%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-User Experience Virtualization-IPC%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-User Experience Virtualization-SQM Uploader%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AAD%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-All-User-Install-Agent%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AllJoyn%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppHost%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppID%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ApplicabilityEngine%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Application Server-Applications%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Application Server-Applications%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Application-Experience%4Program-Compatibility-Assistant.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Application-Experience%4Program-Compatibility-Troubleshooter.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Application-Experience%4Program-Inventory.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Application-Experience%4Program-Telemetry.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Application-Experience%4Steps-Recorder.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppLocker%4EXE and DLL.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppLocker%4MSI and Script.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppLocker%4Packaged app-Deployment.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppLocker%4Packaged app-Execution.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppModel-Runtime%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppReadiness%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppReadiness%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppXDeployment%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppXDeploymentServer%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppXDeploymentServer%4Restricted.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AppxPackaging%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AssignedAccess%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-AssignedAccessBroker%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Audio%4CaptureMonitor.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Audio%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Audio%4PlaybackManager.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Authentication User Interface%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-BackgroundTaskInfrastructure%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Backup.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-BestPractices%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Biometrics%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-BitLocker%4BitLocker Management.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-BitLocker-DrivePreparationTool%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-BitLocker-DrivePreparationTool%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Bits-Client%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Bluetooth-BthLEPrepairing%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Bluetooth-MTPEnum%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-BranchCache%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-BranchCacheSMB%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-CertificateServices-Deployment%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-CertificateServicesClient-Lifecycle-System%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-CertificateServicesClient-Lifecycle-User%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Cleanmgr%4Diagnostic.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-CloudStore%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ClusterAwareUpdating-Management%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-CodeIntegrity%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Compat-Appraiser%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Containers-BindFlt%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Containers-Wcifs%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Containers-Wcnfs%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-CoreApplication%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-CoreSystem-SmsRouter-Events%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-CorruptedFileRecovery-Client%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-CorruptedFileRecovery-Server%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Crypto-DPAPI%4BackUpKeySvc.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Crypto-DPAPI%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Crypto-NCrypt%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DAL-Provider%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DataIntegrityScan%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DataIntegrityScan%4CrashRecovery.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DateTimeControlPanel%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Deduplication%4Diagnostic.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Deduplication%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Deduplication%4Scrubbing.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DeviceGuard%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DeviceManagement-Enterprise-Diagnostics-Provider%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DeviceManagement-Enterprise-Diagnostics-Provider%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Devices-Background%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DeviceSetupManager%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DeviceSetupManager%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DeviceSync%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DeviceUpdateAgent%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Dhcp-Client%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Dhcpv6-Client%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Diagnosis-DPS%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Diagnosis-PCW%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Diagnosis-PLA%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Diagnosis-Scheduled%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Diagnosis-Scripted%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Diagnosis-Scripted%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Diagnosis-ScriptedDiagnosticsProvider%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Diagnostics-Networking%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Diagnostics-Performance%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DirectoryServices-Deployment%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DiskDiagnostic%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DiskDiagnosticDataCollector%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DiskDiagnosticResolver%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DSC%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DSC%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DucUpdateAgent%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DxgKrnl-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-DxgKrnl-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EapHost%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EapMethods-RasChap%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EapMethods-RasTls%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EapMethods-Sim%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EapMethods-Ttls%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EDP-Application-Learning%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EDP-Audit-Regular%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EDP-Audit-TCB%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EnrollmentPolicyWebService%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EnrollmentWebService%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-EventCollector%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-FailoverClustering-Manager%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Fault-Tolerant-Heap%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-FeatureConfiguration%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-FederationServices-Deployment%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-FileHistory-Core%4WHC.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-FileHistory-Engine%4BackupLog.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-FileServices-ServerManager-EventProvider%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-FileServices-ServerManager-EventProvider%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-FMS%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Folder Redirection%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Forwarding%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-GenericRoaming%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-GroupPolicy%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HelloForBusiness%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Help%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HomeGroup Control Panel%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HomeGroup Listener Service%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HomeGroup Provider Service%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Host-Network-Service-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Host-Network-Service-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HostGuardianClient-Service%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HostGuardianClient-Service%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HostGuardianService-CA%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HostGuardianService-CA%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HostGuardianService-Client%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HostGuardianService-Client%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-HotspotAuth%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-Compute-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-Compute-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-Config-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-Config-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-Guest-Drivers%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-Hypervisor-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-Hypervisor-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-StorageVSP-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-VID-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-VMMS-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-VMMS-Networking.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-VMMS-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-VMMS-Storage.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-VmSwitch-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-Worker-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Hyper-V-Worker-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-IdCtrls%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-IKE%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-International-RegionalOptionsControlPanel%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-IPAM%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-IPAM%4ConfigurationChange.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Iphlpsvc%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-IPxlatCfg%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-KdsSvc%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-ApphelpCache%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-Boot%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-EventTracing%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-IO%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-LiveDump%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-PnP%4Configuration.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-PnP%4Driver Watchdog.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-Power%4Thermal-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-ShimEngine%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-StoreMgr%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-WDI%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-WHEA%4Errors.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Kernel-WHEA%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-KeyboardFilter%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Known Folders API Service.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-LanguagePackSetup%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-LiveId%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-MemoryDiagnostics-Results%4Debug.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Mobile-Broadband-Experience-Parser-Task%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ModernDeployment-Diagnostics-Provider%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ModernDeployment-Diagnostics-Provider%4Autopilot.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ModernDeployment-Diagnostics-Provider%4Diagnostics.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ModernDeployment-Diagnostics-Provider%4ManagementService.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Mprddm%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-MUI%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-MUI%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-NcdAutoSetup%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-NCSI%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-NdisImPlatform%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-NetworkLocationWizard%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-NetworkProfile%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-NetworkProvider%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-NetworkProvisioning%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-NlaSvc%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Ntfs%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Ntfs%4WHC.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-NTLM%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-OcpUpdateAgent%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-OfflineFiles%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-OneBackup%4Debug.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-OOBE-Machine-DUI%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PackageStateRoaming%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ParentalControls%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Partition%4Diagnostic.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PerceptionRuntime%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PerceptionSensorDataService%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PersistentMemory-Nvdimm%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PersistentMemory-PmemDisk%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PersistentMemory-ScmBus%4Certification.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PersistentMemory-ScmBus%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Policy%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PowerShell%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PowerShell%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PowerShell-DesiredStateConfiguration-FileDownloadManager%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PrintBRM%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PrintService%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Privacy-Auditing%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Program-Compatibility-Assistant%4CompatAfterUpgrade.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Provisioning-Diagnostics-Provider%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Provisioning-Diagnostics-Provider%4AutoPilot.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Provisioning-Diagnostics-Provider%4ManagementService.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PushNotification-Platform%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-PushNotification-Platform%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ReadyBoost%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ReadyBoostDriver%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ReFS%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Regsvr32%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteAccess-MgmtClient%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteApp and Desktop Connections%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteApp and Desktop Connections%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteAssistance%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteAssistance%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteDesktopServices-RdpCoreTS%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteDesktopServices-RdpCoreTS%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteDesktopServices-RemoteFX-Manager%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteDesktopServices-RemoteFX-Manager%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteDesktopServices-RemoteFX-Synth3dvsc%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteDesktopServices-RemoteFX-Synth3dvsp%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RemoteDesktopServices-SessionServices%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Resource-Exhaustion-Detector%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Resource-Exhaustion-Resolver%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RestartManager%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RetailDemo%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-RetailDemo%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SearchUI%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-Adminless%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-Audit-Configuration-Client%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-EnterpriseData-FileRevocationManager%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-LessPrivilegedAppContainer%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-Mitigations%4KernelMode.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-Mitigations%4UserMode.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-Netlogon%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-SPP-UX-GenuineCenter-Logging%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-SPP-UX-Notifications%4ActionCenter.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Security-UserConsentVerifier%4Audit.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SecurityMitigationsBroker%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SENSE%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SenseIR%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ServerEssentials-Deployment%4Deploy.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ServerManager-MultiMachine%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ServerManager-MultiMachine%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SettingSync%4Debug.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SettingSync%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SettingSync-Azure%4Debug.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SettingSync-Azure%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SettingSync-OneDrive%4Debug.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SettingSync-OneDrive%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Shell-ConnectedAccountState%4ActionCenter.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Shell-Core%4ActionCenter.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Shell-Core%4AppDefaults.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Shell-Core%4LogonTasksChannel.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Shell-Core%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-ShellCommon-StartLayoutPopulation%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SmartCard-Audit%4Authentication.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SmartCard-DeviceEnum%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SmartCard-TPM-VCard-Module%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SmartCard-TPM-VCard-Module%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SmbClient%4Audit.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SmbClient%4Connectivity.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SMBClient%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SmbClient%4Security.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SMBDirect%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SMBServer%4Audit.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SMBServer%4Connectivity.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SMBServer%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SMBServer%4Security.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SMBWitnessClient%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SMBWitnessClient%4Informational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-StateRepository%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-StateRepository%4Restricted.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Storage-ClassPnP%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Storage-Storport%4Health.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Storage-Storport%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Storage-Tiering%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-StorageManagement%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-StorageSettings%4Diagnostic.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-StorageSpaces-Driver%4Diagnostic.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-StorageSpaces-Driver%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-StorageSpaces-ManagementAgent%4WHC.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-StorageSpaces-SpaceManager%4Diagnostic.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-StorageSpaces-SpaceManager%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Store%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Storsvc%4Diagnostic.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-SystemSettingsThreshold%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TaskScheduler%4Maintenance.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TCPIP%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TenantRestrictions%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-ClientUSBDevices%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-ClientUSBDevices%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-LocalSessionManager%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-LocalSessionManager%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-PnPDevices%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-PnPDevices%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-Printers%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-Printers%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-RDPClient%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-RemoteConnectionManager%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-RemoteConnectionManager%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-ServerUSBDevices%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TerminalServices-ServerUSBDevices%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Time-Service%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Time-Service-PTP-Provider%4PTP-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Troubleshooting-Recommended%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Troubleshooting-Recommended%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TWinUI%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TZSync%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-TZUtil%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-UAC%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-UAC-FileVirtualization%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-UniversalTelemetryClient%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-User Control Panel%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-User Device Registration%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-User Profile Service%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-User-Loader%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-UserPnp%4ActionCenter.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-UserPnp%4DeviceInstall.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-VDRVROOT%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-VerifyHardwareSecurity%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-VHDMP-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Volume%4Diagnostic.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-VolumeSnapshot-Driver%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-VPN%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-VPN-Client%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Wcmsvc%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WDAG-PolicyEvaluator-CSP%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WDAG-PolicyEvaluator-GP%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WebAuthN%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WebDeploy%4ConnectionInfo.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WebDeploy%4Error.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WER-PayloadHealth%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WFP%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Win32k%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Windows Defender%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Windows Defender%4WHC.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Windows Firewall With Advanced Security%4ConnectionSecurity.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Windows Firewall With Advanced Security%4Firewall.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Windows Firewall With Advanced Security%4FirewallDiagnostics.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WindowsBackup%4ActionCenter.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WindowsSystemAssessmentTool%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WindowsUpdateClient%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WinINet-Config%4ProxyConfigChanged.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Winlogon%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WinRM%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Winsock-WS2HELP%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Wired-AutoConfig%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WLAN-AutoConfig%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WMI-Activity%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WMPNSS-Service%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WorkFolders%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WorkFolders%4WHC.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-Workplace Join%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WPD-ClassInstaller%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WPD-CompositeClassDriver%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WPD-MTPClassDriver%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-Windows-WWAN-SVC-Events%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Microsoft-WindowsPhone-Connectivity-WiFiConnSvc-Channel.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\OAlerts.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\OpenSSH%4Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\OpenSSH%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Parameters.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\PowerShellCore%4Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\RealTimeKql.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\RemoteDesktopServices-RemoteFX-SessionLicensing-Admin.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\RemoteDesktopServices-RemoteFX-SessionLicensing-Operational.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Security.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Setup.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\SMSApi.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\State.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\System.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Windows Azure.evtx"
+    no_more_events: stop
+  - name: "${EVTX_FOLDER}\\Windows PowerShell.evtx"
+    no_more_events: stop
+
+disk:
+    read_ahead: 8192
+
+processors:
+ - drop_fields:
+        fields: ["beat", "metadata", "log", "agent", "ecs", "event", "host"]
+
+# output.console:
+#   pretty: false
+
+output.file:
+  path: "${OUTPUT_FOLDER}"
+  filename: "${OUTPUT_FILENAME}"
+  rotate_every_kb: 12400000
+  number_of_files: 1024 
