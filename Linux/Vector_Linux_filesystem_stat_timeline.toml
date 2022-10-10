@@ -69,7 +69,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
     .timestamp = .crtime
-    .operation = "file_creation"
+    .operation = "creation"
+    .suboperation = "file_creation"
   '''
 
 [transforms.Linux_stat_timeline_dedup_mtime]
@@ -80,7 +81,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
     .timestamp = .mtime
-    .operation = "file_modification"
+    .operation = "modification"
+    .suboperation = "file_modification"
   '''
 
 [transforms.Linux_stat_timeline_dedup_ctime]
@@ -91,7 +93,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
     .timestamp = .ctime
-    .operation = "file_change"
+    .operation = "modification"
+    .suboperation = "file_change"
   '''
 
 [transforms.Linux_stat_timeline_dedup_atime]
@@ -102,7 +105,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
     .timestamp = .atime
-    .operation = "file_access"
+    .operation = "access"
+    .suboperation = "file_access"
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
