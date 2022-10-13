@@ -1,0 +1,125 @@
+# Description: Process AzureAD Audit Logs, as retrieved by DFIR-ORC365RC.
+#              Filename should match: "**\*AADAuditLog*.json"
+#              Logs should be converted from pretty-printed JSON to compacted JSON using the Onelifying_JSON.sh script (requiring jq).
+# Author(s): Axel ROC, Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_TENANT = "<SOURCE_TENANT>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = "azuread_audit" & sourcetype = "azure_artefact".
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "azuread_audit" & sourcetype = "azure_artefact".
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+# Temporary folder used by Vector
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.AzureAD_DFIR-O365RC_audit_logs_input]
+  type = "file"
+  ignore_checkpoints = true
+  include = ["${INPUT_FOLDER:?The source folder containing the DFIR-O365RC JSON outputs is required}\\**\\*AADAuditLog*.json"]
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+# Double remap as events are stored as JSON objects in a single-line JSON array.
+# The first remap "explode" the JSON array in multiple events.
+[transforms.AzureAD_DFIR-O365RC_audit_logs_parser]
+  inputs = ["AzureAD_DFIR-O365RC_audit_logs_input"]
+  type = "remap"
+  source = '''
+  ., err = parse_json(.message, max_depth: 8)
+  if err != null {
+    log("Unable to parse JSON: " + err, level: "error")
+  }
+  '''
+
+[transforms.AzureAD_DFIR-O365RC_audit_logs_enrich]
+  inputs = ["AzureAD_DFIR-O365RC_audit_logs_parser"]
+  type = "remap"
+  source = '''
+  if is_null(.activityDateTime) == false {
+    .activityDateTime, err1 = to_timestamp(.activityDateTime)
+    if err1 != null {
+      log("Unable to convert to timestamp: " + err1, level: "error")
+    }
+  }
+
+  .timestamp = .activityDateTime
+
+  # Child fields are added to initiatedBy field to have the same nomenclature between the different log sources (audit, signins, unified logs...)
+  if is_null(.initiatedBy.user) == false {
+    .initiatedBy.user.AccountName = .initiatedBy.user.userPrincipalName
+    .initiatedBy.user.ClientIP = .initiatedBy.user.ipAddress
+  }
+  if is_null(.initiatedBy.app) == false {
+    .initiatedBy.app.AppName = .initiatedBy.app.displayName
+    .initiatedBy.app.ServiceName = .initiatedBy.app.servicePrincipalName
+    .initiatedBy.app.ServiceId = .initiatedBy.app.servicePrincipalId
+  }
+
+  .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
+  .source = "azuread_audit"
+  .sourcetype = "azure_artefact"
+
+  # "Explode" 1 event with multiple (X) targetResources into multiple (X) events.
+  if is_null(.targetResources) == false {
+    . = unnest!(.targetResources)
+  }
+  '''
+
+# Extra remap required as the unnest from the enrich remap component explode the event in multiple events.
+[transforms.AzureAD_DFIR-O365RC_audit_logs_flatten]
+  inputs = ["AzureAD_DFIR-O365RC_audit_logs_enrich"]
+  type = "remap"
+  source = '''
+  . = flatten(.)
+  '''
+
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.AzureAD_DFIR-O365RC_audit_logs_blackhole_sink]
+#   type = "blackhole"
+#   inputs = ["AzureAD_DFIR-O365RC_audit_logs_flatten"]
+
+# Sink to send processed logs to the console, for debugging.
+# [sinks.AzureAD_DFIR-O365RC_audit_logs_console_sink]
+#   type = "console"
+#   inputs = ["AzureAD_DFIR-O365RC_audit_logs_flatten"]
+#   target = "stdout"
+#   encoding.codec = "json"
+  
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.AzureAD_DFIR-O365RC_audit_logs_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["AzureAD_DFIR-O365RC_audit_logs_flatten"]
+#   mode="bulk"
+#   # bulk.action = "create"
+#   bulk.index = "${INDEX:?An index name must be specified for ELK / Splunk index}"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_USERNAME:?ELK_USERNAME is required}"
+#   auth.password = "${ELK_PASSWORD:?ELK_PASSWORD is required}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.AzureAD_DFIR-O365RC_audit_logs_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["AzureAD_DFIR-O365RC_audit_logs_flatten"]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"
