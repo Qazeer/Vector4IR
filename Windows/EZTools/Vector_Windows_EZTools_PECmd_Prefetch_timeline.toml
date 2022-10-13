@@ -1,0 +1,105 @@
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Vector_Windows_EZTools_PECmd_Prefetch_timeline config.
+# Description: Process Windows artefacts parsed with PECmd (CSV output).
+#              Filename should match: "*PECmd_Output_Timeline.csv"
+#              PECmd command: PECmd.exe -d %sourceDirectory% --csv %destinationDirectory% -q
+#              Example command: PECmd.exe -d "C:\Windows\Prefetch" --csv <YOUR_OUTPUT> -q
+
+# Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = windows_prefetch-timeline & sourcetype = windows_artefact (windows_event pour evtx).
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = windows_prefetch-timeline & sourcetype = windows_artefact (windows_event pour evtx).
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+  [sources.PECmd_Prefetch_timeline_csv_input]
+    type = "file"
+    include = ["${INPUT_FOLDER:?The input folder containing the PECmd Prefetch Timeline files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/ProgramExecution/*PECmd_Output_Timeline.csv"]
+    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+    oldest_first = true
+    fingerprint.strategy = "device_and_inode"
+    max_line_bytes = 100_000_000
+
+  [transforms.PECmd_Prefetch_timeline_csv_parser]
+    type = "remap"
+    inputs = ["PECmd_Prefetch_timeline_csv_input"]
+    source = '''
+    # Expect CSV header:
+    # RunTime,ExecutableName
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[Prefetch-Timeline] Unable to split CSV: " + err, level: "error")
+    }
+
+    if fields[1] == "ExecutableName"{
+      abort
+    }
+
+    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+      .runtime, err = to_timestamp(fields[0])
+    }
+    .executablename = fields[1]
+    .timestamp = .runtime
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_prefetch-timeline"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    '''
+
+  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+  # [sinks.PECmd_Prefetch_timeline_blackhole_sink]
+  #   type = "blackhole"
+  #   inputs = ["PECmd_Prefetch_timeline_csv_parser"]
+
+  # Sink to send processed logs to the console, for debugging.
+  # [sinks.PECmd_Prefetch_timeline_console_sink]
+  #   type = "console"
+  #   inputs = ["PECmd_Prefetch_timeline_csv_parser"]
+  #   target = "stdout"
+  #   encoding.codec = "json"
+
+  # Sink transform to send processed logs to an ELK instance.
+  [sinks.PECmd_Prefetch_timeline_ELK_sink]
+    type = "elasticsearch"
+    inputs = ["PECmd_Prefetch_timeline_csv_parser"]
+    bulk.index = "${INDEX}-{{ sourcehost }}-prefetch-timeline"
+    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+    auth.strategy = "basic"
+    auth.user = "${ELK_LOGIN}"
+    auth.password = "${ELK_PASSWORD}"
+    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+  # Sink transform to send processed logs to a Splunk instance.
+  # [sinks.PECmd_Prefetch_timeline_Splunk_sink]
+  #   type = "splunk_hec_logs"
+  #   inputs = ["PECmd_Prefetch_timeline_csv_parser"]
+  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+  #   compression = "none"
+  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+  #   host_key = "host"
+  #   source = "{{ source }}"
+  #   sourcetype = "{{ sourcetype }}"
+  #   tls.verify_certificate = false
+  #   encoding.codec = "json"
+
+# Prefetch KAPE Timelining - end.

@@ -1,0 +1,128 @@
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Vector_Windows_EZTools_AmcacheParser_AmCache-DriveBinaries config.
+# Description: Process Windows artefacts parsed with AmcacheParser (CSV output).
+#              Filename should match: "*Amcache_DriveBinaries.csv"
+#              AmcacheParser command: AmcacheParser.exe -f %sourceFile% --csv %destinationDirectory% -i
+#              Example command: AmcacheParser.exe -f "C:\Windows\appcompat\Programs\Amcache.hve" --csv <YOUR_OUTPUT>
+
+# Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = windows_amcache-drivebinaries & sourcetype = windows_artefact (windows_event pour evtx).
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = windows_amcache-drivebinaries & sourcetype = windows_artefact (windows_event pour evtx).
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+  [sources.AmcacheParser_AmCache-DriveBinaries_csv_input]
+    type = "file"
+    include = ["${INPUT_FOLDER:?The input folder containing the AmcacheParser AmCache DriveBinaries files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/ProgramExecution/*Amcache_DriveBinaries.csv"]
+    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+    oldest_first = true
+    fingerprint.strategy = "device_and_inode"
+    max_line_bytes = 100_000_000
+
+  [transforms.AmcacheParser_AmCache-DriveBinaries_csv_parser]
+    type = "remap"
+    inputs = ["AmcacheParser_AmCache-DriveBinaries_csv_input"]
+    source = '''
+    # Expect CSV header:
+    # KeyName,KeyLastWriteTimestamp,DriverTimeStamp,DriverLastWriteTime,DriverName,DriverInBox,DriverIsKernelMode,DriverSigned,DriverCheckSum,DriverCompany,DriverId,DriverPackageStrongName,DriverType,DriverVersion,ImageSize,Inf,Product,ProductVersion,Service,WdfVersion
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[AmCache-DriveBinaries] Unable to split CSV: " + err, level: "error")
+    }
+
+    if fields[1] == "KeyLastWriteTimestamp"{
+      abort
+    }
+
+    .keyname = fields[0]
+
+    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
+      .keylastwritetimestamp, err = to_timestamp(fields[1])
+    }
+
+    .drivertimestamp = fields[2]
+    .driverlastwritetime = fields[3]
+    .drivername = fields[4]
+    .driverinbox = fields[5]
+    .driveriskernelmode = fields[6]
+    .driversigned = fields[7]
+    .driverchecksum = fields[8]
+    .drivercompany = fields[9]
+    .driverid = fields[10]
+    .driverpackagestrongname = fields[11]
+    .drivertype = fields[12]
+    .driverversion = fields[13]
+    .imagesize = fields[14]
+    .inf = fields[15]
+    .product = fields[16]
+    .productversion = fields[17]
+    .service = fields[18]
+    .wdfversion = fields[19]
+    .timestamp = .keylastwritetimestamp
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_amcache-drivebinaries"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    '''
+
+    # types.DriverInBox = "bool"
+    # types.DriverLastWriteTime = "timestamp|%F %T"
+
+  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+  # [sinks.AmcacheParser_AmCache-DriveBinaries_blackhole_sink]
+  #   type = "blackhole"
+  #   inputs = ["AmcacheParser_AmCache-DriveBinaries_csv_parser"]
+
+  # Sink to send processed logs to the console, for debugging.
+  # [sinks.AmcacheParser_AmCache-DriveBinaries_console_sink]
+  #   type = "console"
+  #   inputs = ["AmcacheParser_AmCache-DriveBinaries_csv_parser"]
+  #   target = "stdout"
+  #   encoding.codec = "json"
+
+  # Sink transform to send processed logs to an ELK instance.
+  [sinks.AmcacheParser_AmCache-DriveBinaries_ELK_sink]
+    type = "elasticsearch"
+    inputs = ["AmcacheParser_AmCache-DriveBinaries_csv_parser"]
+    bulk.index = "${INDEX}-{{ sourcehost }}-amcache-drivebinaries"
+    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+    auth.strategy = "basic"
+    auth.user = "${ELK_LOGIN}"
+    auth.password = "${ELK_PASSWORD}"
+    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+  # Sink transform to send processed logs to a Splunk instance.
+  # [sinks.AmcacheParser_AmCache-DriveBinaries_Splunk_sink]
+  #   type = "splunk_hec_logs"
+  #   inputs = ["AmcacheParser_AmCache-DriveBinaries_csv_parser"]
+  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+  #   compression = "none"
+  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+  #   host_key = "host"
+  #   source = "{{ source }}"
+  #   sourcetype = "{{ sourcetype }}"
+  #   tls.verify_certificate = false
+  #   encoding.codec = "json"
+
+# AmCache Drive Binaries - end.

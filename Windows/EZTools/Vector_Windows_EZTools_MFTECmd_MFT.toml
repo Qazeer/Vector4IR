@@ -1,0 +1,256 @@
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Vector_Windows_EZTools_MFTECmd_MFT config.
+# Description: Process Windows artefacts parsed with MFTECmd (CSV output).
+#              Filename should match: "*MFT_Output.csv"
+#              MFTECmd command: MFTECmd.exe -f %sourceFile% --csv %destinationDirectory%
+#              Example command: MFTECmd.exe -f "C:\$MFT" --csv <YOUR_OUTPUT> -q
+
+# Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = windows_mft & sourcetype = windows_artefact (windows_event pour evtx).
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = windows_mft & sourcetype = windows_artefact (windows_event pour evtx).
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+  [sources.MFTECmd_MFT_csv_input]
+    type = "file"
+    include = ["${INPUT_FOLDER:?The input folder containing the MFTECmd MFT files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/FileSystem/*MFT_Output.csv"]
+    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+    oldest_first = true
+    fingerprint.strategy = "device_and_inode"
+    max_line_bytes = 100_000_000
+
+  [transforms.MFTECmd_MFT_csv_parser]
+    type = "remap"
+    inputs = ["MFTECmd_MFT_csv_input"]
+    source = '''
+    # Expect CSV header:
+    # EntryNumber,SequenceNumber,InUse,ParentEntryNumber,ParentSequenceNumber,ParentPath,FileName,Extension,FileSize,ReferenceCount,ReparseTarget,IsDirectory,HasAds,IsAds,SI<FN,uSecZeros,Copied,SiFlags,NameType,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30,UpdateSequenceNumber,LogfileSequenceNumber,SecurityId,ObjectIdFileDroid,LoggedUtilStream,ZoneIdContents
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[MFT] Unable to split CSV: " + err, level: "error")
+    }
+
+    if fields[7] == "Extension"{
+      abort
+    }
+
+    .entrynumber, err = to_int(fields[0])
+    .inuse, err = to_bool(fields[2])
+    .parentpath = fields[5]
+    .filename = fields[6]
+    .extension = fields[7]
+    .filesize, err = to_int(fields[8])
+    .referencecount, err = to_int(fields[9])
+    .reparsetarget = fields[10]
+    .hasads, err = to_bool(fields[12])
+    .isads, err = to_bool(fields[13])
+    .siltfn, err = to_bool(fields[14])
+    .useczeros, err = to_bool(fields[15])
+    .copied, err = to_bool(fields[16])
+    .siflags = fields[17]
+    .nametype = fields[18]
+
+    if (fields[19] != null && fields[19] != "" && fields[19] != "\r") {
+        # Parse Created0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .created0x10, err = parse_timestamp(fields[19], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+    }
+
+    if (fields[20] != null && fields[20] != "" && fields[20] != "\r") {
+        # Parse Created0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .created0x30, err = parse_timestamp(fields[20], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+    }
+
+    if (fields[21] != null && fields[21] != "" && fields[21] != "\r") {
+        # Parse LastModified0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastmodified0x10, err = parse_timestamp(fields[21], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+    }
+
+    if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
+        # Parse LastModified0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastmodified0x30, err = parse_timestamp(fields[22], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+    }
+
+    if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
+        # Parse LastRecordChange0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastrecordchange0x10, err = parse_timestamp(fields[23], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+    }
+
+    if (fields[24] != null && fields[24] != "" && fields[24] != "\r") {
+        # Parse LastRecordChange0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastrecordchange0x30, err = parse_timestamp(fields[24], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+    }
+
+    if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
+        # Parse LastAccess0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastaccess0x10, err = parse_timestamp(fields[25], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+    }
+
+    if (fields[26] != null && fields[26] != "" && fields[26] != "\r") {
+        # Parse LastAccess0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastaccess0x30, err = parse_timestamp(fields[26], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+    }
+
+    .updatesequencenumber = fields[27]
+    .logfilesequencenumber = fields[28]
+    .securityid, err = to_int(fields[29])
+    .timestamp = .lastmodified0x10
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_mft"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    '''
+
+  [transforms.MFTECmd_MFT_dedup_LastModified0x10]
+    type = "remap"
+    inputs = ["MFTECmd_MFT_csv_parser"]
+    source = '''
+    if !exists(.lastmodified0x10){
+      abort
+    }
+
+    .timestamp = .lastmodified0x10
+    .operation = "modification"
+    .suboperation = "file_modification_stdinfo"
+      '''
+
+  [transforms.MFTECmd_MFT_dedup_Created0x10]
+    type = "remap"
+    inputs = ["MFTECmd_MFT_csv_parser"]
+    source = '''
+    if !exists(.created0x10){
+      abort
+    }
+
+    .timestamp = .created0x10
+    .operation = "creation"
+    .suboperation = "file_creation_stdinfo"
+      '''
+
+  [transforms.MFTECmd_MFT_dedup_LastRecordChange0x10]
+    type = "remap"
+    inputs = ["MFTECmd_MFT_csv_parser"]
+    source = '''
+    if !exists(.lastrecordchange0x10){
+      abort
+    }
+
+    .timestamp = .lastrecordchange0x10
+    .operation = "modification"
+    .suboperation = "file_modification_stdinfo"
+      '''
+
+  [transforms.MFTECmd_MFT_dedup_LastAccess0x10]
+    type = "remap"
+    inputs = ["MFTECmd_MFT_csv_parser"]
+    source = '''
+    if !exists(.lastaccess0x10){
+      abort
+    }
+
+    .timestamp = .lastaccess0x10
+    .operation = "access"
+    .suboperation = "file_access_stdinfo"
+      '''
+
+  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+  # [sinks.MFTECmd_MFT_blackhole_sink]
+  #   type = "blackhole"
+  #   inputs = [
+  #     "MFTECmd_MFT_dedup_LastModified0x10",
+  #     "MFTECmd_MFT_dedup_Created0x10",
+  #     "MFTECmd_MFT_dedup_LastRecordChange0x10",
+  #     "MFTECmd_MFT_dedup_LastAccess0x10"
+  #   ]
+
+  # Sink to send processed logs to the console, for debugging.
+  # [sinks.MFTECmd_MFT_console_sink]
+  #   type = "console"
+  #   inputs = [
+  #     "MFTECmd_MFT_dedup_LastModified0x10",
+  #     "MFTECmd_MFT_dedup_Created0x10",
+  #     "MFTECmd_MFT_dedup_LastRecordChange0x10",
+  #     "MFTECmd_MFT_dedup_LastAccess0x10"
+  #   ]
+  #   target = "stdout"
+  #   encoding.codec = "json"
+
+  # Sink transform to send processed logs to an ELK instance.
+  [sinks.MFTECmd_MFT_ELK_sink]
+    type = "elasticsearch"
+    inputs = [
+      "MFTECmd_MFT_dedup_LastModified0x10",
+      "MFTECmd_MFT_dedup_Created0x10",
+      "MFTECmd_MFT_dedup_LastRecordChange0x10",
+      "MFTECmd_MFT_dedup_LastAccess0x10"
+    ]
+    bulk.index = "${INDEX}-{{ sourcehost }}-mft"
+    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+    auth.strategy = "basic"
+    auth.user = "${ELK_LOGIN}"
+    auth.password = "${ELK_PASSWORD}"
+    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+  # Sink transform to send processed logs to a Splunk instance.
+  # [sinks.MFTECmd_MFT_Splunk_sink]
+  #   type = "splunk_hec_logs"
+  #   inputs = [
+  #     "MFTECmd_MFT_dedup_LastModified0x10",
+  #     "MFTECmd_MFT_dedup_Created0x10",
+  #     "MFTECmd_MFT_dedup_LastRecordChange0x10",
+  #     "MFTECmd_MFT_dedup_LastAccess0x10"
+  #   ]
+  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+  #   compression = "none"
+  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+  #   host_key = "host"
+  #   source = "{{ source }}"
+  #   sourcetype = "{{ sourcetype }}"
+  #   tls.verify_certificate = false
+  #   encoding.codec = "json"
+
+# MFT - end.

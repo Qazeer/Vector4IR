@@ -1,0 +1,281 @@
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Vector_Windows_EZTools_LECmd_Lnk config.
+# Description: Process Windows artefacts parsed with LECmd (CSV output).
+#              Filename should match: "*LECmd_Output.csv"
+#              LECmd command: LECmd.exe -d %sourceDirectory% --csv %destinationDirectory% -q
+#              Example command: LECmd.exe -d "C:\" --csv <YOUR_OUTPUT> -q
+
+# Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = windows_lnk-files & sourcetype = windows_artefact (windows_event pour evtx).
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = windows_lnk-files & sourcetype = windows_artefact (windows_event pour evtx).
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+  [sources.LECmd_Lnk_csv_input]
+    type = "file"
+    include = ["${INPUT_FOLDER:?The input folder containing the LECmd Link files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/FileFolderAccess/*LECmd_Output.csv"]
+    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+    oldest_first = true
+    fingerprint.strategy = "device_and_inode"
+    max_line_bytes = 100_000_000
+
+  [transforms.LECmd_Lnk_csv_parser]
+    type = "remap"
+    inputs = ["LECmd_Lnk_csv_input"]
+    source = '''
+    # Expect CSV header:
+    # SourceFile,SourceCreated,SourceModified,SourceAccessed,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,NetworkPath,CommonPath,Arguments,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,MACVendor,TrackerCreatedOn,ExtraBlocksPresent
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[LNK-Files] Unable to split CSV: " + err, level: "error")
+    }
+
+    if fields[0] == "SourceFile"{
+      abort
+    }
+
+    .sourcefile = fields[0]
+    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
+      .sourcecreated, err = to_timestamp(fields[1])
+    }
+
+    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
+      .sourcemodified, err = to_timestamp(fields[2])
+    }
+
+    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
+      .sourceaccessed, err = to_timestamp(fields[3])
+    }
+
+    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+      .targetcreated, err = to_timestamp(fields[4])
+    }
+
+    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
+      .targetmodified, err = to_timestamp(fields[5])
+    }
+
+    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
+      .targetaccessed, err = to_timestamp(fields[6])
+    }
+
+    .filesize, err = to_int(fields[7])
+    .relativepath = fields[8]
+    .workingdirectory = fields[9]
+    .fileattributes = fields[10]
+    .headerflags = fields[11]
+    .drivetype = fields[12]
+    .volumeserialnumber = fields[13]
+    .localpath = fields[15]
+    .networkpath = fields[16]
+    .commonpath = fields[17]
+    .arguments = fields[18]
+    .targetidabsolutepath = fields[19]
+    .targetmftentrynumber = fields[20]
+    .machineid = fields[22]
+    .machinemacaddress = fields[23]
+
+    if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
+      .trackercreatedon, err = to_timestamp(fields[25])
+    }
+
+    .timestamp = .sourcemodified
+
+    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+        if ((parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData')."user") != null) {
+          # Parse SourceFile field to extract username. Expected format: "username".
+          .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData')."user"
+        } else if ((parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData')."user") != null) {
+          # Parse SourceFile field to extract username. Expected format: "username".
+          .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData')."user"
+        }
+    } else {
+        .user = ""
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_lnk-files"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    '''
+
+  [transforms.LECmd_Lnk_dedup_SourceModified]
+    type = "remap"
+    inputs = ["LECmd_Lnk_csv_parser"]
+    source = '''
+    if !exists(.sourcemodified){
+      abort
+    }
+
+    .timestamp = .sourcemodified
+    .operation = "modification"
+    .suboperation = "file_modification_sourcemodified"
+      '''
+
+  [transforms.LECmd_Lnk_dedup_SourceCreated]
+    type = "remap"
+    inputs = ["LECmd_Lnk_csv_parser"]
+    source = '''
+    if !exists(.sourcecreated){
+      abort
+    }
+
+    .timestamp = .sourcecreated
+    .operation = "creation"
+    .suboperation = "file_creation_sourcecreated"
+      '''
+
+  [transforms.LECmd_Lnk_dedup_SourceAccessed]
+    type = "remap"
+    inputs = ["LECmd_Lnk_csv_parser"]
+    source = '''
+    if !exists(.sourceaccessed){
+      abort
+    }
+
+    .timestamp = .sourceaccessed
+    .operation = "access"
+    .suboperation = "file_access_sourceaccessed"
+      '''
+
+  [transforms.LECmd_Lnk_dedup_TargetCreated]
+    type = "remap"
+    inputs = ["LECmd_Lnk_csv_parser"]
+    source = '''
+    if !exists(.targetcreated){
+      abort
+    }
+
+    .timestamp = .targetcreated
+    .operation = "creation"
+    .suboperation = "file_creation_targetcreated"
+      '''
+
+  [transforms.LECmd_Lnk_dedup_TargetModified]
+    type = "remap"
+    inputs = ["LECmd_Lnk_csv_parser"]
+    source = '''
+    if !exists(.targetmodified){
+      abort
+    }
+
+    .timestamp = .targetmodified
+    .operation = "modification"
+    .suboperation = "file_modification_targetmodified"
+      '''
+
+  [transforms.LECmd_Lnk_dedup_TargetAccessed]
+    type = "remap"
+    inputs = ["LECmd_Lnk_csv_parser"]
+    source = '''
+    if !exists(.targetaccessed){
+      abort
+    }
+
+    .timestamp = .targetaccessed
+    .operation = "access"
+    .suboperation = "file_access_targetaccessed"
+      '''
+
+  [transforms.LECmd_Lnk_dedup_TrackerCreatedOn]
+    type = "remap"
+    inputs = ["LECmd_Lnk_csv_parser"]
+    source = '''
+    if !exists(.trackercreatedon){
+      abort
+    }
+
+    .timestamp = .trackercreatedon
+    .operation = "creation"
+    .suboperation = "file_creation_trackercreatedon"
+      '''
+
+  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+  # [sinks.LECmd_Lnk_blackhole_sink]
+  #   type = "blackhole"
+  #   inputs = [
+  #     "LECmd_Lnk_dedup_SourceModified",
+  #     "LECmd_Lnk_dedup_SourceCreated",
+  #     "LECmd_Lnk_dedup_SourceAccessed",
+  #     "LECmd_Lnk_dedup_TargetCreated",
+  #     "LECmd_Lnk_dedup_TargetModified",
+  #     "LECmd_Lnk_dedup_TargetAccessed",
+  #     "LECmd_Lnk_dedup_TrackerCreatedOn"
+  #   ]
+
+  # Sink to send processed logs to the console, for debugging.
+  # [sinks.LECmd_Lnk_console_sink]
+  #   type = "console"
+  #   inputs = [
+  #     "LECmd_Lnk_dedup_SourceModified",
+  #     "LECmd_Lnk_dedup_SourceCreated",
+  #     "LECmd_Lnk_dedup_SourceAccessed",
+  #     "LECmd_Lnk_dedup_TargetCreated",
+  #     "LECmd_Lnk_dedup_TargetModified",
+  #     "LECmd_Lnk_dedup_TargetAccessed",
+  #     "LECmd_Lnk_dedup_TrackerCreatedOn"
+  #   ]
+  #   target = "stdout"
+  #   encoding.codec = "json"
+
+  # Sink transform to send processed logs to an ELK instance.
+  [sinks.LECmd_Lnk_ELK_sink]
+    type = "elasticsearch"
+    inputs = [
+      "LECmd_Lnk_dedup_SourceModified",
+      "LECmd_Lnk_dedup_SourceCreated",
+      "LECmd_Lnk_dedup_SourceAccessed",
+      "LECmd_Lnk_dedup_TargetCreated",
+      "LECmd_Lnk_dedup_TargetModified",
+      "LECmd_Lnk_dedup_TargetAccessed",
+      "LECmd_Lnk_dedup_TrackerCreatedOn"
+    ]
+    bulk.index = "${INDEX}-{{ sourcehost }}-lnkfiles"
+    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+    auth.strategy = "basic"
+    auth.user = "${ELK_LOGIN}"
+    auth.password = "${ELK_PASSWORD}"
+    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+  # Sink transform to send processed logs to a Splunk instance.
+  # [sinks.LECmd_Lnk_Splunk_sink]
+  #   type = "splunk_hec_logs"
+  #   inputs = [
+  #     "LECmd_Lnk_dedup_SourceModified",
+  #     "LECmd_Lnk_dedup_SourceCreated",
+  #     "LECmd_Lnk_dedup_SourceAccessed",
+  #     "LECmd_Lnk_dedup_TargetCreated",
+  #     "LECmd_Lnk_dedup_TargetModified",
+  #     "LECmd_Lnk_dedup_TargetAccessed",
+  #     "LECmd_Lnk_dedup_TrackerCreatedOn"
+  #   ]
+  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+  #   compression = "none"
+  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+  #   host_key = "host"
+  #   source = "{{ source }}"
+  #   sourcetype = "{{ sourcetype }}"
+  #   tls.verify_certificate = false
+  #   encoding.codec = "json"
+
+# LNK files - end.

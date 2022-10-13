@@ -1,0 +1,287 @@
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Vector_Windows_EZTools_JLECmd_Jumplist-CustomDst config.
+# Description: Process Windows artefacts parsed with JLECmd (CSV output).
+#              Filename should match: "*CustomDestinations.csv"
+#              JLECmd command: JLECmd.exe -d %sourceDirectory% --csv %destinationDirectory% -q
+#              Example command: JLECmd.exe -d "C:\" --csv <YOUR_OUTPUT> -q
+
+# Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = windows_jumplist-customdst & sourcetype = windows_artefact (windows_event pour evtx).
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = windows_jumplist-customdst & sourcetype = windows_artefact (windows_event pour evtx).
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+  [sources.JLECmd_Jumplist-CustomDst_csv_input]
+    type = "file"
+    include = ["${INPUT_FOLDER:?The input folder containing the JLECmd Jumplist Custom Destinations files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/FileFolderAccess/*CustomDestinations.csv"]
+    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+    oldest_first = true
+    fingerprint.strategy = "device_and_inode"
+    max_line_bytes = 100_000_000
+
+  [transforms.JLECmd_Jumplist-CustomDst_csv_parser]
+    type = "remap"
+    inputs = ["JLECmd_Jumplist-CustomDst_csv_input"]
+    source = '''
+    # Expect CSV header:
+    # SourceFile,SourceCreated,SourceModified,SourceAccessed,AppId,AppIdDescription,EntryName,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[Jumplist-CustomDst] Unable to split CSV: " + err, level: "error")
+    }
+
+    if fields[8] == "TargetModified"{
+      abort
+    }
+
+    .sourcefile = fields[0]
+
+    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
+      .sourcecreated, err = to_timestamp(fields[1])
+    }
+
+    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
+      .sourcemodified, err = to_timestamp(fields[2])
+    }
+
+    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
+      .sourceaccessed, err = to_timestamp(fields[3])
+    }
+
+    .appid = fields[4]
+    .appiddescription = fields[5]
+    .entryname = fields[6]
+
+    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
+      .targetcreated, err = to_timestamp(fields[7])
+    }
+
+    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
+      .targetmodified, err = to_timestamp(fields[8])
+    }
+
+    if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
+      .targetaccessed, err = to_timestamp(fields[9])
+    }
+
+    .filesize, err = to_int(fields[10])
+    .relativepath = fields[11]
+    .workingdirectory = fields[12]
+    .fileattributes = fields[13]
+    .headerflags = fields[14]
+    .drivetype = fields[15]
+    .volumeserialnumber = fields[16]
+    .volumelabel = fields[17]
+    .localpath = fields[18]
+    .commonpath = fields[19]
+    .targetidabsolutepath = fields[20]
+    .targetmftentrynumber = fields[21]
+    .machineid = fields[23]
+    .machinemacaddress = fields[24]
+
+    if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
+      .trackercreatedon, err = to_timestamp(fields[25])
+    }
+
+    .arguments = fields[27]
+
+    .timestamp = .sourcemodified
+
+    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+        if ((parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
+          # Parse SourceFile field to extract username. Expected format: "username".
+          .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
+        } else if ((parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
+          # Parse SourceFile field to extract username. Expected format: "username".
+          .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
+        }
+    } else {
+        .user = ""
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_jumplist-customdst"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    '''
+
+  [transforms.JLECmd_Jumplist-CustomDst_dedup_SourceCreated]
+    type = "remap"
+    inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+    source = '''
+    if !exists(.sourcecreated){
+      abort
+    }
+
+    .timestamp = .sourcecreated
+    .operation = "creation"
+    .suboperation = "file_creation_sourcecreated"
+      '''
+
+  [transforms.JLECmd_Jumplist-CustomDst_dedup_SourceModified]
+    type = "remap"
+    inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+    source = '''
+    if !exists(.sourcemodified){
+      abort
+    }
+
+    .timestamp = .sourcemodified
+    .operation = "modification"
+    .suboperation = "file_modification_sourcemodified"
+      '''
+
+  [transforms.JLECmd_Jumplist-CustomDst_dedup_SourceAccessed]
+    type = "remap"
+    inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+    source = '''
+    if !exists(.sourceaccessed){
+      abort
+    }
+
+    .timestamp = .sourceaccessed
+    .operation = "access"
+    .suboperation = "file_access_sourceaccessed"
+      '''
+
+  [transforms.JLECmd_Jumplist-CustomDst_dedup_TargetCreated]
+    type = "remap"
+    inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+    source = '''
+    if !exists(.targetcreated){
+      abort
+    }
+
+    .timestamp = .targetcreated
+    .operation = "creation"
+    .suboperation = "file_creation_targetcreated"
+      '''
+
+  [transforms.JLECmd_Jumplist-CustomDst_dedup_TargetModified]
+    type = "remap"
+    inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+    source = '''
+    if !exists(.targetmodified){
+      abort
+    }
+
+    .timestamp = .targetmodified
+    .operation = "modification"
+    .suboperation = "file_modification_targetmodified"
+      '''
+
+  [transforms.JLECmd_Jumplist-CustomDst_dedup_TargetAccessed]
+    type = "remap"
+    inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+    source = '''
+    if !exists(.targetaccessed){
+      abort
+    }
+
+    .timestamp = .targetaccessed
+    .operation = "access"
+    .suboperation = "file_access_targetaccessed"
+      '''
+
+  [transforms.JLECmd_Jumplist-CustomDst_dedup_TrackerCreatedOn]
+    type = "remap"
+    inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+    source = '''
+    if !exists(.trackercreatedon){
+      abort
+    }
+
+    .timestamp = .trackercreatedon
+    .operation = "creation"
+    .suboperation = "file_creation_trackercreatedon"
+      '''
+
+  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+  # [sinks.JLECmd_Jumplist-CustomDst_blackhole_sink]
+  #   type = "blackhole"
+  #   inputs = [
+  #     "JLECmd_Jumplist-CustomDst_dedup_SourceCreated",
+  #     "JLECmd_Jumplist-CustomDst_dedup_SourceModified",
+  #     "JLECmd_Jumplist-CustomDst_dedup_SourceAccessed",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TargetCreated",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TargetModified",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TargetAccessed",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TrackerCreatedOn"
+  #   ]
+
+  # Sink to send processed logs to the console, for debugging.
+  # [sinks.JLECmd_Jumplist-CustomDst_console_sink]
+  #   type = "console"
+  #   inputs = [
+  #     "JLECmd_Jumplist-CustomDst_dedup_SourceCreated",
+  #     "JLECmd_Jumplist-CustomDst_dedup_SourceModified",
+  #     "JLECmd_Jumplist-CustomDst_dedup_SourceAccessed",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TargetCreated",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TargetModified",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TargetAccessed",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TrackerCreatedOn"
+  #   ]
+  #   target = "stdout"
+  #   encoding.codec = "json"
+
+  # Sink transform to send processed logs to an ELK instance.
+  [sinks.JLECmd_Jumplist-CustomDst_ELK_sink]
+    type = "elasticsearch"
+    inputs = [
+      "JLECmd_Jumplist-CustomDst_dedup_SourceCreated",
+      "JLECmd_Jumplist-CustomDst_dedup_SourceModified",
+      "JLECmd_Jumplist-CustomDst_dedup_SourceAccessed",
+      "JLECmd_Jumplist-CustomDst_dedup_TargetCreated",
+      "JLECmd_Jumplist-CustomDst_dedup_TargetModified",
+      "JLECmd_Jumplist-CustomDst_dedup_TargetAccessed",
+      "JLECmd_Jumplist-CustomDst_dedup_TrackerCreatedOn"
+    ]
+    bulk.index = "${INDEX}-{{ sourcehost }}-jumplist-customdst"
+    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+    auth.strategy = "basic"
+    auth.user = "${ELK_LOGIN}"
+    auth.password = "${ELK_PASSWORD}"
+    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+  # Sink transform to send processed logs to a Splunk instance.
+  # [sinks.JLECmd_Jumplist-CustomDst_Splunk_sink]
+  #   type = "splunk_hec_logs"
+  #   inputs = [
+  #     "JLECmd_Jumplist-CustomDst_dedup_SourceCreated",
+  #     "JLECmd_Jumplist-CustomDst_dedup_SourceModified",
+  #     "JLECmd_Jumplist-CustomDst_dedup_SourceAccessed",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TargetCreated",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TargetModified",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TargetAccessed",
+  #     "JLECmd_Jumplist-CustomDst_dedup_TrackerCreatedOn"
+  #   ]
+  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+  #   compression = "none"
+  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+  #   host_key = "host"
+  #   source = "{{ source }}"
+  #   sourcetype = "{{ sourcetype }}"
+  #   tls.verify_certificate = false
+  #   encoding.codec = "json"
+
+# Jump List CustomDestinations - end.
