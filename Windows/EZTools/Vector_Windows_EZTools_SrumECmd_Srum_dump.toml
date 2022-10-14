@@ -67,7 +67,19 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     if (contains!(.file, "AppResourceUseInfo")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
+
+        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
+         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
+         if err != null {
+           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
+         }
+
+         .isexetimestampnull = "false"
+        } else {
+         .isexetimestampnull = "true"
+        }
+
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
@@ -93,7 +105,19 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     } else if (contains!(.file, "EnergyUsage")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
+
+        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
+         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
+         if err != null {
+           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
+         }
+
+         .isexetimestampnull = "false"
+        } else {
+         .isexetimestampnull = "true"
+        }
+
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
@@ -132,7 +156,19 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     } else if (contains!(.file, "NetworkConnections")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
+
+        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
+         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
+         if err != null {
+           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
+         }
+
+         .isexetimestampnull = "false"
+        } else {
+         .isexetimestampnull = "true"
+        }
+
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
@@ -162,7 +198,19 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     } else if (contains!(.file, "NetworkUsages")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
+
+        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
+         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
+         if err != null {
+           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
+         }
+
+         .isexetimestampnull = "false"
+        } else {
+         .isexetimestampnull = "true"
+        }
+
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
@@ -180,7 +228,19 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     } else if (contains!(.file, "PushNotifications")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
+
+        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
+         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
+         if err != null {
+           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
+         }
+
+         .isexetimestampnull = "false"
+        } else {
+         .isexetimestampnull = "true"
+        }
+
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
@@ -196,10 +256,10 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
         .exeinfodescription = fields[3]
 
         if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-          # Parse InstallDateArpLastModified field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
+          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
          .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
          if err != null {
-           log("[SrumDump] Unable to parse EndTime timestamp: " + err, level: "error")
+           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
          }
 
          .isexetimestampnull = "false"
@@ -233,7 +293,19 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
         .appid = fields[3]
         .exeinfo = fields[4]
         .exeinfodescription = fields[5]
-        .exetimestamp = fields[6]
+
+        if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
+          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
+         .exetimestamp, err = parse_timestamp(fields[6], format: "%m/%d/%Y %H:%M:%S %:z")
+         if err != null {
+           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
+         }
+
+         .isexetimestampnull = "false"
+        } else {
+         .isexetimestampnull = "true"
+        }
+
         .sidtype = fields[7]
         .sid = fields[8]
         .username = fields[9]
@@ -305,6 +377,19 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "modification_eventtimestamp"
       '''
 
+    [transforms.SrumECmd_Srum_dump_dedup_ExeTimestamp]
+      type = "remap"
+      inputs = ["SrumECmd_Srum_dump_csv_parser"]
+      source = '''
+      if !exists(.exetimestamp) || (.exetimstamp == ""){
+        abort
+      }
+
+      .timestamp = .exetimestamp
+      .operation = "execution"
+      .suboperation = "execution_exetimestamp"
+        '''
+
   [transforms.SrumECmd_Srum_dump_dedup_ConnectStartTime]
     type = "remap"
     inputs = ["SrumECmd_Srum_dump_csv_parser"]
@@ -350,6 +435,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   #   inputs = [
   #     "SrumECmd_Srum_dump_dedup_Timestamp",
   #     "SrumECmd_Srum_dump_dedup_EventTimestamp",
+  #     "SrumECmd_Srum_dump_dedup_ExeTimestamp",
   #     "SrumECmd_Srum_dump_dedup_ConnectStartTime",
   #     "SrumECmd_Srum_dump_dedup_StartTime",
   #     "SrumECmd_Srum_dump_dedup_EndTime"
@@ -361,6 +447,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   #   inputs = [
   #     "SrumECmd_Srum_dump_dedup_Timestamp",
   #     "SrumECmd_Srum_dump_dedup_EventTimestamp",
+  #     "SrumECmd_Srum_dump_dedup_ExeTimestamp",
   #     "SrumECmd_Srum_dump_dedup_ConnectStartTime",
   #     "SrumECmd_Srum_dump_dedup_StartTime",
   #     "SrumECmd_Srum_dump_dedup_EndTime"
@@ -374,6 +461,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     inputs = [
       "SrumECmd_Srum_dump_dedup_Timestamp",
       "SrumECmd_Srum_dump_dedup_EventTimestamp",
+      "SrumECmd_Srum_dump_dedup_ExeTimestamp",
       "SrumECmd_Srum_dump_dedup_ConnectStartTime",
       "SrumECmd_Srum_dump_dedup_StartTime",
       "SrumECmd_Srum_dump_dedup_EndTime"
@@ -391,6 +479,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   #   inputs = [
   #     "SrumECmd_Srum_dump_dedup_Timestamp",
   #     "SrumECmd_Srum_dump_dedup_EventTimestamp",
+  #     "SrumECmd_Srum_dump_dedup_ExeTimestamp",
   #     "SrumECmd_Srum_dump_dedup_ConnectStartTime",
   #     "SrumECmd_Srum_dump_dedup_StartTime",
   #     "SrumECmd_Srum_dump_dedup_EndTime"

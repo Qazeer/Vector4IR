@@ -32,6 +32,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     oldest_first = true
     fingerprint.strategy = "device_and_inode"
     max_line_bytes = 100_000_000
+    encoding.charset = "utf-16le"
 
   [transforms.WxTCmd_Activitydb-package-ids_csv_parser]
     type = "remap"
@@ -54,11 +55,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .additionalinformation = fields[3]
 
     if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-      # Parse Expires field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .expires, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S")
-      if err != null {
-        log("[Activitydb-PackageIDs] Unable to parse timestamp: " + err, level: "error")
-      }
+      .expires, err = to_timestamp(fields[4])
+      .timestamp = .expires
     }
 
     # Add the metadata fields following the parsing.
