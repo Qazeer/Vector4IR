@@ -1,6 +1,3 @@
-# Temporary folder used by Vector.
-data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-
 # Vector_Windows_EZTools_RECmd_UserAssist config.
 # Description: Process Windows artefacts parsed with RECmd (CSV output).
 #              Filename should match: "*_UserAssist_*.csv"
@@ -8,7 +5,6 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #              Registry key path: Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist
 #              RECmd command: RECmd\RECmd.exe -d %sourceDirectory% --bn RECmd\RECmd_Batch_MC.reb --nl --csv %destinationDirectory% -q
 #              Example command: RECmd\RECmd.exe -d "C:\" --bn RECmd\RECmd_Batch_MC.reb --nl --csv <YOUR_OUTPUT> -q
-
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -27,108 +23,112 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
-  [sources.RECmd_UserAssist_csv_input]
-    type = "file"
-    include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry UserAssist files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/Registry/*_UserAssist_*.csv"]
-    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-    oldest_first = true
-    fingerprint.strategy = "device_and_inode"
-    max_line_bytes = 100_000_000
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-  [transforms.RECmd_UserAssist_csv_parser]
-    type = "remap"
-    inputs = ["RECmd_UserAssist_csv_input"]
-    source = '''
-    # Expect CSV header:
-    # BatchKeyPath,BatchValueName,ProgramName,RunCounter,FocusCount,FocusTime,LastExecuted
-    fields, err = parse_csv(.message, delimiter: ",")
-    if err != null {
-      log("[UserAssist] Unable to split CSV: " + err, level: "error")
-    }
+[sources.RECmd_UserAssist_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry UserAssist files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*_UserAssist_*.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
 
-    if fields[0] == "BatchKeyPath"{
-      abort
-    }
+[transforms.RECmd_UserAssist_csv_parser]
+  type = "remap"
+  inputs = ["RECmd_UserAssist_csv_input"]
+  source = '''
+  # Expect CSV header:
+  # BatchKeyPath,BatchValueName,ProgramName,RunCounter,FocusCount,FocusTime,LastExecuted
+  fields, err = parse_csv(.message, delimiter: ",")
+  if err != null {
+    log("[UserAssist] Unable to split CSV: " + err, level: "error")
+  }
 
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
-    .programname = fields[2]
-    .runcounter, err = to_int(fields[3])
-    .focuscount = fields[4]
-    .focustime = fields[5]
+  if fields[0] == "BatchKeyPath"{
+    abort
+  }
 
-    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-        # Parse LastExecuted field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .lastexecuted, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[UserAssist] Unable to parse LastExecuted timestamp: " + err, level: "error")
-        }
+  .batchkeypath = fields[0]
+  .batchvaluename = fields[1]
+  .programname = fields[2]
+  .runcounter, err = to_int(fields[3])
+  .focuscount = fields[4]
+  .focustime = fields[5]
 
-        .islastexecutednull = "false"
-    } else {
-        .islastexecutednull = "true"
-    }
-
-    .timestamp = .lastexecuted
-
-    if (.file != null && .file != "") {
-      if (contains!(.file, "_Users_")) {
-        # Parse File field to extract username. Expected format: "username".
-        .user, err = parse_regex(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
-      } else if (contains!(.file, "_Utilisateurs_")) {
-        # Parse File field to extract username. Expected format: "username".
-        .user, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
+  if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
+      # Parse LastExecuted field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+      .lastexecuted, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
+      if err != null {
+        log("[UserAssist] Unable to parse LastExecuted timestamp: " + err, level: "error")
       }
-    } else {
-        .user = ""
+
+      .islastexecutednull = "false"
+  } else {
+      .islastexecutednull = "true"
+  }
+
+  .timestamp = .lastexecuted
+
+  if (.file != null && .file != "") {
+    if (contains!(.file, "_Users_")) {
+      # Parse File field to extract username. Expected format: "username".
+      .user, err = parse_regex(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
+    } else if (contains!(.file, "_Utilisateurs_")) {
+      # Parse File field to extract username. Expected format: "username".
+      .user, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
     }
+  } else {
+      .user = ""
+  }
 
-    # Add the metadata fields following the parsing.
-    .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .sourcehost
-    .source = "windows_registry_explorer_userassist"
-    .sourcetype = "windows_artefact"
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "windows_registry_explorer_userassist"
+  .sourcetype = "windows_artefact"
 
-    # Delete irrelevant default fields.
-    del(.source_type)
-    del(.file)
-    '''
+  # Delete irrelevant default fields.
+  del(.source_type)
+  del(.file)
+  del(.message)
+  '''
 
-  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-  # [sinks.RECmd_UserAssist_blackhole_sink]
-  #   type = "blackhole"
-  #   inputs = ["RECmd_UserAssist_csv_parser"]
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.RECmd_UserAssist_blackhole_sink]
+#   type = "blackhole"
+#   inputs = ["RECmd_UserAssist_csv_parser"]
 
-  # Sink to send processed logs to the console, for debugging.
-  # [sinks.RECmd_UserAssist_console_sink]
-  #   type = "console"
-  #   inputs = ["RECmd_UserAssist_csv_parser"]
-  #   target = "stdout"
-  #   encoding.codec = "json"
+# Sink to send processed logs to the console, for debugging.
+# [sinks.RECmd_UserAssist_console_sink]
+#   type = "console"
+#   inputs = ["RECmd_UserAssist_csv_parser"]
+#   target = "stdout"
+#   encoding.codec = "json"
 
-  # Sink transform to send processed logs to an ELK instance.
-  [sinks.RECmd_UserAssist_ELK_sink]
-    type = "elasticsearch"
-    inputs = ["RECmd_UserAssist_csv_parser"]
-    bulk.index = "${INDEX}-{{ sourcehost }}-explorer_userassist"
-    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-    auth.strategy = "basic"
-    auth.user = "${ELK_LOGIN}"
-    auth.password = "${ELK_PASSWORD}"
-    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.RECmd_UserAssist_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["RECmd_UserAssist_csv_parser"]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-explorer_userassist"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
-  # Sink transform to send processed logs to a Splunk instance.
-  # [sinks.RECmd_UserAssist_Splunk_sink]
-  #   type = "splunk_hec_logs"
-  #   inputs = ["RECmd_UserAssist_csv_parser"]
-  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-  #   compression = "none"
-  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-  #   host_key = "host"
-  #   source = "{{ source }}"
-  #   sourcetype = "{{ sourcetype }}"
-  #   tls.verify_certificate = false
-  #   encoding.codec = "json"
-
-# Registry Explorer\UserAssist - end.
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.RECmd_UserAssist_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["RECmd_UserAssist_csv_parser"]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"

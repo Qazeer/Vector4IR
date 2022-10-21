@@ -24,8 +24,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [sources.AzureAD_DFIR-O365RC_signin_logs_input]
   type = "file"
-  ignore_checkpoints = true
   include = ["${INPUT_FOLDER:?The source folder containing the DFIR-O365RC JSON outputs is required}\\**\\*AADSigninLog*.json"]
+  ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"

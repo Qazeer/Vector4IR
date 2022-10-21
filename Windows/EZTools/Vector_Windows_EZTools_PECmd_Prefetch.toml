@@ -1,12 +1,8 @@
-# Temporary folder used by Vector.
-data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-
 # Vector_Windows_EZTools_PECmd_Prefetch config.
 # Description: Process Windows artefacts parsed with PECmd (CSV output).
 #              Filename should match: "*PECmd_Output.csv"
 #              PECmd command: PECmd.exe -d %sourceDirectory% --csv %destinationDirectory% -q
 #              Example command: PECmd.exe -d "C:\Windows\Prefetch" --csv <YOUR_OUTPUT> -q
-
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -25,348 +21,351 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-  [sources.PECmd_Prefetch_csv_input]
-    type = "file"
-    include = ["${INPUT_FOLDER:?The input folder containing the PECmd Prefetch files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/ProgramExecution/*PECmd_Output.csv"]
-    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-    oldest_first = true
-    fingerprint.strategy = "device_and_inode"
-    max_line_bytes = 100_000_000
+[sources.PECmd_Prefetch_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the PECmd Prefetch files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*PECmd_Output.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
 
-  [transforms.PECmd_Prefetch_csv_parser]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_input"]
-    source = '''
-    # Expect CSV header:
-    # Note,SourceFilename,SourceCreated,SourceModified,SourceAccessed,ExecutableName,Hash,Size,Version,RunCount,LastRun,PreviousRun0,PreviousRun1,PreviousRun2,PreviousRun3,PreviousRun4,PreviousRun5,PreviousRun6,Volume0Name,Volume0Serial,Volume0Created,Volume1Name,Volume1Serial,Volume1Created,Directories,FilesLoaded,ParsingError
-    fields, err = parse_csv(.message, delimiter: ",")
-    if err != null {
-      log("[Prefetch] Unable to split CSV: " + err, level: "error")
-    }
+[transforms.PECmd_Prefetch_csv_parser]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_input"]
+  source = '''
+  # Expect CSV header:
+  # Note,SourceFilename,SourceCreated,SourceModified,SourceAccessed,ExecutableName,Hash,Size,Version,RunCount,LastRun,PreviousRun0,PreviousRun1,PreviousRun2,PreviousRun3,PreviousRun4,PreviousRun5,PreviousRun6,Volume0Name,Volume0Serial,Volume0Created,Volume1Name,Volume1Serial,Volume1Created,Directories,FilesLoaded,ParsingError
+  fields, err = parse_csv(.message, delimiter: ",")
+  if err != null {
+    log("[Prefetch] Unable to split CSV: " + err, level: "error")
+  }
 
-    if fields[5] == "ExecutableName"{
-      abort
-    }
+  if fields[5] == "ExecutableName"{
+    abort
+  }
 
-    .sourcefilename = fields[1]
-    .executablename = fields[5]
-    .hash = fields[6]
-    .size, err = to_int(fields[7])
-    .version = fields[8]
-    .runcount, err = to_int(fields[9])
+  .sourcefilename = fields[1]
+  .executablename = fields[5]
+  .hash = fields[6]
+  .size, err = to_int(fields[7])
+  .version = fields[8]
+  .runcount, err = to_int(fields[9])
 
-    if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
-        .islastrunnull = "false"
-        .lastrun, err = to_timestamp(fields[10])
-    } else {
-        .islastrunnull = "true"
-    }
+  if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
+      .islastrunnull = "false"
+      .lastrun, err = to_timestamp(fields[10])
+  } else {
+      .islastrunnull = "true"
+  }
 
-    if (fields[11] != null && fields[11] != "" && fields[11] != "\r") {
-        .ispreviousrun0null = "false"
-        .previousrun0, err = to_timestamp(fields[11])
-    } else {
-        .ispreviousrun0null = "true"
-    }
+  if (fields[11] != null && fields[11] != "" && fields[11] != "\r") {
+      .ispreviousrun0null = "false"
+      .previousrun0, err = to_timestamp(fields[11])
+  } else {
+      .ispreviousrun0null = "true"
+  }
 
-    if (fields[12] != null && fields[12] != "" && fields[12] != "\r") {
-        .ispreviousrun1null = "false"
-        .previousrun1, err = to_timestamp(fields[12])
-    } else {
-        .ispreviousrun1null = "true"
-    }
+  if (fields[12] != null && fields[12] != "" && fields[12] != "\r") {
+      .ispreviousrun1null = "false"
+      .previousrun1, err = to_timestamp(fields[12])
+  } else {
+      .ispreviousrun1null = "true"
+  }
 
-    if (fields[13] != null && fields[13] != "" && fields[13] != "\r") {
-        .ispreviousrun2null = "false"
-        .previousrun2, err = to_timestamp(fields[13])
-    } else {
-        .ispreviousrun2null = "true"
-    }
+  if (fields[13] != null && fields[13] != "" && fields[13] != "\r") {
+      .ispreviousrun2null = "false"
+      .previousrun2, err = to_timestamp(fields[13])
+  } else {
+      .ispreviousrun2null = "true"
+  }
 
-    if (fields[14] != null && fields[14] != "" && fields[14] != "\r") {
-        .ispreviousrun3null = "false"
-        .previousrun3, err = to_timestamp(fields[14])
-    } else {
-        .ispreviousrun3null = "true"
-    }
+  if (fields[14] != null && fields[14] != "" && fields[14] != "\r") {
+      .ispreviousrun3null = "false"
+      .previousrun3, err = to_timestamp(fields[14])
+  } else {
+      .ispreviousrun3null = "true"
+  }
 
-    if (fields[15] != null && fields[15] != "" && fields[15] != "\r") {
-        .ispreviousrun4null = "false"
-        .previousrun4, err = to_timestamp(fields[15])
-    } else {
-        .ispreviousrun4null = "true"
-    }
+  if (fields[15] != null && fields[15] != "" && fields[15] != "\r") {
+      .ispreviousrun4null = "false"
+      .previousrun4, err = to_timestamp(fields[15])
+  } else {
+      .ispreviousrun4null = "true"
+  }
 
-    if (fields[16] != null && fields[16] != "" && fields[16] != "\r") {
-        .ispreviousrun5null = "false"
-        .previousrun5, err = to_timestamp(fields[16])
-    } else {
-        .ispreviousrun5null = "true"
-    }
+  if (fields[16] != null && fields[16] != "" && fields[16] != "\r") {
+      .ispreviousrun5null = "false"
+      .previousrun5, err = to_timestamp(fields[16])
+  } else {
+      .ispreviousrun5null = "true"
+  }
 
-    if (fields[17] != null && fields[17] != "" && fields[17] != "\r") {
-        .ispreviousrun6null = "false"
-        .previousrun6, err = to_timestamp(fields[17])
-    } else {
-        .ispreviousrun6null = "true"
-    }
+  if (fields[17] != null && fields[17] != "" && fields[17] != "\r") {
+      .ispreviousrun6null = "false"
+      .previousrun6, err = to_timestamp(fields[17])
+  } else {
+      .ispreviousrun6null = "true"
+  }
 
-    .volume0name = fields[18]
-    .volume0serial = fields[19]
+  .volume0name = fields[18]
+  .volume0serial = fields[19]
 
-    if (fields[20] != null && fields[20] != "" && fields[20] != "\r") {
-      .volume0created, err = to_timestamp(fields[20])
-    }
+  if (fields[20] != null && fields[20] != "" && fields[20] != "\r") {
+    .volume0created, err = to_timestamp(fields[20])
+  }
 
-    .volume1name = fields[21]
-    .volume1serial = fields[22]
+  .volume1name = fields[21]
+  .volume1serial = fields[22]
 
-    if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
-      .volume1created, err = to_timestamp(fields[23])
-    }
+  if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
+    .volume1created, err = to_timestamp(fields[23])
+  }
 
-    .directories = fields[24]
-    .filesloaded = fields[25]
-    .parsingerror = fields[26]
+  .directories = fields[24]
+  .filesloaded = fields[25]
+  .parsingerror = fields[26]
 
-    # Add the metadata fields following the parsing.
-    .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .sourcehost
-    .source = "windows_prefetch"
-    .sourcetype = "windows_artefact"
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "windows_prefetch"
+  .sourcetype = "windows_artefact"
 
-    # Delete irrelevant default fields.
-    del(.source_type)
-    del(.file)
+  # Delete irrelevant default fields.
+  del(.source_type)
+  del(.file)
+  del(.message)
+  '''
+
+[transforms.PECmd_Prefetch_dedup_LastRun]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.lastrun){
+    abort
+  }
+
+  .timestamp = .lastrun
+  .operation = "execution"
+  .suboperation = "execution_lastrun"
     '''
 
-  [transforms.PECmd_Prefetch_dedup_LastRun]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.lastrun){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_PreviousRun0]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.previousrun0){
+    abort
+  }
 
-    .timestamp = .lastrun
-    .operation = "execution"
-    .suboperation = "execution_lastrun"
-      '''
+  .timestamp = .previousrun0
+  .operation = "execution"
+  .suboperation = "execution_previousrun0"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_PreviousRun0]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.previousrun0){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_PreviousRun1]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.previousrun1){
+    abort
+  }
 
-    .timestamp = .previousrun0
-    .operation = "execution"
-    .suboperation = "execution_previousrun0"
-      '''
+  .timestamp = .previousrun1
+  .operation = "execution"
+  .suboperation = "execution_previousrun1"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_PreviousRun1]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.previousrun1){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_PreviousRun2]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.previousrun2){
+    abort
+  }
 
-    .timestamp = .previousrun1
-    .operation = "execution"
-    .suboperation = "execution_previousrun1"
-      '''
+  .timestamp = .previousrun2
+  .operation = "execution"
+  .suboperation = "execution_previousrun2"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_PreviousRun2]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.previousrun2){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_PreviousRun3]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.previousrun3){
+    abort
+  }
 
-    .timestamp = .previousrun2
-    .operation = "execution"
-    .suboperation = "execution_previousrun2"
-      '''
+  .timestamp = .previousrun3
+  .operation = "execution"
+  .suboperation = "execution_previousrun3"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_PreviousRun3]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.previousrun3){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_PreviousRun4]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.previousrun4){
+    abort
+  }
 
-    .timestamp = .previousrun3
-    .operation = "execution"
-    .suboperation = "execution_previousrun3"
-      '''
+  .timestamp = .previousrun4
+  .operation = "execution"
+  .suboperation = "execution_previousrun4"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_PreviousRun4]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.previousrun4){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_PreviousRun5]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.previousrun5){
+    abort
+  }
 
-    .timestamp = .previousrun4
-    .operation = "execution"
-    .suboperation = "execution_previousrun4"
-      '''
+  .timestamp = .previousrun5
+  .operation = "execution"
+  .suboperation = "execution_previousrun5"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_PreviousRun5]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.previousrun5){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_PreviousRun6]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.previousrun6){
+    abort
+  }
 
-    .timestamp = .previousrun5
-    .operation = "execution"
-    .suboperation = "execution_previousrun5"
-      '''
+  .timestamp = .previousrun6
+  .operation = "execution"
+  .suboperation = "execution_previousrun6"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_PreviousRun6]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.previousrun6){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_SourceCreated]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.sourcecreated){
+    abort
+  }
 
-    .timestamp = .previousrun6
-    .operation = "execution"
-    .suboperation = "execution_previousrun6"
-      '''
+  .timestamp = .sourcecreated
+  .operation = "creation"
+  .suboperation = "file_creation_sourcecreated"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_SourceCreated]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.sourcecreated){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_SourceModified]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.sourcemodified){
+    abort
+  }
 
-    .timestamp = .sourcecreated
-    .operation = "creation"
-    .suboperation = "file_creation_sourcecreated"
-      '''
+  .timestamp = .sourcemodified
+  .operation = "modification"
+  .suboperation = "file_modification_sourcemodified"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_SourceModified]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.sourcemodified){
-      abort
-    }
+[transforms.PECmd_Prefetch_dedup_SourceAccessed]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+  if !exists(.sourceaccessed){
+    abort
+  }
 
-    .timestamp = .sourcemodified
-    .operation = "modification"
-    .suboperation = "file_modification_sourcemodified"
-      '''
+  .timestamp = .sourceaccessed
+  .operation = "access"
+  .suboperation = "file_access_sourceaccessed"
+    '''
 
-  [transforms.PECmd_Prefetch_dedup_SourceAccessed]
-    type = "remap"
-    inputs = ["PECmd_Prefetch_csv_parser"]
-    source = '''
-    if !exists(.sourceaccessed){
-      abort
-    }
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.PECmd_Prefetch_blackhole_sink]
+#   type = "blackhole"
+#   inputs = [
+#     "PECmd_Prefetch_dedup_LastRun",
+#     "PECmd_Prefetch_dedup_PreviousRun0",
+#     "PECmd_Prefetch_dedup_PreviousRun1",
+#     "PECmd_Prefetch_dedup_PreviousRun2",
+#     "PECmd_Prefetch_dedup_PreviousRun3",
+#     "PECmd_Prefetch_dedup_PreviousRun4",
+#     "PECmd_Prefetch_dedup_PreviousRun5",
+#     "PECmd_Prefetch_dedup_PreviousRun6",
+#     "PECmd_Prefetch_dedup_SourceCreated",
+#     "PECmd_Prefetch_dedup_SourceModified",
+#     "PECmd_Prefetch_dedup_SourceAccessed"
+#   ]
 
-    .timestamp = .sourceaccessed
-    .operation = "access"
-    .suboperation = "file_access_sourceaccessed"
-      '''
+# Sink to send processed logs to the console, for debugging.
+# [sinks.PECmd_Prefetch_console_sink]
+#   type = "console"
+#   inputs = [
+#     "PECmd_Prefetch_dedup_LastRun",
+#     "PECmd_Prefetch_dedup_PreviousRun0",
+#     "PECmd_Prefetch_dedup_PreviousRun1",
+#     "PECmd_Prefetch_dedup_PreviousRun2",
+#     "PECmd_Prefetch_dedup_PreviousRun3",
+#     "PECmd_Prefetch_dedup_PreviousRun4",
+#     "PECmd_Prefetch_dedup_PreviousRun5",
+#     "PECmd_Prefetch_dedup_PreviousRun6",
+#     "PECmd_Prefetch_dedup_SourceCreated",
+#     "PECmd_Prefetch_dedup_SourceModified",
+#     "PECmd_Prefetch_dedup_SourceAccessed"
+#   ]
+#   target = "stdout"
+#   encoding.codec = "json"
 
-  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-  # [sinks.PECmd_Prefetch_blackhole_sink]
-  #   type = "blackhole"
-  #   inputs = [
-  #     "PECmd_Prefetch_dedup_LastRun",
-  #     "PECmd_Prefetch_dedup_PreviousRun0",
-  #     "PECmd_Prefetch_dedup_PreviousRun1",
-  #     "PECmd_Prefetch_dedup_PreviousRun2",
-  #     "PECmd_Prefetch_dedup_PreviousRun3",
-  #     "PECmd_Prefetch_dedup_PreviousRun4",
-  #     "PECmd_Prefetch_dedup_PreviousRun5",
-  #     "PECmd_Prefetch_dedup_PreviousRun6",
-  #     "PECmd_Prefetch_dedup_SourceCreated",
-  #     "PECmd_Prefetch_dedup_SourceModified",
-  #     "PECmd_Prefetch_dedup_SourceAccessed"
-  #   ]
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.PECmd_Prefetch_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = [
+#     "PECmd_Prefetch_dedup_LastRun",
+#     "PECmd_Prefetch_dedup_PreviousRun0",
+#     "PECmd_Prefetch_dedup_PreviousRun1",
+#     "PECmd_Prefetch_dedup_PreviousRun2",
+#     "PECmd_Prefetch_dedup_PreviousRun3",
+#     "PECmd_Prefetch_dedup_PreviousRun4",
+#     "PECmd_Prefetch_dedup_PreviousRun5",
+#     "PECmd_Prefetch_dedup_PreviousRun6",
+#     "PECmd_Prefetch_dedup_SourceCreated",
+#     "PECmd_Prefetch_dedup_SourceModified",
+#     "PECmd_Prefetch_dedup_SourceAccessed"
+#   ]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-prefetch"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
-  # Sink to send processed logs to the console, for debugging.
-  # [sinks.PECmd_Prefetch_console_sink]
-  #   type = "console"
-  #   inputs = [
-  #     "PECmd_Prefetch_dedup_LastRun",
-  #     "PECmd_Prefetch_dedup_PreviousRun0",
-  #     "PECmd_Prefetch_dedup_PreviousRun1",
-  #     "PECmd_Prefetch_dedup_PreviousRun2",
-  #     "PECmd_Prefetch_dedup_PreviousRun3",
-  #     "PECmd_Prefetch_dedup_PreviousRun4",
-  #     "PECmd_Prefetch_dedup_PreviousRun5",
-  #     "PECmd_Prefetch_dedup_PreviousRun6",
-  #     "PECmd_Prefetch_dedup_SourceCreated",
-  #     "PECmd_Prefetch_dedup_SourceModified",
-  #     "PECmd_Prefetch_dedup_SourceAccessed"
-  #   ]
-  #   target = "stdout"
-  #   encoding.codec = "json"
-
-  # Sink transform to send processed logs to an ELK instance.
-  [sinks.PECmd_Prefetch_ELK_sink]
-    type = "elasticsearch"
-    inputs = [
-      "PECmd_Prefetch_dedup_LastRun",
-      "PECmd_Prefetch_dedup_PreviousRun0",
-      "PECmd_Prefetch_dedup_PreviousRun1",
-      "PECmd_Prefetch_dedup_PreviousRun2",
-      "PECmd_Prefetch_dedup_PreviousRun3",
-      "PECmd_Prefetch_dedup_PreviousRun4",
-      "PECmd_Prefetch_dedup_PreviousRun5",
-      "PECmd_Prefetch_dedup_PreviousRun6",
-      "PECmd_Prefetch_dedup_SourceCreated",
-      "PECmd_Prefetch_dedup_SourceModified",
-      "PECmd_Prefetch_dedup_SourceAccessed"
-    ]
-    bulk.index = "${INDEX}-{{ sourcehost }}-prefetch"
-    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-    auth.strategy = "basic"
-    auth.user = "${ELK_LOGIN}"
-    auth.password = "${ELK_PASSWORD}"
-    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-  # Sink transform to send processed logs to a Splunk instance.
-  # [sinks.PECmd_Prefetch_Splunk_sink]
-  #   type = "splunk_hec_logs"
-  #   inputs = [
-  #     "PECmd_Prefetch_dedup_LastRun",
-  #     "PECmd_Prefetch_dedup_PreviousRun0",
-  #     "PECmd_Prefetch_dedup_PreviousRun1",
-  #     "PECmd_Prefetch_dedup_PreviousRun2",
-  #     "PECmd_Prefetch_dedup_PreviousRun3",
-  #     "PECmd_Prefetch_dedup_PreviousRun4",
-  #     "PECmd_Prefetch_dedup_PreviousRun5",
-  #     "PECmd_Prefetch_dedup_PreviousRun6",
-  #     "PECmd_Prefetch_dedup_SourceCreated",
-  #     "PECmd_Prefetch_dedup_SourceModified",
-  #     "PECmd_Prefetch_dedup_SourceAccessed"
-  #   ]
-  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-  #   compression = "none"
-  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-  #   host_key = "host"
-  #   source = "{{ source }}"
-  #   sourcetype = "{{ sourcetype }}"
-  #   tls.verify_certificate = false
-  #   encoding.codec = "json"
-
-# Prefetch - end.
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.PECmd_Prefetch_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = [
+#     "PECmd_Prefetch_dedup_LastRun",
+#     "PECmd_Prefetch_dedup_PreviousRun0",
+#     "PECmd_Prefetch_dedup_PreviousRun1",
+#     "PECmd_Prefetch_dedup_PreviousRun2",
+#     "PECmd_Prefetch_dedup_PreviousRun3",
+#     "PECmd_Prefetch_dedup_PreviousRun4",
+#     "PECmd_Prefetch_dedup_PreviousRun5",
+#     "PECmd_Prefetch_dedup_PreviousRun6",
+#     "PECmd_Prefetch_dedup_SourceCreated",
+#     "PECmd_Prefetch_dedup_SourceModified",
+#     "PECmd_Prefetch_dedup_SourceAccessed"
+#   ]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"

@@ -1,12 +1,8 @@
-# Temporary folder used by Vector.
-data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-
 # Vector_Windows_EZTools_RecentFileCacheParser_RecentFileCacheParser config.
 # Description: Process Windows artefacts parsed with RecentFileCacheParser (CSV output).
 #              Filename should match: "*_RecentFileCacheParser_*.csv"
 #              WxTCmd command: RecentFileCacheParser.exe -f %sourceFile% --csv %destinationDirectory%
 #              Example command: RecentFileCacheParser.exe -f "C:\Windows\AppCompat\Programs\RecentFileCache.bcf" --csv <YOUR_OUTPUT>
-
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -25,148 +21,152 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
-  [sources.RecentFileCacheParser_RecentFileCacheParser_csv_input]
-    type = "file"
-    include = ["${INPUT_FOLDER}/*/ProgramExecution/*_RecentFileCacheParser_*.csv"]
-    data_dir = "${VECTOR_TEMP_FOLDER}"
-    oldest_first = true
-    fingerprint.strategy = "device_and_inode"
-    max_line_bytes = 100_000_000
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-  [transforms.RecentFileCacheParser_RecentFileCacheParser_csv_parser]
-    type = "remap"
-    inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_input"]
-    source = '''
-    # Expect CSV header:
-    # SourceFile,SourceCreated,SourceModified,SourceAccessed,Filename
-    fields, err = parse_csv(.message, delimiter: ",")
-    if err != null {
-      log("[RecentFileCacheParser] Unable to split CSV: " + err, level: "error")
+[sources.RecentFileCacheParser_RecentFileCacheParser_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER}/**/*_RecentFileCacheParser_*.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.RecentFileCacheParser_RecentFileCacheParser_csv_parser]
+  type = "remap"
+  inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_input"]
+  source = '''
+  # Expect CSV header:
+  # SourceFile,SourceCreated,SourceModified,SourceAccessed,Filename
+  fields, err = parse_csv(.message, delimiter: ",")
+  if err != null {
+    log("[RecentFileCacheParser] Unable to split CSV: " + err, level: "error")
+  }
+
+  if fields[0] == "SourceFile"{
+    abort
+  }
+
+  .sourcefile = fields[0]
+  .sourcecreated, err = to_timestamp(fields[1])
+  .sourcemodified, err = to_timestamp(fields[2])
+  .sourceaccessed, err = to_timestamp(fields[3])
+  .filename = fields[4]
+
+  if (.filename != null && .filename != "") {
+    if (contains(.filename, "users")) {
+      # Parse Filename field to extract username. Expected format: "username".
+      .user, err = parse_regex(.filename, r'[a-zA-Z]:\\users\\(?P<user>[\w]+)\\*')."user"
+    } else if (contains(.filename, "utilisateurs")) {
+      # Parse Filename field to extract username. Expected format: "username".
+      .user, err = parse_regex(.filename, r'[a-zA-Z]:\\utilisateurs\\(?P<user>[\w]+)\\*')."user"
     }
+  } else {
+      .user = ""
+  }
 
-    if fields[0] == "SourceFile"{
-      abort
-    }
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "windows_recentfilecacheparser"
+  .sourcetype = "windows_artefact"
 
-    .sourcefile = fields[0]
-    .sourcecreated, err = to_timestamp(fields[1])
-    .sourcemodified, err = to_timestamp(fields[2])
-    .sourceaccessed, err = to_timestamp(fields[3])
-    .filename = fields[4]
+  # Delete irrelevant default fields.
+  del(.source_type)
+  del(.file)
+  del(.message)
+  '''
 
-    if (.filename != null && .filename != "") {
-      if (contains(.filename, "users")) {
-        # Parse Filename field to extract username. Expected format: "username".
-        .user, err = parse_regex(.filename, r'[a-zA-Z]:\\users\\(?P<user>[\w]+)\\*')."user"
-      } else if (contains(.filename, "utilisateurs")) {
-        # Parse Filename field to extract username. Expected format: "username".
-        .user, err = parse_regex(.filename, r'[a-zA-Z]:\\utilisateurs\\(?P<user>[\w]+)\\*')."user"
-      }
-    } else {
-        .user = ""
-    }
+[transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated]
+  type = "remap"
+  inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
+  source = '''
+  if !exists(.sourcecreated){
+    abort
+  }
 
-    # Add the metadata fields following the parsing.
-    .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .sourcehost
-    .source = "windows_recentfilecacheparser"
-    .sourcetype = "windows_artefact"
+  .timestamp = .sourcecreated
+  .operation = "creation"
+  .suboperation = "file_creation_sourcecreated"
+  '''
 
-    # Delete irrelevant default fields.
-    del(.source_type)
-    del(.file)
-    '''
+[transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified]
+  type = "remap"
+  inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
+  source = '''
+  if !exists(.sourcemodified){
+    abort
+  }
 
-  [transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated]
+  .timestamp = .sourcemodified
+  .operation = "modification"
+  .suboperation = "file_modification_sourcemodified"
+  '''
+
+  [transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed]
     type = "remap"
     inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
     source = '''
-    if !exists(.sourcecreated){
+    if !exists(.sourceaccessed){
       abort
     }
 
-    .timestamp = .sourcecreated
-    .operation = "creation"
-    .suboperation = "file_creation_sourcecreated"
+    .timestamp = .sourceaccessed
+    .operation = "access"
+    .suboperation = "file_access_sourceaccessed"
     '''
 
-  [transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified]
-    type = "remap"
-    inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
-    source = '''
-    if !exists(.sourcemodified){
-      abort
-    }
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.RecentFileCacheParser_RecentFileCacheParser_blackhole_sink]
+#   type = "blackhole"
+#   inputs = [
+#      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated",
+#      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified",
+#      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed"
+#    ]
 
-    .timestamp = .sourcemodified
-    .operation = "modification"
-    .suboperation = "file_modification_sourcemodified"
-    '''
+# Sink to send processed logs to the console, for debugging.
+# [sinks.RecentFileCacheParser_RecentFileCacheParser_console_sink]
+#   type = "console"
+#   inputs = [
+#      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated",
+#      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified",
+#      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed"
+#    ]
+#   target = "stdout"
+#   encoding.codec = "json"
 
-    [transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed]
-      type = "remap"
-      inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
-      source = '''
-      if !exists(.sourceaccessed){
-        abort
-      }
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.RecentFileCacheParser_RecentFileCacheParser_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = [
+#     "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated",
+#     "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified",
+#     "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed"
+#   ]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-recentfilecacheparser"
+#   endpoint = "http://${ELK_IP}:${ELK_PORT}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
-      .timestamp = .sourceaccessed
-      .operation = "access"
-      .suboperation = "file_access_sourceaccessed"
-      '''
-
-  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-  # [sinks.RecentFileCacheParser_RecentFileCacheParser_blackhole_sink]
-  #   type = "blackhole"
-  #   inputs = [
-  #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated",
-  #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified",
-  #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed"
-  #    ]
-
-  # Sink to send processed logs to the console, for debugging.
-  # [sinks.RecentFileCacheParser_RecentFileCacheParser_console_sink]
-  #   type = "console"
-  #   inputs = [
-  #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated",
-  #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified",
-  #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed"
-  #    ]
-  #   target = "stdout"
-  #   encoding.codec = "json"
-
-  # Sink transform to send processed logs to an ELK instance.
-  [sinks.RecentFileCacheParser_RecentFileCacheParser_ELK_sink]
-    type = "elasticsearch"
-    inputs = [
-      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated",
-      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified",
-      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed"
-    ]
-    bulk.index = "${INDEX}-{{ sourcehost }}-recentfilecacheparser"
-    endpoint = "http://${ELK_IP}:${ELK_PORT}"
-    auth.strategy = "basic"
-    auth.user = "${ELK_LOGIN}"
-    auth.password = "${ELK_PASSWORD}"
-    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-  # Sink transform to send processed logs to a Splunk instance.
-  # [sinks.RecentFileCacheParser_RecentFileCacheParser_Splunk_sink]
-  #   type = "splunk_hec_logs"
-  #   inputs = [
-  #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated",
-  #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified",
-  #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed"
-  #    ]
-  #   endpoint = "http://${SPLUNK_IP}:${SPLUNK_PORT}"
-  #   default_token = "${SPLUNK_HEC_TOKEN}"
-  #   compression = "none"
-  #   index = "${INDEX}"
-  #   host_key = "host"
-  #   source = "{{ source }}"
-  #   sourcetype = "{{ sourcetype }}"
-  #   tls.verify_certificate = false
-  #   encoding.codec = "json"
-
-# RecentFileCacheParser - end.
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.RecentFileCacheParser_RecentFileCacheParser_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = [
+#      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated",
+#      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified",
+#      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed"
+#    ]
+#   endpoint = "http://${SPLUNK_IP}:${SPLUNK_PORT}"
+#   default_token = "${SPLUNK_HEC_TOKEN}"
+#   compression = "none"
+#   index = "${INDEX}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"

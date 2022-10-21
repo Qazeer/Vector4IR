@@ -1,6 +1,3 @@
-# Temporary folder used by Vector.
-data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-
 # Vector_Windows_EZTools_RECmd_NetworkList config.
 # Description: Process Windows artefacts parsed with RECmd (CSV output).
 #              Filename should match: "*KnownNetworks*.csv"
@@ -8,7 +5,6 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #              Registry key path: Microsoft\Windows NT\CurrentVersion\NetworkList
 #              RECmd command: RECmd\RECmd.exe -d %sourceDirectory% --bn RECmd\RECmd_Batch_MC.reb --nl --csv %destinationDirectory% -q
 #              Example command: RECmd\RECmd.exe -d "C:\" --bn RECmd\RECmd_Batch_MC.reb --nl --csv <YOUR_OUTPUT> -q
-
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -27,140 +23,144 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
-  [sources.RECmd_NetworkList_csv_input]
-    type = "file"
-    include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry NetworkList files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/Registry/*KnownNetworks*.csv"]
-    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-    oldest_first = true
-    fingerprint.strategy = "device_and_inode"
-    max_line_bytes = 100_000_000
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-  [transforms.RECmd_NetworkList_csv_parser]
-    type = "remap"
-    inputs = ["RECmd_NetworkList_csv_input"]
-    source = '''
-    # Expect CSV header:
-    # BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID
-    fields, err = parse_csv(.message, delimiter: ",")
-    if err != null {
-      log("[RECmd_NetworkList_Profiles] Unable to split CSV: " + err, level: "error")
-    }
+[sources.RECmd_NetworkList_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry NetworkList files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*KnownNetworks*.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
 
-    if fields[0] == "BatchKeyPath"{
-      abort
-    }
+[transforms.RECmd_NetworkList_csv_parser]
+  type = "remap"
+  inputs = ["RECmd_NetworkList_csv_input"]
+  source = '''
+  # Expect CSV header:
+  # BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID
+  fields, err = parse_csv(.message, delimiter: ",")
+  if err != null {
+    log("[RECmd_NetworkList_Profiles] Unable to split CSV: " + err, level: "error")
+  }
 
-    .networkname = fields[2]
-    .nametype = fields[3]
+  if fields[0] == "BatchKeyPath"{
+    abort
+  }
 
-    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-        # Parse FirstConnectLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .firstconnectlocal, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[RECmd_NetworkList_Profiles] Unable to parse FirstConnectLocal timestamp: " + err, level: "error")
-        }
-    }
+  .networkname = fields[2]
+  .nametype = fields[3]
 
-    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-        # Parse LastConnectedLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .lastconnectedlocal, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[RECmd_NetworkList_Profiles] Unable to parse LastConnectedLocal timestamp: " + err, level: "error")
-        }
-    }
+  if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+      # Parse FirstConnectLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+      .firstconnectlocal, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
+      if err != null {
+        log("[RECmd_NetworkList_Profiles] Unable to parse FirstConnectLocal timestamp: " + err, level: "error")
+      }
+  }
 
-    .managed = fields[6]
-    .dnssuffix = fields[7]
-    .gatewaymacaddress = fields[8]
-    .profileguid = fields[9]
-    .timestamp = .lastconnectedlocal
+  if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
+      # Parse LastConnectedLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+      .lastconnectedlocal, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
+      if err != null {
+        log("[RECmd_NetworkList_Profiles] Unable to parse LastConnectedLocal timestamp: " + err, level: "error")
+      }
+  }
 
-    # Add the metadata fields following the parsing.
-    .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .sourcehost
-    .source = "windows_registry_networklist_profiles"
-    .sourcetype = "windows_artefact"
+  .managed = fields[6]
+  .dnssuffix = fields[7]
+  .gatewaymacaddress = fields[8]
+  .profileguid = fields[9]
+  .timestamp = .lastconnectedlocal
 
-    # Delete irrelevant default fields.
-    del(.source_type)
-    del(.file)
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "windows_registry_networklist_profiles"
+  .sourcetype = "windows_artefact"
+
+  # Delete irrelevant default fields.
+  del(.source_type)
+  del(.file)
+  del(.message)
+  '''
+
+  # types.Managed = bool
+
+[transforms.RECmd_NetworkList_dedup_LastConnectedLOCAL]
+  type = "remap"
+  inputs = ["RECmd_NetworkList_csv_parser"]
+  source = '''
+  if !exists(.lastconnectedlocal){
+    abort
+  }
+
+  .timestamp = .lastconnectedlocal
+  .operation = "connection"
+  .suboperation = "connection_lastconnectedlocal"
     '''
 
-    # types.Managed = bool
+[transforms.RECmd_NetworkList_dedup_FirstConnectLOCAL]
+  type = "remap"
+  inputs = ["RECmd_NetworkList_csv_parser"]
+  source = '''
+  if !exists(.firstconnectlocal){
+    abort
+  }
 
-  [transforms.RECmd_NetworkList_dedup_LastConnectedLOCAL]
-    type = "remap"
-    inputs = ["RECmd_NetworkList_csv_parser"]
-    source = '''
-    if !exists(.lastconnectedlocal){
-      abort
-    }
+  .timestamp = .firstconnectlocal
+  .operation = "connection"
+  .suboperation = "connection_firstconnectlocal"
+    '''
 
-    .timestamp = .lastconnectedlocal
-    .operation = "connection"
-    .suboperation = "connection_lastconnectedlocal"
-      '''
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.RECmd_NetworkList_blackhole_sink]
+#   type = "blackhole"
+#   inputs = [
+#     "RECmd_NetworkList_dedup_LastConnectedLOCAL",
+#     "RECmd_NetworkList_dedup_FirstConnectLOCAL"
+#   ]
 
-  [transforms.RECmd_NetworkList_dedup_FirstConnectLOCAL]
-    type = "remap"
-    inputs = ["RECmd_NetworkList_csv_parser"]
-    source = '''
-    if !exists(.firstconnectlocal){
-      abort
-    }
+# Sink to send processed logs to the console, for debugging.
+# [sinks.RECmd_NetworkList_console_sink]
+#   type = "console"
+#   inputs = [
+#     "RECmd_NetworkList_dedup_LastConnectedLOCAL",
+#     "RECmd_NetworkList_dedup_FirstConnectLOCAL"
+#   ]
+#   target = "stdout"
+#   encoding.codec = "json"
 
-    .timestamp = .firstconnectlocal
-    .operation = "connection"
-    .suboperation = "connection_firstconnectlocal"
-      '''
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.RECmd_NetworkList_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = [
+#     "RECmd_NetworkList_dedup_LastConnectedLOCAL",
+#     "RECmd_NetworkList_dedup_FirstConnectLOCAL"
+#   ]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-networklist_profiles"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
-  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-  # [sinks.RECmd_NetworkList_blackhole_sink]
-  #   type = "blackhole"
-  #   inputs = [
-  #     "RECmd_NetworkList_dedup_LastConnectedLOCAL",
-  #     "RECmd_NetworkList_dedup_FirstConnectLOCAL"
-  #   ]
-
-  # Sink to send processed logs to the console, for debugging.
-  # [sinks.RECmd_NetworkList_console_sink]
-  #   type = "console"
-  #   inputs = [
-  #     "RECmd_NetworkList_dedup_LastConnectedLOCAL",
-  #     "RECmd_NetworkList_dedup_FirstConnectLOCAL"
-  #   ]
-  #   target = "stdout"
-  #   encoding.codec = "json"
-
-  # Sink transform to send processed logs to an ELK instance.
-  [sinks.RECmd_NetworkList_ELK_sink]
-    type = "elasticsearch"
-    inputs = [
-      "RECmd_NetworkList_dedup_LastConnectedLOCAL",
-      "RECmd_NetworkList_dedup_FirstConnectLOCAL"
-    ]
-    bulk.index = "${INDEX}-{{ sourcehost }}-networklist_profiles"
-    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-    auth.strategy = "basic"
-    auth.user = "${ELK_LOGIN}"
-    auth.password = "${ELK_PASSWORD}"
-    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-  # Sink transform to send processed logs to a Splunk instance.
-  # [sinks.RECmd_NetworkList_Splunk_sink]
-  #   type = "splunk_hec_logs"
-  #   inputs = [
-  #     "RECmd_NetworkList_dedup_LastConnectedLOCAL",
-  #     "RECmd_NetworkList_dedup_FirstConnectLOCAL"
-  #   ]
-  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-  #   compression = "none"
-  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-  #   host_key = "host"
-  #   source = "{{ source }}"
-  #   sourcetype = "{{ sourcetype }}"
-  #   tls.verify_certificate = false
-  #   encoding.codec = "json"
-
-# Registry NetworkList\Profiles - end.
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.RECmd_NetworkList_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = [
+#     "RECmd_NetworkList_dedup_LastConnectedLOCAL",
+#     "RECmd_NetworkList_dedup_FirstConnectLOCAL"
+#   ]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"

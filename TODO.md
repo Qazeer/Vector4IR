@@ -204,13 +204,6 @@
     Comme ca si l'output du tool change, on pourra voir assez vite ce qui a été
     rajouté / modifié / supprimé.
 
-  - Ajout d'unittest https://vector.dev/docs/reference/configuration/unit-tests/
-    Pour le moment pas urgent, ca pourrait être un nice to have cela dit,
-    pour qu'on puisse tester depuis l'input sur 1 ligne de test, jusqu'au json
-    de sortie.
-    Pour le moment rajouter des fichiers dans le dossier test, avec 1 ligne par
-    ex, 2 pour les CSV (header + data).
-
   - Rajouter du parsing pour les outputs JSON des tools suivants, en laissant
     le CSV mais en rajoutant des
     <TOOL>_<ARTEFACT>_json_input -> <TOOL>_<ARTEFACT>_json_parser puis en
@@ -228,3 +221,26 @@
 
   - Ajout d'une pipeline pour un JSON produit par winlogbeat. Je (TDO) pourrais
     regarder ca semaine pro.
+
+  New TODO :
+  
+  - Rajouter les extract de tests, sous le format Windows_EZTools_TOOL_ARTEFACT.csv
+      Ex: Windows_EZTools_AmcacheParser_Amcache_AssociatedFileEntries
+  
+  - Parsing de timestamp sous ce format:
+      if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
+        # Parse LastModifiedTimeUTC field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastmodifiedtimeutc, err = parse_timestamp(fields[3], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[Amcache_ProgramEntries] Unable to parse LastModifiedTimeUTC timestamp: " + err, level: "error")
+        }
+      }
+
+ - Faire du coerce en bool: to_bool
+ 
+ - Suppr les assignements d'err si pas de check fait dessus.
+     Ex si pas de check sur err: value, err = to_int(abc) => value = to_int!(abc)
+
+ - Update avec le nouveau header
+     Vector_Windows_EZTools_AmcacheParser_Amcache-Program-Entries
+   

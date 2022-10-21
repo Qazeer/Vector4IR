@@ -1,6 +1,3 @@
-# Temporary folder used by Vector.
-data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-
 # Vector_Windows_EZTools_RECmd_TypedPaths config.
 # Description: Process Windows artefacts parsed with RECmd (CSV output).
 #              Filename should match: "*_TypedPaths_*.csv"
@@ -8,7 +5,6 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #              Registry key path: Software\Microsoft\Windows\CurrentVersion\Explorer\TypedPaths
 #              RECmd command: RECmd\RECmd.exe -d %sourceDirectory% --bn RECmd\RECmd_Batch_MC.reb --nl --csv %destinationDirectory% -q
 #              Example command: RECmd\RECmd.exe -d "C:\" --bn RECmd\RECmd_Batch_MC.reb --nl --csv <YOUR_OUTPUT> -q
-
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -27,103 +23,109 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
-  [sources.RECmd_TypedPaths_csv_input]
-    type = "file"
-    include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry TypedPaths files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/Registry/*_TypedPaths_*.csv"]
-    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-    oldest_first = true
-    fingerprint.strategy = "device_and_inode"
-    max_line_bytes = 100_000_000
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-  [transforms.RECmd_TypedPaths_csv_parser]
-    type = "remap"
-    inputs = ["RECmd_TypedPaths_csv_input"]
-    source = '''
-    # Expect CSV header:
-    # HivePath,HiveType,Description,Category,KeyPath,ValueName,ValueType,ValueData,ValueData2,ValueData3,Comment,Recursive,Deleted,LastWriteTimestamp,PluginDetailFile
-    fields, err = parse_csv(.message, delimiter: ",")
+[sources.RECmd_TypedPaths_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry TypedPaths files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*_TypedPaths_*.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.RECmd_TypedPaths_csv_parser]
+  type = "remap"
+  inputs = ["RECmd_TypedPaths_csv_input"]
+  source = '''
+  # Expect CSV header:
+  # HivePath,HiveType,Description,Category,KeyPath,ValueName,ValueType,ValueData,ValueData2,ValueData3,Comment,Recursive,Deleted,LastWriteTimestamp,PluginDetailFile
+  fields, err = parse_csv(.message, delimiter: ",")
+  if err != null {
+    log("[TypedPaths] Unable to split CSV: " + err, level: "error")
+  }
+
+  if fields[7] == "ValueData"{
+    abort
+  }
+
+  .category = fields[3]
+  .valuename = fields[5]
+  .valuetype = fields[6]
+  .valuedata = fields[7]
+  .deleted, err = to_bool(fields[12])
+
+  if (fields[13] != null && fields[13] != "" && fields[13] != "\r") {
+    # Parse LastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+    .lastwritetimestamp, err = parse_timestamp(fields[13], format: "%Y-%m-%d %H:%M:%S.%f")
     if err != null {
-      log("[TypedPaths] Unable to split CSV: " + err, level: "error")
+      log("[TypedPaths] Unable to parse LastWriteTimestamp timestamp: " + err, level: "error")
     }
+  }
 
-    if fields[7] == "ValueData"{
-      abort
-    }
+  .timestamp = .lastwritetimestamp
 
-    .category = fields[3]
-    .valuename = fields[5]
-    .valuetype = fields[6]
-    .valuedata = fields[7]
-    .deleted, err = to_bool(fields[12])
-
-    if (fields[13] != null && fields[13] != "" && fields[13] != "\r") {
-      # Parse LastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastwritetimestamp, err = parse_timestamp(fields[13], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[TypedPaths] Unable to parse LastWriteTimestamp timestamp: " + err, level: "error")
+  if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+      if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
+        # Parse HivePath field to extract username. Expected format: "username".
+        .user, err = parse_regex(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user"
+      } else if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
+        # Parse HivePath field to extract username. Expected format: "username".
+        .user, err = parse_regex(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user"
       }
-    }
+  } else {
+      .user = ""
+  }
 
-    .timestamp = .lastwritetimestamp
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "windows_registry_explorer_typedpaths"
+  .sourcetype = "windows_artefact"
 
-    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
-        if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
-          # Parse HivePath field to extract username. Expected format: "username".
-          .user, err = parse_regex(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user"
-        } else if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
-          # Parse HivePath field to extract username. Expected format: "username".
-          .user, err = parse_regex(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user"
-        }
-    } else {
-        .user = ""
-    }
+  # Delete irrelevant default fields.
+  del(.source_type)
+  del(.file)
+  del(.message)
+  '''
 
-    # Add the metadata fields following the parsing.
-    .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .sourcehost
-    .source = "windows_registry_explorer_typedpaths"
-    .sourcetype = "windows_artefact"
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.RECmd_TypedPaths_blackhole_sink]
+#   type = "blackhole"
+#   inputs = ["RECmd_TypedPaths_csv_parser"]
 
-    # Delete irrelevant default fields.
-    del(.source_type)
-    del(.file)
-    '''
+# Sink to send processed logs to the console, for debugging.
+# [sinks.RECmd_TypedPaths_console_sink]
+#   type = "console"
+#   inputs = ["RECmd_TypedPaths_csv_parser"]
+#   target = "stdout"
+#   encoding.codec = "json"
 
-  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-  # [sinks.RECmd_TypedPaths_blackhole_sink]
-  #   type = "blackhole"
-  #   inputs = ["RECmd_TypedPaths_csv_parser"]
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.RECmd_TypedPaths_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["RECmd_TypedPaths_csv_parser"]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-explorer_typedpaths"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
-  # Sink to send processed logs to the console, for debugging.
-  # [sinks.RECmd_TypedPaths_console_sink]
-  #   type = "console"
-  #   inputs = ["RECmd_TypedPaths_csv_parser"]
-  #   target = "stdout"
-  #   encoding.codec = "json"
-
-  # Sink transform to send processed logs to an ELK instance.
-  [sinks.RECmd_TypedPaths_ELK_sink]
-    type = "elasticsearch"
-    inputs = ["RECmd_TypedPaths_csv_parser"]
-    bulk.index = "${INDEX}-{{ sourcehost }}-explorer_typedpaths"
-    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-    auth.strategy = "basic"
-    auth.user = "${ELK_LOGIN}"
-    auth.password = "${ELK_PASSWORD}"
-    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-  # Sink transform to send processed logs to a Splunk instance.
-  # [sinks.RECmd_TypedPaths_Splunk_sink]
-  #   type = "splunk_hec_logs"
-  #   inputs = ["RECmd_TypedPaths_csv_parser"]
-  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-  #   compression = "none"
-  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-  #   host_key = "host"
-  #   source = "{{ source }}"
-  #   sourcetype = "{{ sourcetype }}"
-  #   tls.verify_certificate = false
-  #   encoding.codec = "json"
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.RECmd_TypedPaths_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["RECmd_TypedPaths_csv_parser"]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"
 
 # Registry Explorer\TypedPaths - end.

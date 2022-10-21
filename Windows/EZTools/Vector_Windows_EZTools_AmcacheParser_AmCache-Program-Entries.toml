@@ -1,12 +1,8 @@
-# Temporary folder used by Vector.
-data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-
 # Vector_Windows_EZTools_AmcacheParser_AmCache-Program-Entries config.
 # Description: Process Windows artefacts parsed with AmcacheParser (CSV output).
 #              Filename should match: "*Amcache_ProgramEntries.csv"
 #              AmcacheParser command: AmcacheParser.exe -f %sourceFile% --csv %destinationDirectory% -i
 #              Example command: AmcacheParser.exe -f "C:\Windows\appcompat\Programs\Amcache.hve" --csv <YOUR_OUTPUT>
-
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -25,216 +21,224 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
-  [sources.AmcacheParser_AmCache-Program-Entries_csv_input]
-    type = "file"
-    include = ["${INPUT_FOLDER:?The input folder containing the AmcacheParser AmCache Program Entries files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/ProgramExecution/*Amcache_ProgramEntries.csv"]
-    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-    oldest_first = true
-    fingerprint.strategy = "device_and_inode"
-    max_line_bytes = 100_000_000
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-  [transforms.AmcacheParser_AmCache-Program-Entries_csv_parser]
-    type = "remap"
-    inputs = ["AmcacheParser_AmCache-Program-Entries_csv_input"]
-    source = '''
-    # Expect CSV header:
-    # ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDate,OSVersionAtInstallTime,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,InstallDateArpLastModified,InstallDateMsi,InstallDateFromLinkFile,Manufacturer
-    fields, err = parse_csv(.message, delimiter: ",")
-    if err != null {
-      log("[AmCache-Program-Entries] Unable to split CSV: " + err, level: "error")
-    }
+[sources.AmcacheParser_AmCache-Program-Entries_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the AmcacheParser AmCache Program Entries files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*Amcache_ProgramEntries.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
 
-    if fields[0] == "ProgramId"{
-      abort
-    }
+[transforms.AmcacheParser_AmCache-Program-Entries_csv_parser]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_input"]
+  source = '''
+  # Expect CSV header:
+  # Old: ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDate,OSVersionAtInstallTime,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,InstallDateArpLastModified,InstallDateMsi,InstallDateFromLinkFile,Manufacturer
+  # New: ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDateArpLastModified,InstallDate,InstallDateMsi,OSVersionAtInstallTime,InstallDateFromLinkFile,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,Manufacturer
+  fields, err = parse_csv(.message, delimiter: ",")
+  if err != null {
+    log("[AmCache-Program-Entries] Unable to split CSV: " + err, level: "error")
+  }
 
-    .programid = fields[0]
+  if fields[0] == "ProgramId"{
+    abort
+  }
 
-    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-      .keylastwritetimestamp, err = to_timestamp(fields[1])
-    }
+  .programid = fields[0]
 
-    .name = fields[2]
-    .version = fields[3]
-    .publisher = fields[4]
+  if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
+      # Parse KeyLastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+      .keylastwritetimestamp, err = parse_timestamp(fields[1], format: "%Y-%m-%d %H:%M:%S.%f")
+      if err != null {
+        log("[Amcache_ProgramEntries] Unable to parse KeyLastWriteTimestamp timestamp: " + err, level: "error")
+      }
+  }
 
-    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-      .installdate, err = to_timestamp(fields[5])
-    }
+  .name = fields[2]
+  .version = fields[3]
+  .publisher = fields[4]
 
-    .osversionatinstalltime = fields[6]
-    .bundlemanifestpath = fields[7]
-    .hiddenarp = fields[8]
-    .inboxmodernapp = fields[9]
-    .language = fields[10]
-    .manifestpath = fields[11]
-    .msipackagecode = fields[12]
-    .msiproductcode = fields[13]
-    .packagefullname = fields[14]
-    .programinstanceid = fields[15]
-    .registrykeypath = fields[16]
-    .rootdirpath = fields[17]
-    .type = fields[18]
-    .source = fields[19]
-    .storeapptype = fields[20]
-    .uninstallstring = fields[21]
+  if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
+      # Parse InstallDateMsi field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+      .installdate, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
+      if err != null {
+        log("[Amcache_ProgramEntries] Unable to parse InstallDateMsi timestamp: " + err, level: "error")
+      }
+  }
 
-    if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
-      # Parse InstallDateArpLastModified field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdatearplastmodified, err = parse_timestamp(fields[22], format: "%m/%d/%Y %H:%M:%S")
-    }
+  .osversionatinstalltime = fields[6]
+  .bundlemanifestpath = fields[7]
+  .hiddenarp = to_bool!(fields[8])
+  .inboxmodernapp = to_bool!(fields[9])
+  .language = fields[10]
+  .manifestpath = fields[11]
+  .msipackagecode = fields[12]
+  .msiproductcode = fields[13]
+  .packagefullname = fields[14]
+  .programinstanceid = fields[15]
+  .registrykeypath = fields[16]
+  .rootdirpath = fields[17]
+  .type = fields[18]
+  .source = fields[19]
+  .storeapptype = fields[20]
+  .uninstallstring = fields[21]
 
-    if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
-      # Parse InstallDateMsi field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdatemsi, err = parse_timestamp(fields[23], format: "%m/%d/%Y %H:%M:%S")
-    }
+  if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
+    # Parse InstallDateArpLastModified field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
+    .installdatearplastmodified, err = parse_timestamp(fields[22], format: "%m/%d/%Y %H:%M:%S")
+  }
 
-    if (fields[24] != null && fields[24] != "" && fields[24] != "\r") {
-      # Parse InstallDateFromLinkFile field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdatefromlinkfile, err = parse_timestamp(fields[24], format: "%m/%d/%Y %H:%M:%S")
-    }
+  if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
+    # Parse InstallDateMsi field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
+    .installdatemsi, err = parse_timestamp(fields[23], format: "%m/%d/%Y %H:%M:%S")
+  }
 
-    .manufacturer = fields[25]
-    .timestamp = .keylastwritetimestamp
+  if (fields[24] != null && fields[24] != "" && fields[24] != "\r") {
+    # Parse InstallDateFromLinkFile field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
+    .installdatefromlinkfile, err = parse_timestamp(fields[24], format: "%m/%d/%Y %H:%M:%S")
+  }
 
-    # Add the metadata fields following the parsing.
-    .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .sourcehost
-    .source = "windows_amcache-programentries"
-    .sourcetype = "windows_artefact"
+  .manufacturer = fields[25]
+  .timestamp = .keylastwritetimestamp
 
-    # Delete irrelevant default fields.
-    del(.source_type)
-    del(.file)
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "windows_amcache-programentries"
+  .sourcetype = "windows_artefact"
+
+  # Delete irrelevant default fields.
+  del(.source_type)
+  del(.file)
+  del(.message)
+  '''
+
+[transforms.AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  source = '''
+  if !exists(.keylastwritetimestamp){
+    abort
+  }
+
+  .timestamp = .keylastwritetimestamp
+  .operation = "program_modification_keylastwritetimestamp"
     '''
 
-    # types.HiddenArp = "bool"
-    # types.InboxModernApp = "bool"
-    # types.Language = "int"
+[transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDate]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  source = '''
+  if !exists(.installdate){
+    abort
+  }
 
-  [transforms.AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp]
-    type = "remap"
-    inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
-    source = '''
-    if !exists(.keylastwritetimestamp){
-      abort
-    }
+  .timestamp = .installdate
+  .operation = "creation"
+  .suboperation = "program_installationdate"
+    '''
 
-    .timestamp = .keylastwritetimestamp
-    .operation = "program_modification_keylastwritetimestamp"
-      '''
+[transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  source = '''
+  if !exists(.installdatearplastmodified){
+    abort
+  }
 
-  [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDate]
-    type = "remap"
-    inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
-    source = '''
-    if !exists(.installdate){
-      abort
-    }
+  .timestamp = .installdatearplastmodified
+  .operation = "modification"
+  .suboperation = "program_installdatearplastmodified"
+    '''
 
-    .timestamp = .installdate
-    .operation = "creation"
-    .suboperation = "program_installationdate"
-      '''
+[transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  source = '''
+  if !exists(.installdatemsi){
+    abort
+  }
 
-  [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified]
-    type = "remap"
-    inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
-    source = '''
-    if !exists(.installdatearplastmodified){
-      abort
-    }
+  .timestamp = .installdatemsi
+  .operation = "creation"
+  .suboperation = "program_installdatemsi"
+    '''
 
-    .timestamp = .installdatearplastmodified
-    .operation = "modification"
-    .suboperation = "program_installdatearplastmodified"
-      '''
+[transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  source = '''
+  if !exists(.installdatefromlinkfile){
+    abort
+  }
 
-  [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi]
-    type = "remap"
-    inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
-    source = '''
-    if !exists(.installdatemsi){
-      abort
-    }
+  .timestamp = .installdatefromlinkfile
+  .operation = "creation"
+  .suboperation = "program_installdatefromlinkfile"
+    '''
 
-    .timestamp = .installdatemsi
-    .operation = "creation"
-    .suboperation = "program_installdatemsi"
-      '''
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.AmcacheParser_AmCache-Program-Entries_blackhole_sink]
+#   type = "blackhole"
+#   inputs = [
+#     "AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDate",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile"
+#   ]
 
-  [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile]
-    type = "remap"
-    inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
-    source = '''
-    if !exists(.installdatefromlinkfile){
-      abort
-    }
+# Sink to send processed logs to the console, for debugging.
+# [sinks.AmcacheParser_AmCache-Program-Entries_console_sink]
+#   type = "console"
+#   inputs = [
+#     "AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDate",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile"
+#   ]
+#   target = "stdout"
+#   encoding.codec = "json"
 
-    .timestamp = .installdatefromlinkfile
-    .operation = "creation"
-    .suboperation = "program_installdatefromlinkfile"
-      '''
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.AmcacheParser_AmCache-Program-Entries_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = [
+#     "AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDate",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile"
+#   ]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-amcache-programentries"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
-  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-  # [sinks.AmcacheParser_AmCache-Program-Entries_blackhole_sink]
-  #   type = "blackhole"
-  #   inputs = [
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDate",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile"
-  #   ]
-
-  # Sink to send processed logs to the console, for debugging.
-  # [sinks.AmcacheParser_AmCache-Program-Entries_console_sink]
-  #   type = "console"
-  #   inputs = [
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDate",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile"
-  #   ]
-  #   target = "stdout"
-  #   encoding.codec = "json"
-
-  # Sink transform to send processed logs to an ELK instance.
-  [sinks.AmcacheParser_AmCache-Program-Entries_ELK_sink]
-    type = "elasticsearch"
-    inputs = [
-      "AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp",
-      "AmcacheParser_AmCache-Program-Entries_dedup_InstallDate",
-      "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified",
-      "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi",
-      "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile"
-    ]
-    bulk.index = "${INDEX}-{{ sourcehost }}-amcache-programentries"
-    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-    auth.strategy = "basic"
-    auth.user = "${ELK_LOGIN}"
-    auth.password = "${ELK_PASSWORD}"
-    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-  # Sink transform to send processed logs to a Splunk instance.
-  # [sinks.AmcacheParser_AmCache-Program-Entries_Splunk_sink]
-  #   type = "splunk_hec_logs"
-  #   inputs = [
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDate",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi",
-  #     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile"
-  #   ]
-  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-  #   compression = "none"
-  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-  #   host_key = "host"
-  #   source = "{{ source }}"
-  #   sourcetype = "{{ sourcetype }}"
-  #   tls.verify_certificate = false
-  #   encoding.codec = "json"
-
-# AmCache Program Entries - end.
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.AmcacheParser_AmCache-Program-Entries_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = [
+#     "AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDate",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi",
+#     "AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile"
+#   ]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"

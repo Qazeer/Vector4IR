@@ -1,12 +1,8 @@
-# Temporary folder used by Vector.
-data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-
 # Vector_Windows_EZTools_RBCmd_RecycleBin config.
 # Description: Process Windows artefacts parsed with RBCmd (CSV output).
 #              Filename should match: "*PECmd_Output_Timeline.csv"
 #              RBCmd command: RBCmd.exe -d %sourceDirectory% --csv %destinationDirectory% -q
 #              Example command: RBCmd.exe -d "C:\ --csv <YOUR_OUTPUT> -q
-
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -25,92 +21,96 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
-  [sources.RBCmd_RecycleBin_csv_input]
-    type = "file"
-    include = ["${INPUT_FOLDER:?The input folder containing the RBCmd Registry RecycleBin files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/FileDeletion/*_RBCmd_Output.csv"]
-    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-    oldest_first = true
-    fingerprint.strategy = "device_and_inode"
-    max_line_bytes = 100_000_000
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-  [transforms.RBCmd_RecycleBin_csv_parser]
-    type = "remap"
-    inputs = ["RBCmd_RecycleBin_csv_input"]
-    source = '''
-    # Expect CSV header:
-    # SourceName,FileType,FileName,FileSize,DeletedOn
-    fields, err = parse_csv(.message, delimiter: ",")
-    if err != null {
-      log("[RecycleBin] Unable to split CSV: " + err, level: "error")
-    }
+[sources.RBCmd_RecycleBin_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the RBCmd Registry RecycleBin files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*_RBCmd_Output.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
 
-    if fields[0] == "SourceName"{
-      abort
-    }
+[transforms.RBCmd_RecycleBin_csv_parser]
+  type = "remap"
+  inputs = ["RBCmd_RecycleBin_csv_input"]
+  source = '''
+  # Expect CSV header:
+  # SourceName,FileType,FileName,FileSize,DeletedOn
+  fields, err = parse_csv(.message, delimiter: ",")
+  if err != null {
+    log("[RecycleBin] Unable to split CSV: " + err, level: "error")
+  }
 
-    .sourcename = fields[0]
-    .filetype = fields[1]
-    .filename = fields[2]
-    .filesize, err = to_int(fields[3])
+  if fields[0] == "SourceName"{
+    abort
+  }
 
-    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-        # Parse DeletedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .deletedon, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[RecycleBin] Unable to parse DeletedOn timestamp: " + err, level: "error")
-        }
-    }
+  .sourcename = fields[0]
+  .filetype = fields[1]
+  .filename = fields[2]
+  .filesize, err = to_int(fields[3])
 
-    .timestamp = .deletedon
-    # Parse SourceName field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
-    .user_sid, err = parse_regex(.sourcename, r'\$$Recycle.Bin\\(?P<sid>.*)\\')."sid"
+  if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+      # Parse DeletedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+      .deletedon, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
+      if err != null {
+        log("[RecycleBin] Unable to parse DeletedOn timestamp: " + err, level: "error")
+      }
+  }
 
-    # Add the metadata fields following the parsing.
-    .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .sourcehost
-    .source = "windows_recyclebin"
-    .sourcetype = "windows_artefact"
+  .timestamp = .deletedon
+  # Parse SourceName field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
+  .user_sid, err = parse_regex(.sourcename, r'\$$Recycle.Bin\\(?P<sid>.*)\\')."sid"
 
-    # Delete irrelevant default fields.
-    del(.source_type)
-    del(.file)
-    '''
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "windows_recyclebin"
+  .sourcetype = "windows_artefact"
 
-  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-  # [sinks.RBCmd_RecycleBin_blackhole_sink]
-  #   type = "blackhole"
-  #   inputs = ["RBCmd_RecycleBin_csv_parser"]
+  # Delete irrelevant default fields.
+  del(.source_type)
+  del(.file)
+  del(.message)
+  '''
 
-  # Sink to send processed logs to the console, for debugging.
-  # [sinks.RBCmd_RecycleBin_console_sink]
-  #   type = "console"
-  #   inputs = ["RBCmd_RecycleBin_csv_parser"]
-  #   target = "stdout"
-  #   encoding.codec = "json"
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.RBCmd_RecycleBin_blackhole_sink]
+#   type = "blackhole"
+#   inputs = ["RBCmd_RecycleBin_csv_parser"]
 
-  # Sink transform to send processed logs to an ELK instance.
-  [sinks.RBCmd_RecycleBin_ELK_sink]
-    type = "elasticsearch"
-    inputs = ["RBCmd_RecycleBin_csv_parser"]
-    bulk.index = "${INDEX}-{{ sourcehost }}-recyclebin"
-    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-    auth.strategy = "basic"
-    auth.user = "${ELK_LOGIN}"
-    auth.password = "${ELK_PASSWORD}"
-    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+# Sink to send processed logs to the console, for debugging.
+# [sinks.RBCmd_RecycleBin_console_sink]
+#   type = "console"
+#   inputs = ["RBCmd_RecycleBin_csv_parser"]
+#   target = "stdout"
+#   encoding.codec = "json"
 
-  # Sink transform to send processed logs to a Splunk instance.
-  # [sinks.RBCmd_RecycleBin_Splunk_sink]
-  #   type = "splunk_hec_logs"
-  #   inputs = ["RBCmd_RecycleBin_csv_parser"]
-  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-  #   compression = "none"
-  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-  #   host_key = "host"
-  #   source = "{{ source }}"
-  #   sourcetype = "{{ sourcetype }}"
-  #   tls.verify_certificate = false
-  #   encoding.codec = "json"
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.RBCmd_RecycleBin_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["RBCmd_RecycleBin_csv_parser"]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-recyclebin"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
-# Recycle.Bin artefacts - end.
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.RBCmd_RecycleBin_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["RBCmd_RecycleBin_csv_parser"]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"

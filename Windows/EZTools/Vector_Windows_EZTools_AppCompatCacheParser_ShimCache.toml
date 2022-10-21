@@ -1,12 +1,8 @@
-# Temporary folder used by Vector.
-data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-
 # Vector_Windows_EZTools_AppCompatCacheParser_ShimCache config.
 # Description: Process Windows artefacts parsed with AppCompatCacheParser (CSV output).
 #              Filename should match: "*AppCompatCache.csv"
 #              AppCompatCacheParser command: AppCompatCacheParser.exe -f %sourceFile% --csv %destinationDirectory%
 #              Example command: AppCompatCacheParser.exe -f "C:\Windows\System32\config\SYSTEM" --csv <YOUR_OUTPUT>
-
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -25,88 +21,96 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
-  [sources.AppCompatCacheParser_ShimCache_csv_input]
-    type = "file"
-    include = ["${INPUT_FOLDER:?The input folder containing the AppCompatCacheParser ShimCache files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/ProgramExecution/*AppCompatCache.csv"]
-    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-    oldest_first = true
-    fingerprint.strategy = "device_and_inode"
-    max_line_bytes = 100_000_000
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-  [transforms.AppCompatCacheParser_ShimCache_csv_parser]
-    type = "remap"
-    inputs = ["AppCompatCacheParser_ShimCache_csv_input"]
-    source = '''
-    # Expect CSV header:
-    # ControlSet,CacheEntryPosition,Path,LastModifiedTimeUTC,Executed,Duplicate,SourceFile
-    fields, err = parse_csv(.message, delimiter: ",")
-    if err != null {
-      log("[ShimCache] Unable to split CSV: " + err, level: "error")
-    }
+[sources.AppCompatCacheParser_ShimCache_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the AppCompatCacheParser ShimCache files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*AppCompatCache.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
 
-    if fields[0] == "ControlSet"{
-      abort
-    }
+[transforms.AppCompatCacheParser_ShimCache_csv_parser]
+  type = "remap"
+  inputs = ["AppCompatCacheParser_ShimCache_csv_input"]
+  source = '''
+  # Expect CSV header:
+  # ControlSet,CacheEntryPosition,Path,LastModifiedTimeUTC,Executed,Duplicate,SourceFile
+  fields, err = parse_csv(.message, delimiter: ",")
+  if err != null {
+    log("[ShimCache] Unable to split CSV: " + err, level: "error")
+  }
 
-    .controlset, err = to_int(fields[0])
-    .cacheentryposition, err = to_int(fields[1])
-    .path = fields[2]
+  if fields[0] == "ControlSet"{
+    abort
+  }
 
-    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-      .lastmodifiedtimeutc, err = to_timestamp(fields[3])
-    }
+  .controlset = to_int!(fields[0])
+  .cacheentryposition = to_int!(fields[1])
+  .path = fields[2]
 
-    .executed = fields[4]
-    .duplicate = fields[5]
-    .sourcefile = fields[6]
-    .timestamp = .lastmodifiedtimeutc
+  if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
+      # Parse LastModifiedTimeUTC field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+      .lastmodifiedtimeutc, err = parse_timestamp(fields[3], format: "%Y-%m-%d %H:%M:%S")
+      if err != null {
+        log("[Amcache_ProgramEntries] Unable to parse LastModifiedTimeUTC timestamp: " + err, level: "error")
+      }
+  }
 
-    # Add the metadata fields following the parsing.
-    .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .sourcehost
-    .source = "windows_shimcache"
-    .sourcetype = "windows_artefact"
+  .executed = fields[4]
+  .duplicate = to_bool!(fields[5])
+  .sourcefile = fields[6]
+  .timestamp = .lastmodifiedtimeutc
 
-    # Delete irrelevant default fields.
-    del(.source_type)
-    del(.file)
-    '''
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "windows_shimcache"
+  .sourcetype = "windows_artefact"
 
-  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-  # [sinks.AppCompatCacheParser_ShimCache_blackhole_sink]
-  #   type = "blackhole"
-  #   inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
+  # Delete irrelevant default fields.
+  del(.source_type)
+  del(.file)
+  del(.message)
+  '''
 
-  # Sink to send processed logs to the console, for debugging.
-  # [sinks.AppCompatCacheParser_ShimCache_console_sink]
-  #   type = "console"
-  #   inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
-  #   target = "stdout"
-  #   encoding.codec = "json"
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.AppCompatCacheParser_ShimCache_blackhole_sink]
+#   type = "blackhole"
+#   inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
 
-  # Sink transform to send processed logs to an ELK instance.
-  [sinks.AppCompatCacheParser_ShimCache_ELK_sink]
-    type = "elasticsearch"
-    inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
-    bulk.index = "${INDEX}-{{ sourcehost }}-shimcache"
-    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-    auth.strategy = "basic"
-    auth.user = "${ELK_LOGIN}"
-    auth.password = "${ELK_PASSWORD}"
-    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+# Sink to send processed logs to the console, for debugging.
+[sinks.AppCompatCacheParser_ShimCache_console_sink]
+  type = "console"
+  inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
+  target = "stdout"
+  encoding.codec = "json"
 
-  # Sink transform to send processed logs to a Splunk instance.
-  # [sinks.AppCompatCacheParser_ShimCache_Splunk_sink]
-  #   type = "splunk_hec_logs"
-  #   inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
-  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-  #   compression = "none"
-  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-  #   host_key = "host"
-  #   source = "{{ source }}"
-  #   sourcetype = "{{ sourcetype }}"
-  #   tls.verify_certificate = false
-  #   encoding.codec = "json"
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.AppCompatCacheParser_ShimCache_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-shimcache"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
-# ShimCache - end.
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.AppCompatCacheParser_ShimCache_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"

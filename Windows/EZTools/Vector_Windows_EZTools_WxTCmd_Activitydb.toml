@@ -1,12 +1,8 @@
-# Temporary folder used by Vector.
-data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-
 # Vector_Windows_EZTools_WxTCmd_Activitydb config.
 # Description: Process Windows artefacts parsed with WxTCmd (CSV output).
 #              Filename should match: "*_Activity.csv"
 #              WxTCmd command: WxTCmd.exe -f %sourceFile% --csv %destinationDirectory%
 #              Example command: WxTCmd.exe -f "C:\Users\<USER>\AppData\Local\ConnectedDevicesPlatform\<FOLDER>\ActivitiesCache.db" --csv <YOUR_OUTPUT>
-
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -25,227 +21,231 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
-  [sources.WxTCmd_Activitydb_csv_input]
-    type = "file"
-    include = ["${INPUT_FOLDER:?The input folder containing the WxTCmd Activitydb files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*/FileFolderAccess/*_Activity.csv"]
-    data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
-    oldest_first = true
-    fingerprint.strategy = "device_and_inode"
-    max_line_bytes = 100_000_000
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-  [transforms.WxTCmd_Activitydb_csv_parser]
-    type = "remap"
-    inputs = ["WxTCmd_Activitydb_csv_input"]
-    source = '''
-    # Expect CSV header:
-    # Id,Executable,DisplayText,ContentInfo,StartTime,EndTime,LastModifiedTime,ExpirationTime,CreatedInCloud,LastModifiedOnClient,OriginalLastModifiedOnClient,ActivityType,IsLocalOnly,ETag,PackageIdHash,PlatformDeviceId,Duration
+[sources.WxTCmd_Activitydb_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the WxTCmd Activitydb files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*_Activity.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
 
-    # Remove CSV parsing error on DisplayText value which is under following format: "Téléchargez le navigateur Firefox, rapide, sécurisé...".
-    .message, err = replace(.message, s'"', s'\"')
-    if err != null {
-      log("[Activitydb] Unable to remove whitespaces: " + err, level: "error")
-    }
+[transforms.WxTCmd_Activitydb_csv_parser]
+  type = "remap"
+  inputs = ["WxTCmd_Activitydb_csv_input"]
+  source = '''
+  # Expect CSV header:
+  # Id,Executable,DisplayText,ContentInfo,StartTime,EndTime,LastModifiedTime,ExpirationTime,CreatedInCloud,LastModifiedOnClient,OriginalLastModifiedOnClient,ActivityType,IsLocalOnly,ETag,PackageIdHash,PlatformDeviceId,Duration
 
-    fields, err = parse_csv(.message, delimiter: ",")
-    if err != null {
-      log("[Activitydb] Unable to split CSV: " + err, level: "error")
-    }
+  # Remove CSV parsing error on DisplayText value which is under following format: "Téléchargez le navigateur Firefox, rapide, sécurisé...".
+  .message, err = replace(.message, s'"', s'\"')
+  if err != null {
+    log("[Activitydb] Unable to remove whitespaces: " + err, level: "error")
+  }
 
-    if fields[1] == "Executable"{
-      abort
-    }
+  fields, err = parse_csv(.message, delimiter: ",")
+  if err != null {
+    log("[Activitydb] Unable to split CSV: " + err, level: "error")
+  }
 
-    .id = fields[0]
-    .executable = fields[1]
-    .displaytext = fields[2]
-    .contentinfo = fields[3]
+  if fields[1] == "Executable"{
+    abort
+  }
 
-    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-      .starttime, err = to_timestamp(fields[4])
-    }
+  .id = fields[0]
+  .executable = fields[1]
+  .displaytext = fields[2]
+  .contentinfo = fields[3]
 
-    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-      .endtime, err = to_timestamp(fields[5])
-    }
+  if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+    .starttime, err = to_timestamp(fields[4])
+  }
 
-    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-      .lastmodifiedtime, err = to_timestamp(fields[6])
-    }
+  if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
+    .endtime, err = to_timestamp(fields[5])
+  }
 
-    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-      .expirationtime, err = to_timestamp(fields[7])
-    }
+  if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
+    .lastmodifiedtime, err = to_timestamp(fields[6])
+  }
 
-    .createdincloud = fields[8]
+  if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
+    .expirationtime, err = to_timestamp(fields[7])
+  }
 
-    if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
-      .lastmodifiedonclient, err = to_timestamp(fields[9])
-    }
+  .createdincloud = fields[8]
 
-    if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
-      .originallastmodifiedonclient, err = to_timestamp(fields[10])
-    }
+  if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
+    .lastmodifiedonclient, err = to_timestamp(fields[9])
+  }
 
-    .activitytype, err = to_int(fields[11])
-    .islocalonly = fields[12]
-    .etag, err = to_int(fields[13])
-    .packageidhash = fields[14]
-    .platformdeviceid = fields[15]
-    .duration = fields[16]
-    .timestamp = .starttime
+  if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
+    .originallastmodifiedonclient, err = to_timestamp(fields[10])
+  }
 
-    # Add the metadata fields following the parsing.
-    .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .sourcehost
-    .source = "windows_activitydb"
-    .sourcetype = "windows_artefact"
+  .activitytype, err = to_int(fields[11])
+  .islocalonly = fields[12]
+  .etag, err = to_int(fields[13])
+  .packageidhash = fields[14]
+  .platformdeviceid = fields[15]
+  .duration = fields[16]
+  .timestamp = .starttime
 
-    # Delete irrelevant default fields.
-    del(.source_type)
-    del(.file)
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "windows_activitydb"
+  .sourcetype = "windows_artefact"
+
+  # Delete irrelevant default fields.
+  del(.source_type)
+  del(.file)
+  del(.message)
+  '''
+
+[transforms.WxTCmd_Activitydb_dedup_StartTime]
+  type = "remap"
+  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  source = '''
+  if !exists(.starttime){
+    abort
+  }
+
+  .timestamp = .starttime
+  .operation = "execution"
+  .suboperation = "execution_starttime"
     '''
 
-  [transforms.WxTCmd_Activitydb_dedup_StartTime]
-    type = "remap"
-    inputs = ["WxTCmd_Activitydb_csv_parser"]
-    source = '''
-    if !exists(.starttime){
-      abort
-    }
+[transforms.WxTCmd_Activitydb_dedup_EndTime]
+  type = "remap"
+  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  source = '''
+  if !exists(.endtime){
+    abort
+  }
 
-    .timestamp = .starttime
-    .operation = "execution"
-    .suboperation = "execution_starttime"
-      '''
+  .timestamp = .endtime
+  .operation = "execution"
+  .suboperation = "execution_endtime"
+    '''
 
-  [transforms.WxTCmd_Activitydb_dedup_EndTime]
-    type = "remap"
-    inputs = ["WxTCmd_Activitydb_csv_parser"]
-    source = '''
-    if !exists(.endtime){
-      abort
-    }
+[transforms.WxTCmd_Activitydb_dedup_LastModifiedTime]
+  type = "remap"
+  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  source = '''
+  if !exists(.lastmodifiedtime){
+    abort
+  }
 
-    .timestamp = .endtime
-    .operation = "execution"
-    .suboperation = "execution_endtime"
-      '''
+  .timestamp = .lastmodifiedtime
+  .operation = "modification"
+  .suboperation = "database_modification_lastmodifiedtime"
+    '''
 
-  [transforms.WxTCmd_Activitydb_dedup_LastModifiedTime]
-    type = "remap"
-    inputs = ["WxTCmd_Activitydb_csv_parser"]
-    source = '''
-    if !exists(.lastmodifiedtime){
-      abort
-    }
+[transforms.WxTCmd_Activitydb_dedup_ExpirationTime]
+  type = "remap"
+  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  source = '''
+  if !exists(.expirationtime){
+    abort
+  }
 
-    .timestamp = .lastmodifiedtime
-    .operation = "modification"
-    .suboperation = "database_modification_lastmodifiedtime"
-      '''
+  .timestamp = .expirationtime
+  .operation = "expiration"
+  .suboperation = "expirationtime"
+    '''
 
-  [transforms.WxTCmd_Activitydb_dedup_ExpirationTime]
-    type = "remap"
-    inputs = ["WxTCmd_Activitydb_csv_parser"]
-    source = '''
-    if !exists(.expirationtime){
-      abort
-    }
+[transforms.WxTCmd_Activitydb_dedup_LastModifiedOnClient]
+  type = "remap"
+  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  source = '''
+  if !exists(.lastmodifiedonclient){
+    abort
+  }
 
-    .timestamp = .expirationtime
-    .operation = "expiration"
-    .suboperation = "expirationtime"
-      '''
+  .timestamp = .lastmodifiedonclient
+  .operation = "modification"
+  .suboperation = "database_modification_lastmodifiedonclient"
+    '''
 
-  [transforms.WxTCmd_Activitydb_dedup_LastModifiedOnClient]
-    type = "remap"
-    inputs = ["WxTCmd_Activitydb_csv_parser"]
-    source = '''
-    if !exists(.lastmodifiedonclient){
-      abort
-    }
+[transforms.WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient]
+  type = "remap"
+  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  source = '''
+  if !exists(.originallastmodifiedonclient){
+    abort
+  }
 
-    .timestamp = .lastmodifiedonclient
-    .operation = "modification"
-    .suboperation = "database_modification_lastmodifiedonclient"
-      '''
+  .timestamp = .originallastmodifiedonclient
+  .operation = "modification"
+  .suboperation = "database_modification_originallastmodifiedonclient"
+    '''
 
-  [transforms.WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient]
-    type = "remap"
-    inputs = ["WxTCmd_Activitydb_csv_parser"]
-    source = '''
-    if !exists(.originallastmodifiedonclient){
-      abort
-    }
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.WxTCmd_Activitydb_blackhole_sink]
+#   type = "blackhole"
+#   inputs = [
+#     "WxTCmd_Activitydb_dedup_StartTime",
+#     "WxTCmd_Activitydb_dedup_EndTime",
+#     "WxTCmd_Activitydb_dedup_LastModifiedTime",
+#     "WxTCmd_Activitydb_dedup_ExpirationTime",
+#     "WxTCmd_Activitydb_dedup_LastModifiedOnClient",
+#     "WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient"
+#   ]
 
-    .timestamp = .originallastmodifiedonclient
-    .operation = "modification"
-    .suboperation = "database_modification_originallastmodifiedonclient"
-      '''
+# Sink to send processed logs to the console, for debugging.
+# [sinks.WxTCmd_Activitydb_console_sink]
+#   type = "console"
+#   inputs = [
+#     "WxTCmd_Activitydb_dedup_StartTime",
+#     "WxTCmd_Activitydb_dedup_EndTime",
+#     "WxTCmd_Activitydb_dedup_LastModifiedTime",
+#     "WxTCmd_Activitydb_dedup_ExpirationTime",
+#     "WxTCmd_Activitydb_dedup_LastModifiedOnClient",
+#     "WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient"
+#   ]
+#   target = "stdout"
+#   encoding.codec = "json"
 
-  # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-  # [sinks.WxTCmd_Activitydb_blackhole_sink]
-  #   type = "blackhole"
-  #   inputs = [
-  #     "WxTCmd_Activitydb_dedup_StartTime",
-  #     "WxTCmd_Activitydb_dedup_EndTime",
-  #     "WxTCmd_Activitydb_dedup_LastModifiedTime",
-  #     "WxTCmd_Activitydb_dedup_ExpirationTime",
-  #     "WxTCmd_Activitydb_dedup_LastModifiedOnClient",
-  #     "WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient"
-  #   ]
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.WxTCmd_Activitydb_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = [
+#     "WxTCmd_Activitydb_dedup_StartTime",
+#     "WxTCmd_Activitydb_dedup_EndTime",
+#     "WxTCmd_Activitydb_dedup_LastModifiedTime",
+#     "WxTCmd_Activitydb_dedup_ExpirationTime",
+#     "WxTCmd_Activitydb_dedup_LastModifiedOnClient",
+#     "WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient"
+#   ]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-activitydb"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
-  # Sink to send processed logs to the console, for debugging.
-  # [sinks.WxTCmd_Activitydb_console_sink]
-  #   type = "console"
-  #   inputs = [
-  #     "WxTCmd_Activitydb_dedup_StartTime",
-  #     "WxTCmd_Activitydb_dedup_EndTime",
-  #     "WxTCmd_Activitydb_dedup_LastModifiedTime",
-  #     "WxTCmd_Activitydb_dedup_ExpirationTime",
-  #     "WxTCmd_Activitydb_dedup_LastModifiedOnClient",
-  #     "WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient"
-  #   ]
-  #   target = "stdout"
-  #   encoding.codec = "json"
-
-  # Sink transform to send processed logs to an ELK instance.
-  [sinks.WxTCmd_Activitydb_ELK_sink]
-    type = "elasticsearch"
-    inputs = [
-      "WxTCmd_Activitydb_dedup_StartTime",
-      "WxTCmd_Activitydb_dedup_EndTime",
-      "WxTCmd_Activitydb_dedup_LastModifiedTime",
-      "WxTCmd_Activitydb_dedup_ExpirationTime",
-      "WxTCmd_Activitydb_dedup_LastModifiedOnClient",
-      "WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient"
-    ]
-    bulk.index = "${INDEX}-{{ sourcehost }}-activitydb"
-    endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-    auth.strategy = "basic"
-    auth.user = "${ELK_LOGIN}"
-    auth.password = "${ELK_PASSWORD}"
-    suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-  # Sink transform to send processed logs to a Splunk instance.
-  # [sinks.WxTCmd_Activitydb_Splunk_sink]
-  #   type = "splunk_hec_logs"
-  #   inputs = [
-  #     "WxTCmd_Activitydb_dedup_StartTime",
-  #     "WxTCmd_Activitydb_dedup_EndTime",
-  #     "WxTCmd_Activitydb_dedup_LastModifiedTime",
-  #     "WxTCmd_Activitydb_dedup_ExpirationTime",
-  #     "WxTCmd_Activitydb_dedup_LastModifiedOnClient",
-  #     "WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient"
-  #   ]
-  #   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-  #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-  #   compression = "none"
-  #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-  #   host_key = "host"
-  #   source = "{{ source }}"
-  #   sourcetype = "{{ sourcetype }}"
-  #   tls.verify_certificate = false
-  #   encoding.codec = "json"
-
-# Activity.db - end.
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.WxTCmd_Activitydb_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = [
+#     "WxTCmd_Activitydb_dedup_StartTime",
+#     "WxTCmd_Activitydb_dedup_EndTime",
+#     "WxTCmd_Activitydb_dedup_LastModifiedTime",
+#     "WxTCmd_Activitydb_dedup_ExpirationTime",
+#     "WxTCmd_Activitydb_dedup_LastModifiedOnClient",
+#     "WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient"
+#   ]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"

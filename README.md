@@ -33,7 +33,7 @@ SOURCE_HOST = "<SOURCE_HOST>" # Hostname of the host from which the artifacts ar
 SOURCE_TENANT = "<SOURCE_TENANT>" # AzureAD tenant from which the Azure events are originating from.
 ```
 
-### Vector execution
+### Execution
 
 ###### Onelinifying JSON files
 
@@ -43,6 +43,8 @@ and thus not directly valid JSON objects for `Vector`.
 
 The `Onelinifying_JSON.sh` bash script of this repository can be used to
 "compact" recursively the JSON files in a folder using `jq`.
+
+### Vector execution
 
 ```bash
 vector.exe [-c <CONFIG_FILE> | -C <CONFIG_FOLDER>]

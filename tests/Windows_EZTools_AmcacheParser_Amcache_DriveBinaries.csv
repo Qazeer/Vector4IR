@@ -1,0 +1,2 @@
+KeyName,KeyLastWriteTimestamp,DriverTimeStamp,DriverLastWriteTime,DriverName,DriverInBox,DriverIsKernelMode,DriverSigned,DriverCheckSum,DriverCompany,DriverId,DriverPackageStrongName,DriverType,DriverVersion,ImageSize,Inf,Product,ProductVersion,Service,WdfVersion
+c:/windows/system32/drivers/1394ohci.sys,2022-09-10 09:11:57.7399099,2071-11-08 05:23:53.0000000,2019-12-07 09:07:53.0000000,1394ohci.sys,True,True,True,315384,Microsoft Corporation,00002b8b64c19fb245b97a274ca412cb309ceae54d90,,8650778,10.0.19041.1,294912,,Microsoft® Windows® Operating System,10.0.19041.1,1394ohci,
