@@ -1,8 +1,8 @@
 # Vector configs for Incident Response
 
-Configuration files for sending logs, from various sources, using
-[`Vector`](https://github.com/vectordotdev/vector) to `(H)ELK` or `Splunk` (as
-well as the 30+ `sinks` supported by `Vector`).
+[`Vector`](https://github.com/vectordotdev/vector) configuration files to 
+send logs from various sources to `(H)ELK` or `Splunk` (as well as the
+30+ `sinks` supported by `Vector`).
 
 ### Required environnement variables
 
