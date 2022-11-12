@@ -1,0 +1,7 @@
+2021-06-18T17:17:15Z ESXShell: ESXi Shell unavailable
+2021-06-18T17:17:10Z ESXShell: ESXi shell login enabled
+2021-06-18T17:17:10Z ESXShell: ESXi Shell available
+2021-06-18T17:19:14Z SSH: SSH login disabled
+2021-06-18T17:24:12Z SSH: SSH login enabled
+2021-06-18T17:53:11Z shell[2198123]: Interactive shell session started
+2021-06-18T17:59:16Z shell[2198123]: [root]: cd /tmp/
