@@ -1,0 +1,182 @@
+# Description: Process AWS Netflow logs (CSV output).
+#              Filename should match: "*vpcflowlogs*.log"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-12-14
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_TENANT = "<SOURCE_TENANT>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = aws_vpc_flow & sourcetype = AWS_artefact.
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = aws_vpc_flow & sourcetype = AWS_artefact.
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.AWS_VPC_flow_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the AWS VPC flow logs CSV files is required.}/**/*vpcflowlogs*.log"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.AWS_VPC_flow_csv_parser_base_version]
+  type = "remap"
+  inputs = ["AWS_VPC_flow_csv_input"]
+  source = '''
+    # Expect CSV base header (version 2):
+    # version account-id interface-id srcaddr dstaddr srcport dstport protocol packets bytes start end action log-status
+    # 2 305681518678 eni-04758d0ccd75dde0a 1.2.3.4 5.6.7.8 50276 22 6 2 88 1619988519 1619988577 ACCEPT OK
+    .fields, err = parse_csv(.message, delimiter: " ")
+    if err != null {
+      log("Unable to split CSV: " + err, level: "error")
+    }
+
+    # Drop header.
+    if .fields[0] == "version" {
+      abort
+    }
+
+    .version, err = to_int(.fields[0])
+    # Drop malformed log entry.
+    if err != null {
+      log("Malformed log entry, with a non int version: " + string!(.fields[0]), level: "error")
+      abort
+    }
+
+    ."account-id" = .fields[1]
+    ."interface-id" = .fields[2]
+    .srcaddr = .fields[3]
+    .dstaddr = .fields[4]
+    if is_integer(.fields[5]) {
+      .srcport = to_int!(.fields[5])
+    }
+    if is_integer(.fields[6]) {
+      .dstport = to_int!(.fields[6])
+    }
+    if is_integer(.fields[7]) {
+      .protocol = to_int!(.fields[7])
+    }
+    if is_integer(.fields[8]) {
+      .packets = to_int!(.fields[8])
+    }
+    if is_integer(.fields[9]) {
+      .bytes = to_int!(.fields[9])
+    }
+    .start = parse_timestamp!(.fields[10], format: "%s")
+    .end = parse_timestamp!(.fields[11], format: "%s")
+    .action = .fields[12]
+    ."log-status" = .fields[13]
+
+    .timestamp = .start
+
+    # Add the metadata .fields following the parsing.
+    .sourcehost = "${SOURCE_TENANT:?The source AWS tenant / account is required}"
+    .host = .sourcehost
+    .source = "aws_vpc_flow"
+    .sourcetype = "aws_artefact"
+
+    # Delete irrelevant default .fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+  '''
+
+# Add version 3 .fields if VPC Flow Logs version is > 2.
+[transforms.AWS_VPC_flow_csv_parser_version_3]
+  type = "remap"
+  inputs = ["AWS_VPC_flow_csv_parser_base_version"]
+  source = '''
+    if int!(.version) > 2 {
+      ."vpc-id" = .fields[14]
+      ."subnet-id" = .fields[15]
+      ."instance-id" = .fields[16]
+      if is_integer(.fields[17]) {
+        ."tcp-flags" = to_int!(.fields[17])
+      }
+      .type = .fields[18]
+      ."pkt-srcaddr" = .fields[18]
+      ."pkt-dstaddr" = .fields[20]
+    }
+  '''
+
+# Add version 4 .fields if VPC Flow Logs version is > 3.
+[transforms.AWS_VPC_flow_csv_parser_version_4]
+  type = "remap"
+  inputs = ["AWS_VPC_flow_csv_parser_version_3"]
+  source = '''
+    if int!(.version) > 3 {
+      .region = .fields[21]
+      ."az-id" = .fields[22]
+      ."sublocation-type" = .fields[23]
+      ."sublocation-id" = .fields[24]
+    }
+  '''
+
+# Add version 5 .fields if VPC Flow Logs version is > 4.
+[transforms.AWS_VPC_flow_csv_parser_version_5]
+  type = "remap"
+  inputs = ["AWS_VPC_flow_csv_parser_version_4"]
+  source = '''
+    if int!(.version) > 4 {
+      ."pkt-src-aws-service" = .fields[25]
+      ."pkt-dst-aws-service" = .fields[26]
+      if is_integer(.fields[27]) {
+        ."flow-direction" = to_int!(.fields[27])
+      }
+      if is_integer(.fields[28]) {
+        ."traffic-path" = to_int!(.fields[28])
+      }
+    }
+
+    # Finally, remove the "fields" field.
+    del(.fields)
+  '''
+
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.AWS_VPC_flow_blackhole_sink]
+#   type = "blackhole"
+#   inputs = ["AWS_VPC_flow_csv_parser_version_5"]
+
+# Sink to send processed logs to the console, for debugging.
+# [sinks.AWS_VPC_flow_console_sink]
+#   type = "console"
+#   inputs = ["AWS_VPC_flow_csv_parser_version_5"]
+#   target = "stdout"
+#   encoding.codec = "json"
+
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.AWS_VPC_flow_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["AWS_VPC_flow_csv_parser_version_5"]
+#   bulk.index = "${INDEX}-{{ sourcehost }}-amcache-drivebinaries"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_LOGIN}"
+#   auth.password = "${ELK_PASSWORD}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.AWS_VPC_flow_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["AWS_VPC_flow_csv_parser_version_5"]
+#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"
