@@ -1,5 +1,8 @@
 # Description: Process Windows EVTX parsed as JSON with Winlogbeat.
 #              Filename should match: "*winlogbeat*"
+#              The EVTX can be parsed with Winlogbeat using:
+#                - For all events, the Winlogbeat_ALL.mkape KAPE module (https://github.com/EricZimmerman/KapeFiles/blob/master/Modules/Apps/Winlogbeat_ALL.mkape) 
+#                - For a filtered set of events, the Winlogbeat_Windows_EVTX_to_JSON_filtered.yml configuration file in the present repository. 
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-01
