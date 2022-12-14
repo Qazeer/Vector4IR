@@ -48,7 +48,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     log("[Amcache_FileEntries] Unable to split CSV: " + err, level: "error")
   }
 
-  if fields[1] == "ProgramId"{
+  if fields[1] == "ProgramId" {
     abort
   }
 
