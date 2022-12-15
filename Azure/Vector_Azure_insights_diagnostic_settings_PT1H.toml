@@ -1,0 +1,210 @@
+# Description: Process logs exported from Azure Diagnostic settings to a storage accounts.
+#              Filename should match: "PT1H.json" and must be present in one of the default folders.
+#              The following sources are parsed from their default folder(s):
+#                 - AAD Tenant - signins - index: aad_signins:
+#                   - insights-logs-signinlogs
+#                   - insights-logs-noninteractiveusersigninlogs
+#                   - insights-logs-managedidentitysigninlogs
+#                   - insights-logs-serviceprincipalsigninlogs
+#                 - AAD Tenant - audit logs - index: aad_audit:
+#                   - insights-logs-auditlogs
+#                 - Subscription - activity logs - index: subscription_activity:
+#                   - insights-activity-logs
+#                 - Resource - Key vaults - index: keyvault_audit:
+#                   - insights-logs-auditevent
+#                 - Resource - Storage accounts - index: storageaccount_audit:
+#                   - insights-logs-storageread
+#                 - Resource - NSG event - index: nsg_event:
+#                   - insights-logs-networksecuritygroupevent
+#
+#              The files exported to a storage accounts can be download using az cli:
+#                 az login
+#                 List subscriptions if necessary: az account list
+#                 az account set --subscription "<SUBSCRIPTION_ID>"
+#                 List the storage accounts if necessary: az storage account list
+#                 One-liner to recursively download the Blobs in all the containers of the specified storage account:
+#                 $accountname = "<ACCOUNT_NAME>"; $containers = az storage container list --account-name "$accountname"; foreach($container in $($containers | ConvertFrom-Json)) { Write-Host "Downloading $($container.name)"; mkdir $container.name; az storage blob download-batch --account-name "$accountname" --source $container.name --destination $container.name }
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-12-13
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_TENANT = "<SOURCE_TENANT>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = "<DEPENDANT_OF_THE_SOURCE>" & sourcetype = "azure_artefact".
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "<DEPENDANT_OF_THE_SOURCE>" & sourcetype = "azure_artefact".
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.Azure_Diagnostic_aad_signins_input]
+  type = "file"
+  include = [
+    "${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/insights-logs-signinlogs/**/PT1H.json",
+    "${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/insights-logs-noninteractiveusersigninlogs/**/PT1H.json",
+    "${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/insights-logs-managedidentitysigninlogs/**/PT1H.json",
+    "${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/insights-logs-serviceprincipalsigninlogs/**/PT1H.json"
+  ]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  # maybe_new_field = "aad_signins"
+
+[sources.Azure_Diagnostic_aad_audit_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/insights-logs-auditlogs/**/PT1H.json"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  # maybe_new_field = "aad_audit"
+
+[sources.Azure_Diagnostic_subscription_activity_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/insights-activity-logs/**/PT1H.json"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  # maybe_new_field = "subscription_activity"
+
+[sources.Azure_Diagnostic_keyvault_audit_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/insights-logs-auditevent/**/PT1H.json"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  # maybe_new_field = "keyvault_audit"
+
+[sources.Azure_Diagnostic_storageaccount_audit_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/insights-logs-storageread/**/PT1H.json"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  # maybe_new_field = "storageaccount_audit"
+
+[sources.Azure_Diagnostic_nsg_event_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/insights-logs-networksecuritygroupevent/**/PT1H.json"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  # maybe_new_field = "nsg_flow"
+
+[transforms.Azure_Diagnostic_logs_parser]
+  inputs = [
+    "Azure_Diagnostic_aad_signins_input",
+    "Azure_Diagnostic_aad_audit_input",
+    "Azure_Diagnostic_subscription_activity_input",
+    "Azure_Diagnostic_keyvault_audit_input",
+    "Azure_Diagnostic_storageaccount_audit_input",
+    "Azure_Diagnostic_nsg_event_input"
+  ]
+  type = "remap"
+  source = '''
+    splitted, err = split(.message, "\n")
+    if err != null {
+      log("Unable to split message on newlines: " + err, level: "error")
+    }
+
+    . = flatten(map_values(splitted) -> |value| {
+      parsed_value, err = parse_json(value)
+      if err != null {
+        log("Unable to parse JSON: " + err, level: "error")
+        null
+      } else {
+        # Keep the file path.
+        parsed_value.file = .file
+        parsed_value
+      }
+    })
+  '''
+
+[transforms.Azure_Diagnostic_logs_enrich]
+  inputs = ["Azure_Diagnostic_logs_parser"]
+  type = "remap"
+  source = '''
+    .timestamp, err = parse_timestamp(.time, format: "%+")
+    if err != null {
+      log("Unable to convert to timestamp: " + err, level: "error")
+    }
+
+    file_string = string!(.file)
+    if match(file_string, r'signinlogs') {
+      .source = "aad_signins"
+    } else if match(file_string, r'insights-logs-auditlogs') {
+      .source = "aad_audit"
+    } else if match(file_string, r'insights-activity-logs') {
+      .source = "subscription_activity"
+    } else if match(file_string, r'insights-logs-auditevent') {
+      .source = "keyvault_audit"
+    } else if match(file_string, r'insights-logs-storageread') {
+      .source = "storageaccount_audit"
+    } else if match(file_string, r'insights-logs-networksecuritygroupevent') {
+      .source = "nsg_event"
+    } else {
+      .source = "unknown"
+    }
+
+    del(.file)
+
+    .sourcetype = "azure_artefact"
+    .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
+  '''
+
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+[sinks.Azure_Diagnostic_logs_blackhole_sink]
+  type = "blackhole"
+  inputs = ["Azure_Diagnostic_logs_enrich"]
+
+# Sink to send processed logs to the console, for debugging.
+[sinks.Azure_Diagnostic_logs_console_sink]
+  type = "console"
+  inputs = ["Azure_Diagnostic_logs_enrich"]
+  target = "stdout"
+  encoding.codec = "json"
+
+# Sink transform to send processed logs to an ELK instance.
+# [sinks.Azure_Diagnostic_logs_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["Azure_Diagnostic_logs_enrich"]
+#   mode="bulk"
+#   # bulk.action = "create"
+#   bulk.index = "${INDEX:?An index name must be specified for ELK / Splunk index}"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_USERNAME:?ELK_USERNAME is required}"
+#   auth.password = "${ELK_PASSWORD:?ELK_PASSWORD is required}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.Azure_Diagnostic_logs_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["Azure_Diagnostic_logs_enrich"]
+#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"
