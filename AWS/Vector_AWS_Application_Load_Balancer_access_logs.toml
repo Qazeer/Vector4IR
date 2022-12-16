@@ -1,0 +1,92 @@
+# Description: Process AWS Application Load Balancer access logs.
+#              Reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html
+#              Filename should match: "*elasticloadbalancing*.log"
+#              The exported compressed files can be uncompressed using:
+#                find <EXPORT_FOLDER> -type f -iname '*.gz' | xargs -I0 gzip --keep -d 0
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-12-14
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_TENANT = "<SOURCE_TENANT>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = "aws_alb_logs" & sourcetype = "aws_artefact".
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "aws_alb_logs" & sourcetype = "aws_artefact".
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.AWS_Application_Load_Balancer_access_logs_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the Application Load Balancer logs is required}/**/*elasticloadbalancing*.log"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.AWS_Application_Load_Balancer_access_logs_parser]
+  type = "remap"
+  inputs = ["AWS_Application_Load_Balancer_access_logs_input"]
+  source = '''
+    ., err = parse_aws_alb_log(.message)
+    if (err != null) {
+      log("Unable to convert to parse log line: " + err, level: "error")
+      abort
+    }
+  '''
+
+[transforms.AWS_Application_Load_Balancer_access_logs_enrich]
+  type = "remap"
+  inputs = ["AWS_Application_Load_Balancer_access_logs_parser"]
+  source = '''
+    .host = "${SOURCE_TENANT:?The source AWS tenant / account is required}"
+    .source = "aws_alb_logs"
+    .sourcetype = "aws_artefact"
+  '''
+
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+[sinks.AWS_Application_Load_Balancer_access_logs_blackhole_sink]
+  type = "blackhole"
+  inputs = ["AWS_Application_Load_Balancer_access_logs_enrich"]
+
+# Sink to send processed logs to the console for debugging.
+[sinks.AWS_Application_Load_Balancer_access_logs_console_sink]
+  type = "console"
+  inputs = ["AWS_Application_Load_Balancer_access_logs_enrich"]
+  target = "stdout"
+  encoding.codec = "json"
+
+# [sinks.AWS_Application_Load_Balancer_access_logs_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["AWS_Application_Load_Balancer_access_logs_enrich"]
+#   mode="bulk"
+#   # bulk.action = "create"
+#   bulk.index = "${INDEX:?An index name must be specified for ELK / Splunk index}"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_USERNAME:?ELK_USERNAME is required}"
+#   auth.password = "${ELK_PASSWORD:?ELK_PASSWORD is required}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.AWS_Application_Load_Balancer_access_logs_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = ["AWS_Application_Load_Balancer_access_logs_enrich"]
+#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"
