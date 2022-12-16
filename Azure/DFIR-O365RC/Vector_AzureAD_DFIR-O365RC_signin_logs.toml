@@ -9,12 +9,12 @@
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
 #   INDEX = "<INDEX>"
 #   SOURCE_TENANT = "<SOURCE_TENANT>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = "azuread_signin" & sourcetype = "azure_artefact".
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = "azure_aad_signins" & sourcetype = "azure_artefact".
 #   ELK_IP = "<IP>"
 #   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
 #   ELK_USERNAME = "<USERNAME>"
 #   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "azuread_signin" & sourcetype = "azure_artefact".
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "azure_aad_signins" & sourcetype = "azure_artefact".
 #   SPLUNK_IP = "<IP>"
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
@@ -37,40 +37,40 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   inputs = ["AzureAD_DFIR-O365RC_signin_logs_input"]
   type = "remap"
   source = '''
-  ., err = parse_json(.message)
-  if err != null {
-    log("Unable to parse JSON: " + err, level: "error")
-  }
+    ., err = parse_json(.message)
+    if err != null {
+      log("Unable to parse JSON: " + err, level: "error")
+    }
   '''
 
 [transforms.AzureAD_DFIR-O365RC_signin_logs_enrich]
   inputs = ["AzureAD_DFIR-O365RC_signin_logs_parser"]
   type = "remap"
   source = '''
-  if is_null(.createdDateTime) == false {
-    .createdDateTime, err1 = to_timestamp(.createdDateTime)
-    if err1 != null {
-      log("Unable to convert to timestamp: " + err1, level: "error")
+    if is_null(.createdDateTime) == false {
+      .createdDateTime, err1 = to_timestamp(.createdDateTime)
+      if err1 != null {
+        log("Unable to convert to timestamp: " + err1, level: "error")
+      }
     }
-  }
-  
-  if (.status.errorCode == 0 && .status.failureReason == "Other."){
-    .authenticationResult = "Success"
-  } else {
-    .authenticationResult = "Failure"
-  }
 
-  # Add new fields copied from existing ones to have the same nomenclature between the different log sources (audit, signins, unified logs...)
-  .timestamp = .createdDateTime
-  .ClientIP = .ipAddress
-  .Username = .userDisplayName
-  .AccountName = .userPrincipalName
-  
-  .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
-  .source = "azuread_signin"
-  .sourcetype = "azure_artefact"
+    if (.status.errorCode == 0 && .status.failureReason == "Other."){
+      .authenticationResult = "Success"
+    } else {
+      .authenticationResult = "Failure"
+    }
 
-  . = flatten(.)
+    # Add new fields copied from existing ones to have the same nomenclature between the different log sources (audit, signins, unified logs...)
+    .timestamp = .createdDateTime
+    .ClientIP = .ipAddress
+    .Username = .userDisplayName
+    .AccountName = .userPrincipalName
+
+    .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
+    .source = "azure_aad_signins"
+    .sourcetype = "azure_artefact"
+
+    . = flatten(.)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
@@ -84,7 +84,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   inputs = ["AzureAD_DFIR-O365RC_signin_logs_enrich"]
 #   target = "stdout"
 #   encoding.codec = "json"
-  
+
 # Sink transform to send processed logs to an ELK instance.
 # [sinks.AzureAD_DFIR-O365RC_signin_logs_ELK_sink]
 #   type = "elasticsearch"

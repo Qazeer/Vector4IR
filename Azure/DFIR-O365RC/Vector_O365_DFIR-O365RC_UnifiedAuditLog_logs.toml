@@ -33,101 +33,99 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   inputs = ["Azure_O365_UnifiedAuditLog_DFIR-O365RC_input"]
   type = "remap"
   source = '''
-  splitted, err = split(.message, "\n")
-  if err != null {
-    log("Unable to split message on newlines: " + err, level: "error")
-  }
+    splitted, err = split(.message, "\n")
+    if err != null {
+      log("Unable to split message on newlines: " + err, level: "error")
+    }
 
-  . = map_values(splitted, true) -> |value| {
-    is_value_json = value != null && is_json(value)
-
-    if (err == null && is_value_json) {
-      parsed_value, err = parse_json(value)
-
-      if err != null {
-        log("Unable to parse JSON: " + err, level: "error")
-        null
-      } else {
-        parsed_value
+    . = map_values(splitted, true) -> |value| {
+      is_value_json = value != null && is_json(value)
+      if (err == null && is_value_json) {
+        parsed_value, err = parse_json(value)
+        if err != null {
+          log("Unable to parse JSON: " + err, level: "error")
+          null
+        } else {
+          parsed_value
+        }
       }
     }
-  }
   '''
 
 [transforms.Azure_O365_UnifiedAuditLog_DFIR-O365RC_enrich]
   inputs = ["Azure_O365_UnifiedAuditLog_DFIR-O365RC_parser"]
   type = "remap"
   source = '''
-  if is_null(.CreationTime) == false {
-    .CreationTime, err1 = to_timestamp(.CreationTime)
-    if err1 != null {
-      log("Unable to convert to timestamp: " + err1, level: "error")
+    if is_null(.CreationTime) == false {
+      .CreationTime, err1 = to_timestamp(.CreationTime)
+      if err1 != null {
+        log("Unable to convert to timestamp: " + err1, level: "error")
+      }
     }
-  }
 
-  # Fields added to have the same nomenclature between the different log sources (audit, signins, unified logs...)
-  .timestamp = .CreationTime
-  .AccountName = .UserId
+    # Fields added to have the same nomenclature between the different log sources (audit, signins, unified logs...)
+    .timestamp = .CreationTime
+    .AccountName = .UserId
 
-  # Flatten the .DeviceProperties, ExtendedProperties, Parameters, and ModifiedProperties fields.
-  # Expected format:
-  #   DeviceProperties": [
-  #     {
-  #       "Name": "OS",
-  #       "Value": "MacOs"
-  #     },
-  #     {
-  #       "Name": "BrowserType",
-  #       "Value": "Other"
-  #     },
-  #     [...]
-  DevicePropertiesArray = .DeviceProperties
-  if is_null(.DeviceProperties) == false {
-    DevicePropertiesMapped = {}
-    for_each(array!(.DeviceProperties)) -> |_, item| {
-      DevicePropertiesMapped = set!(DevicePropertiesMapped, [item.Name], item.Value)
+    # Flatten the .DeviceProperties, ExtendedProperties, Parameters, and ModifiedProperties fields.
+    # Expected format:
+    #   DeviceProperties": [
+    #     {
+    #       "Name": "OS",
+    #       "Value": "MacOs"
+    #     },
+    #     {
+    #       "Name": "BrowserType",
+    #       "Value": "Other"
+    #     },
+    #     [...]
+    DevicePropertiesArray = .DeviceProperties
+    if is_null(.DeviceProperties) == false {
+      DevicePropertiesMapped = {}
+      for_each(array!(.DeviceProperties)) -> |_, item| {
+        DevicePropertiesMapped = set!(DevicePropertiesMapped, [item.Name], item.Value)
+      }
+      .DeviceProperties = DevicePropertiesMapped
     }
-    .DeviceProperties = DevicePropertiesMapped
-  }
 
-  ExtendedPropertiesArray = .ExtendedProperties
-  if is_null(.ExtendedProperties) == false {
-    ExtendedPropertiesMapped = {}
-    for_each(array!(.ExtendedProperties)) -> |_, item| {
-      ExtendedPropertiesMapped = set!(ExtendedPropertiesMapped, [item.Name], item.Value)
+    ExtendedPropertiesArray = .ExtendedProperties
+    if is_null(.ExtendedProperties) == false {
+      ExtendedPropertiesMapped = {}
+      for_each(array!(.ExtendedProperties)) -> |_, item| {
+        ExtendedPropertiesMapped = set!(ExtendedPropertiesMapped, [item.Name], item.Value)
+      }
+      .ExtendedProperties = ExtendedPropertiesMapped
     }
-    .ExtendedProperties = ExtendedPropertiesMapped
-  }
 
-  ParametersArray = .Parameters
-  if is_null(.Parameters) == false {
-    ParametersMapped = {}
-    for_each(array!(.Parameters)) -> |_, item| {
-      ParametersMapped = set!(ParametersMapped, [item.Name], item.Value)
+    ParametersArray = .Parameters
+    if is_null(.Parameters) == false {
+      ParametersMapped = {}
+      for_each(array!(.Parameters)) -> |_, item| {
+        ParametersMapped = set!(ParametersMapped, [item.Name], item.Value)
+      }
+      .Parameters = ParametersMapped
     }
-    .Parameters = ParametersMapped
-  }
 
-  ModifiedPropertiesArray = .ModifiedProperties
-  if is_null(.ModifiedProperties) == false {
-    ModifiedPropertiesMapped = {}
-    for_each(array!(.ModifiedProperties)) -> |_, item| {
-      ModifiedPropertiesMapped = set!(ModifiedPropertiesMapped, [item.Name, "OldValue"], item.OldValue)
-      ModifiedPropertiesMapped = set!(ModifiedPropertiesMapped, [item.Name, "NewValue"], item.NewValue)
+    ModifiedPropertiesArray = .ModifiedProperties
+    if is_null(.ModifiedProperties) == false {
+      ModifiedPropertiesMapped = {}
+      for_each(array!(.ModifiedProperties)) -> |_, item| {
+        ModifiedPropertiesMapped = set!(ModifiedPropertiesMapped, [item.Name, "OldValue"], item.OldValue)
+        ModifiedPropertiesMapped = set!(ModifiedPropertiesMapped, [item.Name, "NewValue"], item.NewValue)
+      }
+      .ModifiedProperties = ModifiedPropertiesMapped
     }
-    .ModifiedProperties = ModifiedPropertiesMapped
-  }
 
-  . = flatten(.)
-  # Restore the original fields as well following the flattening, to keep both a flattened and array version.
-  .DevicePropertiesArray = DevicePropertiesArray
-  .ExtendedPropertiesArray = ExtendedPropertiesArray
-  .ParametersArray = ParametersArray
-  .ModifiedPropertiesArray = ModifiedPropertiesArray
+    . = flatten(.)
+    # Restore the original fields as well following the flattening, to keep both a flattened and array version.
+    .DevicePropertiesArray = DevicePropertiesArray
+    .ExtendedPropertiesArray = ExtendedPropertiesArray
+    .ParametersArray = ParametersArray
+    .ModifiedPropertiesArray = ModifiedPropertiesArray
 
-  .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
-  .source = "o365_unifiedaudit"
-  .sourcetype = "azure_artefact"
+    .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
+    .source = "o365_unifiedaudit"
+    .sourcetype = "azure_artefact"
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

@@ -9,12 +9,12 @@
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
 #   INDEX = "<INDEX>"
 #   SOURCE_TENANT = "<SOURCE_TENANT>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = "azuread_audit" & sourcetype = "azure_artefact".
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = "azure_aad_audit" & sourcetype = "azure_artefact".
 #   ELK_IP = "<IP>"
 #   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
 #   ELK_USERNAME = "<USERNAME>"
 #   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "azuread_audit" & sourcetype = "azure_artefact".
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "azure_aad_audit" & sourcetype = "azure_artefact".
 #   SPLUNK_IP = "<IP>"
 #   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
 #   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
@@ -37,44 +37,44 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   inputs = ["AzureAD_DFIR-O365RC_audit_logs_input"]
   type = "remap"
   source = '''
-  ., err = parse_json(.message, max_depth: 8)
-  if err != null {
-    log("Unable to parse JSON: " + err, level: "error")
-  }
+    ., err = parse_json(.message, max_depth: 8)
+    if err != null {
+      log("Unable to parse JSON: " + err, level: "error")
+    }
   '''
 
 [transforms.AzureAD_DFIR-O365RC_audit_logs_enrich]
   inputs = ["AzureAD_DFIR-O365RC_audit_logs_parser"]
   type = "remap"
   source = '''
-  if is_null(.activityDateTime) == false {
-    .activityDateTime, err1 = to_timestamp(.activityDateTime)
-    if err1 != null {
-      log("Unable to convert to timestamp: " + err1, level: "error")
+    if is_null(.activityDateTime) == false {
+      .activityDateTime, err1 = to_timestamp(.activityDateTime)
+      if err1 != null {
+        log("Unable to convert to timestamp: " + err1, level: "error")
+      }
     }
-  }
 
-  .timestamp = .activityDateTime
+    .timestamp = .activityDateTime
 
-  # Child fields are added to initiatedBy field to have the same nomenclature between the different log sources (audit, signins, unified logs...)
-  if is_null(.initiatedBy.user) == false {
-    .initiatedBy.user.AccountName = .initiatedBy.user.userPrincipalName
-    .initiatedBy.user.ClientIP = .initiatedBy.user.ipAddress
-  }
-  if is_null(.initiatedBy.app) == false {
-    .initiatedBy.app.AppName = .initiatedBy.app.displayName
-    .initiatedBy.app.ServiceName = .initiatedBy.app.servicePrincipalName
-    .initiatedBy.app.ServiceId = .initiatedBy.app.servicePrincipalId
-  }
+    # Child fields are added to initiatedBy field to have the same nomenclature between the different log sources (audit, signins, unified logs...)
+    if is_null(.initiatedBy.user) == false {
+      .initiatedBy.user.AccountName = .initiatedBy.user.userPrincipalName
+      .initiatedBy.user.ClientIP = .initiatedBy.user.ipAddress
+    }
+    if is_null(.initiatedBy.app) == false {
+      .initiatedBy.app.AppName = .initiatedBy.app.displayName
+      .initiatedBy.app.ServiceName = .initiatedBy.app.servicePrincipalName
+      .initiatedBy.app.ServiceId = .initiatedBy.app.servicePrincipalId
+    }
 
-  .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
-  .source = "azuread_audit"
-  .sourcetype = "azure_artefact"
+    .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
+    .source = "azure_aad_audit"
+    .sourcetype = "azure_artefact"
 
-  # "Explode" 1 event with multiple (X) targetResources into multiple (X) events.
-  if is_null(.targetResources) == false {
-    . = unnest!(.targetResources)
-  }
+    # "Explode" 1 event with multiple (X) targetResources into multiple (X) events.
+    if is_null(.targetResources) == false {
+      . = unnest!(.targetResources)
+    }
   '''
 
 # Extra remap required as the unnest from the enrich remap component explode the event in multiple events.
@@ -96,7 +96,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   inputs = ["AzureAD_DFIR-O365RC_audit_logs_flatten"]
 #   target = "stdout"
 #   encoding.codec = "json"
-  
+
 # Sink transform to send processed logs to an ELK instance.
 # [sinks.AzureAD_DFIR-O365RC_audit_logs_ELK_sink]
 #   type = "elasticsearch"
