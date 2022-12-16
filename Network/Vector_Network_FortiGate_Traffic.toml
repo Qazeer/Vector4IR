@@ -41,7 +41,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # Expected formats:
     # date=2017-11-15 time=11:44:16
     # date=2017-11-15 time=11:44:16 tz="+0200"
-    
+
     # If a timezone ("tz" field) is not specified, the environnement variable UTC_OFFSET is used.
     timezone = ""
     if (exists(.tz)) {
@@ -63,7 +63,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       log("Parsing of the timestamp failed: " + err, level: "error")
       abort
     }
-    
+
     # Coerce types.
     . = map_values(.) -> |value| {
       if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f %z"); err == null) {
@@ -96,12 +96,12 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   inputs = ["FortiGate_traffic_parser"]
 
 # Sink to send processed logs to the console, for debugging.
-[sinks.FortiGate_traffic_console_sink]
-  type = "console"
-  inputs = ["FortiGate_traffic_parser"]
-  target = "stdout"
-  encoding.codec = "json"
-  
+# [sinks.FortiGate_traffic_console_sink]
+#   type = "console"
+#   inputs = ["FortiGate_traffic_parser"]
+#   target = "stdout"
+#   encoding.codec = "json"
+
 # Sink transform to send processed logs to an ELK instance.
 # [sinks.FortiGate_traffic_ELK_sink]
 #   type = "elasticsearch"

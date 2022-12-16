@@ -53,7 +53,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
         value
       }
     }
-   
+
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
@@ -130,7 +130,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   ]
 #   target = "stdout"
 #   encoding.codec = "json"
-  
+
 # Sink transform to send processed logs to an ELK instance.
 # [sinks.Linux_stat_timeline_ELK_sink]
 #   type = "elasticsearch"

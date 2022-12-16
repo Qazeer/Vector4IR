@@ -63,14 +63,14 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       .timestamp = parse_timestamp!(match_other_terminal.timestamp, format: "%Y-%m-%dT%H:%M:%SZ")
       .terminal = match_other_terminal.terminal
       .message_suffix = match_other_terminal.message
-    # Match other log entries that have a timestamp. 
+    # Match other log entries that have a timestamp.
     } else if (match_other, err = parse_regex(.message, r'^(?P<timestamp>.*)\s(?P<message>.*)$'); err == null) {
       .timestamp = parse_timestamp!(match_other.timestamp, format: "%Y-%m-%dT%H:%M:%SZ")
       .message_suffix = match_other.message
     } else {
       log("The following event is not in a valid format: " + to_string!(.message), level: "error")
     }
-    
+
     # Delete irrelevant default fields
     del(.file)
     del(.message)
@@ -94,7 +94,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   inputs = ["VMware_ESXi_shell_parser"]
 #   target = "stdout"
 #   encoding.codec = "json"
-  
+
 # Sink transform to send processed logs to an ELK instance.
 # [sinks.VMware_ESXi_shell_ELK_sink]
 #   type = "elasticsearch"
