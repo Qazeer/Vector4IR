@@ -61,9 +61,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-# [sinks.AWS_CloudTrail_JSON_blackhole_sink]
-#   type = "blackhole"
-#   inputs = ["AWS_CloudTrail_JSON_enrich"]
+[sinks.AWS_CloudTrail_JSON_blackhole_sink]
+  type = "blackhole"
+  inputs = ["AWS_CloudTrail_JSON_enrich"]
 
 # Sink to send processed logs to the console for debugging.
 # [sinks.AWS_CloudTrail_JSON_console_sink]
@@ -85,15 +85,15 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
 
 # Sink transform to send processed logs to a Splunk instance.
-# [sinks.AWS_CloudTrail_JSON_Splunk_sink]
-#   type = "splunk_hec_logs"
-#   inputs = ["AWS_CloudTrail_JSON_enrich"]
-#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-#   compression = "none"
-#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-#   host_key = "host"
-#   source = "{{ source }}"
-#   sourcetype = "{{ sourcetype }}"
-#   tls.verify_certificate = false
-#   encoding.codec = "json"
+[sinks.AWS_CloudTrail_JSON_Splunk_sink]
+  type = "splunk_hec_logs"
+  inputs = ["AWS_CloudTrail_JSON_enrich"]
+  endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+  default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+  compression = "none"
+  index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+  host_key = "host"
+  source = "{{ source }}"
+  sourcetype = "{{ sourcetype }}"
+  tls.verify_certificate = false
+  encoding.codec = "json"

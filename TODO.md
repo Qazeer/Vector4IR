@@ -118,7 +118,7 @@
   
   - Mettre en valeur par défaut 9200 pour ELK_PORT et 8088 pour SPLUNK_PORT
       "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-      "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+      "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
   
   - Maj le message d'erreur en cas d'absence de variable d'env INPUT_FOLDER pour
     correspondre à l'artefact.

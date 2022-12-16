@@ -36,7 +36,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   inputs = ["Zimbra_access_log_input"]
   source = '''
     ., err = parse_apache_log(.message, format: "combined")
-    
+
     if (err != null) {
       log("Unable to convert to parse log line: " + err, level: "error")
     }
@@ -75,10 +75,10 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 # [sinks.Zimbra_access_log_Splunk_sink]
 #   type = "splunk_hec_logs"
 #   inputs = [ "Zimbra_access_log_parser" ]
-#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
 #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
 #   compression = "none"
-#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}" 
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
 #   host_key = "host"
 #   source = "{{ source }}"
 #   sourcetype = "{{ sourcetype }}"

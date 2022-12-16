@@ -124,7 +124,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 # [sinks.RECmd_RegistryServices_Splunk_sink]
 #   type = "splunk_hec_logs"
 #   inputs = ["RECmd_RegistryServices_csv_parser"]
-#   endpoint = "http://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
 #   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
 #   compression = "none"
 #   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"

@@ -161,7 +161,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified",
 #      "RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed"
 #    ]
-#   endpoint = "http://${SPLUNK_IP}:${SPLUNK_PORT}"
+#   endpoint = "https://${SPLUNK_IP}:${SPLUNK_PORT}"
 #   default_token = "${SPLUNK_HEC_TOKEN}"
 #   compression = "none"
 #   index = "${INDEX}"
