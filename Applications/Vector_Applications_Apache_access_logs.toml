@@ -1,0 +1,89 @@
+# Description: Process Apache access log files (Apache common and combined formats supported).
+#              Common format: https://httpd.apache.org/docs/current/logs.html#common
+#              Combined format: https://httpd.apache.org/docs/current/logs.html#combined
+#              The format should be specified with the APACHE_LOG_FORMAT environnement variable.
+#              Filename should match: "*access_log*"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   APACHE_LOG_FORMAT = "<common | combined>" -- Defaukts to combined.
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   INDEX = "<INDEX>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+#   -- ELK sink specific variables. ELK index = <INDEX> & source = "apache_access_logs" & sourcetype = "http_event".
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "apache_access_logs" & sourcetype = "http_event".
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.Apache_access_log_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the Apache access log files is required. Add '**' to process the specified folder recursively (exemple: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*access_log*"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.Apache_access_log_parser]
+  type = "remap"
+  inputs = ["Apache_access_log_input"]
+  source = '''
+    ., err = parse_apache_log(.message, format: "${APACHE_LOG_FORMAT:combined}")
+
+    if (err != null) {
+      log("Unable to convert to parse Apache log line: " + err, level: "error")
+    }
+
+    # Add the source host following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .source = "apache_access_logs"
+    .sourcetype = "http_event"
+  '''
+
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+# [sinks.Apache_access_log_blackhole_sink]
+#   type = "blackhole"
+#   inputs = ["Apache_access_log_parser"]
+
+# Sink to send processed logs to the console for debugging.
+# [sinks.Apache_access_log_console_sink]
+#   type = "console"
+#   inputs = ["Apache_access_log_parser"]
+#   target = "stdout"
+#   encoding.codec = "json"
+
+# [sinks.Apache_access_log_ELK_sink]
+#   type = "elasticsearch"
+#   inputs = ["Apache_access_log_parser"]
+#   mode="bulk"
+#   # bulk.action = "create"
+#   bulk.index = "${INDEX:?An index name must be specified for ELK / Splunk index}"
+#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+#   auth.strategy = "basic"
+#   auth.user = "${ELK_USERNAME:?ELK_USERNAME is required}"
+#   auth.password = "${ELK_PASSWORD:?ELK_PASSWORD is required}"
+#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
+
+# Sink transform to send processed logs to a Splunk instance.
+# [sinks.Apache_access_log_Splunk_sink]
+#   type = "splunk_hec_logs"
+#   inputs = [ "Apache_access_log_parser" ]
+#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+#   compression = "none"
+#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
+#   host_key = "host"
+#   source = "{{ source }}"
+#   sourcetype = "{{ sourcetype }}"
+#   tls.verify_certificate = false
+#   encoding.codec = "json"
