@@ -38,132 +38,132 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_csv_input"]
   source = '''
-  # Expect CSV header:
-  # SourceFile,SourceCreated,SourceModified,SourceAccessed,AppId,AppIdDescription,EntryName,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[Jumplist-CustomDst] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # SourceFile,SourceCreated,SourceModified,SourceAccessed,AppId,AppIdDescription,EntryName,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[Jumplist-CustomDst] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[8] == "TargetModified"{
-    abort
-  }
+    if fields[8] == "TargetModified"{
+      abort
+    }
 
-  .sourcefile = fields[0]
+    .sourcefile = fields[0]
 
-  if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-    .sourcecreated, err = to_timestamp(fields[1])
-  }
+    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
+      .sourcecreated = to_timestamp!(fields[1])
+    }
 
-  if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
-    .sourcemodified, err = to_timestamp(fields[2])
-  }
+    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
+      .sourcemodified = to_timestamp!(fields[2])
+    }
 
-  if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-    .sourceaccessed, err = to_timestamp(fields[3])
-  }
+    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
+      .sourceaccessed = to_timestamp!(fields[3])
+    }
 
-  .appid = fields[4]
-  .appiddescription = fields[5]
-  .entryname = fields[6]
+    .appid = fields[4]
+    .appiddescription = fields[5]
+    .entryname = fields[6]
 
-  if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-    .targetcreated, err = to_timestamp(fields[7])
-  }
+    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
+      .targetcreated = to_timestamp!(fields[7])
+    }
 
-  if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-    .targetmodified, err = to_timestamp(fields[8])
-  }
+    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
+      .targetmodified = to_timestamp!(fields[8])
+    }
 
-  if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
-    .targetaccessed, err = to_timestamp(fields[9])
-  }
+    if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
+      .targetaccessed = to_timestamp!(fields[9])
+    }
 
-  .filesize, err = to_int(fields[10])
-  .relativepath = fields[11]
-  .workingdirectory = fields[12]
-  .fileattributes = fields[13]
-  .headerflags = fields[14]
-  .drivetype = fields[15]
-  .volumeserialnumber = fields[16]
-  .volumelabel = fields[17]
-  .localpath = fields[18]
-  .commonpath = fields[19]
-  .targetidabsolutepath = fields[20]
-  .targetmftentrynumber = fields[21]
-  .machineid = fields[23]
-  .machinemacaddress = fields[24]
+    .filesize = to_int!(fields[10])
+    .relativepath = fields[11]
+    .workingdirectory = fields[12]
+    .fileattributes = fields[13]
+    .headerflags = fields[14]
+    .drivetype = fields[15]
+    .volumeserialnumber = fields[16]
+    .volumelabel = fields[17]
+    .localpath = fields[18]
+    .commonpath = fields[19]
+    .targetidabsolutepath = fields[20]
+    .targetmftentrynumber = fields[21]
+    .machineid = fields[23]
+    .machinemacaddress = fields[24]
 
-  if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
-    .trackercreatedon, err = to_timestamp(fields[25])
-  }
+    if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
+      .trackercreatedon = to_timestamp!(fields[25])
+    }
 
-  .arguments = fields[27]
+    .arguments = fields[27]
 
-  .timestamp = .sourcemodified
+    .timestamp = .sourcemodified
 
-  if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
-      if ((parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
-        # Parse SourceFile field to extract username. Expected format: "username".
-        .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
-      } else if ((parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
-        # Parse SourceFile field to extract username. Expected format: "username".
-        .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
-      }
-  } else {
-      .user = ""
-  }
+    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+        if ((parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
+          # Parse SourceFile field to extract username. Expected format: "username".
+          .user = parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
+        } else if ((parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
+          # Parse SourceFile field to extract username. Expected format: "username".
+          .user = parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
+        }
+    } else {
+        .user = ""
+    }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_jumplist-customdst"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_jumplist-customdst"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_SourceCreated]
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
   source = '''
-  if !exists(.sourcecreated){
-    abort
-  }
+    if !exists(.sourcecreated){
+      abort
+    }
 
-  .timestamp = .sourcecreated
-  .operation = "creation"
-  .suboperation = "file_creation_sourcecreated"
-    '''
+    .timestamp = .sourcecreated
+    .operation = "creation"
+    .suboperation = "file_creation_sourcecreated"
+  '''
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_SourceModified]
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
   source = '''
-  if !exists(.sourcemodified){
-    abort
-  }
+    if !exists(.sourcemodified){
+      abort
+    }
 
-  .timestamp = .sourcemodified
-  .operation = "modification"
-  .suboperation = "file_modification_sourcemodified"
-    '''
+    .timestamp = .sourcemodified
+    .operation = "modification"
+    .suboperation = "file_modification_sourcemodified"
+  '''
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_SourceAccessed]
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
   source = '''
-  if !exists(.sourceaccessed){
-    abort
-  }
+    if !exists(.sourceaccessed){
+      abort
+    }
 
-  .timestamp = .sourceaccessed
-  .operation = "access"
-  .suboperation = "file_access_sourceaccessed"
-    '''
+    .timestamp = .sourceaccessed
+    .operation = "access"
+    .suboperation = "file_access_sourceaccessed"
+  '''
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_TargetCreated]
   type = "remap"
@@ -176,7 +176,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   .timestamp = .targetcreated
   .operation = "creation"
   .suboperation = "file_creation_targetcreated"
-    '''
+  '''
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_TargetModified]
   type = "remap"
@@ -189,7 +189,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   .timestamp = .targetmodified
   .operation = "modification"
   .suboperation = "file_modification_targetmodified"
-    '''
+  '''
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_TargetAccessed]
   type = "remap"
@@ -202,7 +202,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   .timestamp = .targetaccessed
   .operation = "access"
   .suboperation = "file_access_targetaccessed"
-    '''
+  '''
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_TrackerCreatedOn]
   type = "remap"
@@ -215,7 +215,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   .timestamp = .trackercreatedon
   .operation = "creation"
   .suboperation = "file_creation_trackercreatedon"
-    '''
+  '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
 # [sinks.JLECmd_Jumplist-CustomDst_blackhole_sink]

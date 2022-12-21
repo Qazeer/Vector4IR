@@ -39,37 +39,37 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["WxTCmd_Activitydb-package-ids_csv_input"]
   source = '''
-  # Expect CSV header:
-  # Id,Platform,Name,AdditionalInformation,Expires
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[Activitydb-PackageIDs] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # Id,Platform,Name,AdditionalInformation,Expires
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[Activitydb-PackageIDs] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[1] == "Platform"{
-    abort
-  }
+    if fields[1] == "Platform"{
+      abort
+    }
 
-  .id = fields[0]
-  .platform = fields[1]
-  .name = fields[2]
-  .additionalinformation = fields[3]
+    .id = fields[0]
+    .platform = fields[1]
+    .name = fields[2]
+    .additionalinformation = fields[3]
 
-  if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-    .expires, err = to_timestamp(fields[4])
-    .timestamp = .expires
-  }
+    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+      .expires = to_timestamp!(fields[4])
+      .timestamp = .expires
+    }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_activitydb-packageids"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_activitydb-packageids"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

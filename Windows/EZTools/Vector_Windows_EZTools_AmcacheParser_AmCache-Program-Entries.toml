@@ -37,150 +37,150 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_csv_input"]
   source = '''
-  # Expect CSV header:
-  # Old: ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDate,OSVersionAtInstallTime,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,InstallDateArpLastModified,InstallDateMsi,InstallDateFromLinkFile,Manufacturer
-  # New: ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDateArpLastModified,InstallDate,InstallDateMsi,OSVersionAtInstallTime,InstallDateFromLinkFile,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,Manufacturer
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[AmCache-Program-Entries] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # Old: ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDate,OSVersionAtInstallTime,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,InstallDateArpLastModified,InstallDateMsi,InstallDateFromLinkFile,Manufacturer
+    # New: ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDateArpLastModified,InstallDate,InstallDateMsi,OSVersionAtInstallTime,InstallDateFromLinkFile,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,Manufacturer
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[AmCache-Program-Entries] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[0] == "ProgramId"{
-    abort
-  }
+    if fields[0] == "ProgramId"{
+      abort
+    }
 
-  .programid = fields[0]
+    .programid = fields[0]
 
-  if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-      # Parse KeyLastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .keylastwritetimestamp, err = parse_timestamp(fields[1], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[Amcache_ProgramEntries] Unable to parse KeyLastWriteTimestamp timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
+        # Parse KeyLastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .keylastwritetimestamp, err = parse_timestamp(fields[1], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[Amcache_ProgramEntries] Unable to parse KeyLastWriteTimestamp timestamp: " + err, level: "error")
+        }
+    }
 
-  .name = fields[2]
-  .version = fields[3]
-  .publisher = fields[4]
+    .name = fields[2]
+    .version = fields[3]
+    .publisher = fields[4]
 
-  if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-      # Parse InstallDateMsi field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdate, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[Amcache_ProgramEntries] Unable to parse InstallDateMsi timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
+        # Parse InstallDateMsi field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .installdate, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[Amcache_ProgramEntries] Unable to parse InstallDateMsi timestamp: " + err, level: "error")
+        }
+    }
 
-  .osversionatinstalltime = fields[6]
-  .bundlemanifestpath = fields[7]
-  .hiddenarp = to_bool!(fields[8])
-  .inboxmodernapp = to_bool!(fields[9])
-  .language = fields[10]
-  .manifestpath = fields[11]
-  .msipackagecode = fields[12]
-  .msiproductcode = fields[13]
-  .packagefullname = fields[14]
-  .programinstanceid = fields[15]
-  .registrykeypath = fields[16]
-  .rootdirpath = fields[17]
-  .type = fields[18]
-  .source = fields[19]
-  .storeapptype = fields[20]
-  .uninstallstring = fields[21]
+    .osversionatinstalltime = fields[6]
+    .bundlemanifestpath = fields[7]
+    .hiddenarp = to_bool!(fields[8])
+    .inboxmodernapp = to_bool!(fields[9])
+    .language = fields[10]
+    .manifestpath = fields[11]
+    .msipackagecode = fields[12]
+    .msiproductcode = fields[13]
+    .packagefullname = fields[14]
+    .programinstanceid = fields[15]
+    .registrykeypath = fields[16]
+    .rootdirpath = fields[17]
+    .type = fields[18]
+    .source = fields[19]
+    .storeapptype = fields[20]
+    .uninstallstring = fields[21]
 
-  if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
-    # Parse InstallDateArpLastModified field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-    .installdatearplastmodified, err = parse_timestamp(fields[22], format: "%m/%d/%Y %H:%M:%S")
-  }
+    if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
+      # Parse InstallDateArpLastModified field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
+      .installdatearplastmodified, err = parse_timestamp(fields[22], format: "%m/%d/%Y %H:%M:%S")
+    }
 
-  if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
+    if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
     # Parse InstallDateMsi field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-    .installdatemsi, err = parse_timestamp(fields[23], format: "%m/%d/%Y %H:%M:%S")
-  }
+      .installdatemsi, err = parse_timestamp(fields[23], format: "%m/%d/%Y %H:%M:%S")
+    }
 
-  if (fields[24] != null && fields[24] != "" && fields[24] != "\r") {
-    # Parse InstallDateFromLinkFile field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-    .installdatefromlinkfile, err = parse_timestamp(fields[24], format: "%m/%d/%Y %H:%M:%S")
-  }
+    if (fields[24] != null && fields[24] != "" && fields[24] != "\r") {
+      # Parse InstallDateFromLinkFile field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
+      .installdatefromlinkfile, err = parse_timestamp(fields[24], format: "%m/%d/%Y %H:%M:%S")
+    }
 
-  .manufacturer = fields[25]
-  .timestamp = .keylastwritetimestamp
+    .manufacturer = fields[25]
+    .timestamp = .keylastwritetimestamp
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_amcache-programentries"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_amcache-programentries"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 [transforms.AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
   source = '''
-  if !exists(.keylastwritetimestamp){
-    abort
-  }
+    if !exists(.keylastwritetimestamp){
+      abort
+    }
 
-  .timestamp = .keylastwritetimestamp
-  .operation = "program_modification_keylastwritetimestamp"
-    '''
+    .timestamp = .keylastwritetimestamp
+    .operation = "program_modification_keylastwritetimestamp"
+  '''
 
 [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDate]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
   source = '''
-  if !exists(.installdate){
-    abort
-  }
+    if !exists(.installdate){
+      abort
+    }
 
-  .timestamp = .installdate
-  .operation = "creation"
-  .suboperation = "program_installationdate"
-    '''
+    .timestamp = .installdate
+    .operation = "creation"
+    .suboperation = "program_installationdate"
+  '''
 
 [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
   source = '''
-  if !exists(.installdatearplastmodified){
-    abort
-  }
+    if !exists(.installdatearplastmodified){
+      abort
+    }
 
-  .timestamp = .installdatearplastmodified
-  .operation = "modification"
-  .suboperation = "program_installdatearplastmodified"
-    '''
+    .timestamp = .installdatearplastmodified
+    .operation = "modification"
+    .suboperation = "program_installdatearplastmodified"
+  '''
 
 [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
   source = '''
-  if !exists(.installdatemsi){
-    abort
-  }
+    if !exists(.installdatemsi){
+      abort
+    }
 
-  .timestamp = .installdatemsi
-  .operation = "creation"
-  .suboperation = "program_installdatemsi"
-    '''
+    .timestamp = .installdatemsi
+    .operation = "creation"
+    .suboperation = "program_installdatemsi"
+  '''
 
 [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
   source = '''
-  if !exists(.installdatefromlinkfile){
-    abort
-  }
+    if !exists(.installdatefromlinkfile){
+      abort
+    }
 
-  .timestamp = .installdatefromlinkfile
-  .operation = "creation"
-  .suboperation = "program_installdatefromlinkfile"
-    '''
+    .timestamp = .installdatefromlinkfile
+    .operation = "creation"
+    .suboperation = "program_installdatefromlinkfile"
+  '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
 # [sinks.AmcacheParser_AmCache-Program-Entries_blackhole_sink]

@@ -38,178 +38,178 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["LECmd_Lnk_csv_input"]
   source = '''
-  # Expect CSV header:
-  # SourceFile,SourceCreated,SourceModified,SourceAccessed,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,NetworkPath,CommonPath,Arguments,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,MACVendor,TrackerCreatedOn,ExtraBlocksPresent
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[LNK-Files] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # SourceFile,SourceCreated,SourceModified,SourceAccessed,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,NetworkPath,CommonPath,Arguments,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,MACVendor,TrackerCreatedOn,ExtraBlocksPresent
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[LNK-Files] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[0] == "SourceFile"{
-    abort
-  }
+    if fields[0] == "SourceFile"{
+      abort
+    }
 
-  .sourcefile = fields[0]
-  if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-    .sourcecreated, err = to_timestamp(fields[1])
-  }
+    .sourcefile = fields[0]
+    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
+      .sourcecreated = to_timestamp!(fields[1])
+    }
 
-  if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
-    .sourcemodified, err = to_timestamp(fields[2])
-  }
+    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
+      .sourcemodified = to_timestamp!(fields[2])
+    }
 
-  if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-    .sourceaccessed, err = to_timestamp(fields[3])
-  }
+    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
+      .sourceaccessed = to_timestamp!(fields[3])
+    }
 
-  if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-    .targetcreated, err = to_timestamp(fields[4])
-  }
+    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+      .targetcreated = to_timestamp!(fields[4])
+    }
 
-  if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-    .targetmodified, err = to_timestamp(fields[5])
-  }
+    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
+      .targetmodified = to_timestamp!(fields[5])
+    }
 
-  if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-    .targetaccessed, err = to_timestamp(fields[6])
-  }
+    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
+      .targetaccessed = to_timestamp!(fields[6])
+    }
 
-  .filesize, err = to_int(fields[7])
-  .relativepath = fields[8]
-  .workingdirectory = fields[9]
-  .fileattributes = fields[10]
-  .headerflags = fields[11]
-  .drivetype = fields[12]
-  .volumeserialnumber = fields[13]
-  .localpath = fields[15]
-  .networkpath = fields[16]
-  .commonpath = fields[17]
-  .arguments = fields[18]
-  .targetidabsolutepath = fields[19]
-  .targetmftentrynumber = fields[20]
-  .machineid = fields[22]
-  .machinemacaddress = fields[23]
+    .filesize = to_int!(fields[7])
+    .relativepath = fields[8]
+    .workingdirectory = fields[9]
+    .fileattributes = fields[10]
+    .headerflags = fields[11]
+    .drivetype = fields[12]
+    .volumeserialnumber = fields[13]
+    .localpath = fields[15]
+    .networkpath = fields[16]
+    .commonpath = fields[17]
+    .arguments = fields[18]
+    .targetidabsolutepath = fields[19]
+    .targetmftentrynumber = fields[20]
+    .machineid = fields[22]
+    .machinemacaddress = fields[23]
 
-  if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
-    .trackercreatedon, err = to_timestamp(fields[25])
-  }
+    if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
+      .trackercreatedon = to_timestamp!(fields[25])
+    }
 
-  .timestamp = .sourcemodified
+    .timestamp = .sourcemodified
 
-  if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
-      if ((parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData')."user") != null) {
-        # Parse SourceFile field to extract username. Expected format: "username".
-        .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData')."user"
-      } else if ((parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData')."user") != null) {
-        # Parse SourceFile field to extract username. Expected format: "username".
-        .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData')."user"
-      }
-  } else {
-      .user = ""
-  }
+    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+        if ((parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData')."user") != null) {
+          # Parse SourceFile field to extract username. Expected format: "username".
+          .user = parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData')."user"
+        } else if ((parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData')."user") != null) {
+          # Parse SourceFile field to extract username. Expected format: "username".
+          .user = parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData')."user"
+        }
+    } else {
+        .user = ""
+    }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_lnk-files"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_lnk-files"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 [transforms.LECmd_Lnk_dedup_SourceModified]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
-  if !exists(.sourcemodified){
-    abort
-  }
+    if !exists(.sourcemodified){
+      abort
+    }
 
-  .timestamp = .sourcemodified
-  .operation = "modification"
-  .suboperation = "file_modification_sourcemodified"
-    '''
+    .timestamp = .sourcemodified
+    .operation = "modification"
+    .suboperation = "file_modification_sourcemodified"
+  '''
 
 [transforms.LECmd_Lnk_dedup_SourceCreated]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
-  if !exists(.sourcecreated){
-    abort
-  }
+    if !exists(.sourcecreated){
+      abort
+    }
 
-  .timestamp = .sourcecreated
-  .operation = "creation"
-  .suboperation = "file_creation_sourcecreated"
-    '''
+    .timestamp = .sourcecreated
+    .operation = "creation"
+    .suboperation = "file_creation_sourcecreated"
+  '''
 
 [transforms.LECmd_Lnk_dedup_SourceAccessed]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
-  if !exists(.sourceaccessed){
-    abort
-  }
+    if !exists(.sourceaccessed){
+      abort
+    }
 
-  .timestamp = .sourceaccessed
-  .operation = "access"
-  .suboperation = "file_access_sourceaccessed"
-    '''
+    .timestamp = .sourceaccessed
+    .operation = "access"
+    .suboperation = "file_access_sourceaccessed"
+  '''
 
 [transforms.LECmd_Lnk_dedup_TargetCreated]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
-  if !exists(.targetcreated){
-    abort
-  }
+    if !exists(.targetcreated){
+      abort
+    }
 
-  .timestamp = .targetcreated
-  .operation = "creation"
-  .suboperation = "file_creation_targetcreated"
-    '''
+    .timestamp = .targetcreated
+    .operation = "creation"
+    .suboperation = "file_creation_targetcreated"
+  '''
 
 [transforms.LECmd_Lnk_dedup_TargetModified]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
-  if !exists(.targetmodified){
-    abort
-  }
+    if !exists(.targetmodified){
+      abort
+    }
 
-  .timestamp = .targetmodified
-  .operation = "modification"
-  .suboperation = "file_modification_targetmodified"
-    '''
+    .timestamp = .targetmodified
+    .operation = "modification"
+    .suboperation = "file_modification_targetmodified"
+  '''
 
 [transforms.LECmd_Lnk_dedup_TargetAccessed]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
-  if !exists(.targetaccessed){
-    abort
-  }
+    if !exists(.targetaccessed){
+      abort
+    }
 
-  .timestamp = .targetaccessed
-  .operation = "access"
-  .suboperation = "file_access_targetaccessed"
-    '''
+    .timestamp = .targetaccessed
+    .operation = "access"
+    .suboperation = "file_access_targetaccessed"
+  '''
 
 [transforms.LECmd_Lnk_dedup_TrackerCreatedOn]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
-  if !exists(.trackercreatedon){
-    abort
-  }
+    if !exists(.trackercreatedon){
+      abort
+    }
 
-  .timestamp = .trackercreatedon
-  .operation = "creation"
-  .suboperation = "file_creation_trackercreatedon"
-    '''
+    .timestamp = .trackercreatedon
+    .operation = "creation"
+    .suboperation = "file_creation_trackercreatedon"
+  '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
 # [sinks.LECmd_Lnk_blackhole_sink]

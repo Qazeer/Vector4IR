@@ -38,77 +38,77 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_input"]
   source = '''
-  # Expect CSV header:
-  # SourceFile,SourceCreated,SourceModified,SourceAccessed,Filename
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[RecentFileCacheParser] Unable to split CSV: " + err, level: "error")
-  }
-
-  if fields[0] == "SourceFile"{
-    abort
-  }
-
-  .sourcefile = fields[0]
-  .sourcecreated, err = to_timestamp(fields[1])
-  .sourcemodified, err = to_timestamp(fields[2])
-  .sourceaccessed, err = to_timestamp(fields[3])
-  .filename = fields[4]
-
-  if (.filename != null && .filename != "") {
-    if (contains(.filename, "users")) {
-      # Parse Filename field to extract username. Expected format: "username".
-      .user, err = parse_regex(.filename, r'[a-zA-Z]:\\users\\(?P<user>[\w]+)\\*')."user"
-    } else if (contains(.filename, "utilisateurs")) {
-      # Parse Filename field to extract username. Expected format: "username".
-      .user, err = parse_regex(.filename, r'[a-zA-Z]:\\utilisateurs\\(?P<user>[\w]+)\\*')."user"
+    # Expect CSV header:
+    # SourceFile,SourceCreated,SourceModified,SourceAccessed,Filename
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[RecentFileCacheParser] Unable to split CSV: " + err, level: "error")
     }
-  } else {
-      .user = ""
-  }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_recentfilecacheparser"
-  .sourcetype = "windows_artefact"
+    if fields[0] == "SourceFile"{
+      abort
+    }
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    .sourcefile = fields[0]
+    .sourcecreated = to_timestamp!(fields[1])
+    .sourcemodified = to_timestamp!(fields[2])
+    .sourceaccessed = to_timestamp!(fields[3])
+    .filename = fields[4]
+
+    if (.filename != null && .filename != "") {
+      if (contains(.filename, "users")) {
+        # Parse Filename field to extract username. Expected format: "username".
+        .user = parse_regex!(.filename, r'[a-zA-Z]:\\users\\(?P<user>[\w]+)\\*')."user"
+      } else if (contains(.filename, "utilisateurs")) {
+        # Parse Filename field to extract username. Expected format: "username".
+        .user = parse_regex!(.filename, r'[a-zA-Z]:\\utilisateurs\\(?P<user>[\w]+)\\*')."user"
+      }
+    } else {
+        .user = ""
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_recentfilecacheparser"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 [transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated]
   type = "remap"
   inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
   source = '''
-  if !exists(.sourcecreated){
-    abort
-  }
+    if !exists(.sourcecreated){
+      abort
+    }
 
-  .timestamp = .sourcecreated
-  .operation = "creation"
-  .suboperation = "file_creation_sourcecreated"
+    .timestamp = .sourcecreated
+    .operation = "creation"
+    .suboperation = "file_creation_sourcecreated"
   '''
 
 [transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified]
   type = "remap"
   inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
   source = '''
-  if !exists(.sourcemodified){
-    abort
-  }
+    if !exists(.sourcemodified){
+      abort
+    }
 
-  .timestamp = .sourcemodified
-  .operation = "modification"
-  .suboperation = "file_modification_sourcemodified"
+    .timestamp = .sourcemodified
+    .operation = "modification"
+    .suboperation = "file_modification_sourcemodified"
   '''
 
-  [transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed]
-    type = "remap"
-    inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
-    source = '''
+[transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed]
+  type = "remap"
+  inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
+  source = '''
     if !exists(.sourceaccessed){
       abort
     }
@@ -116,7 +116,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .timestamp = .sourceaccessed
     .operation = "access"
     .suboperation = "file_access_sourceaccessed"
-    '''
+  '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
 # [sinks.RecentFileCacheParser_RecentFileCacheParser_blackhole_sink]

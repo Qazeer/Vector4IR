@@ -40,52 +40,52 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_NetworkList_csv_input"]
   source = '''
-  # Expect CSV header:
-  # BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[RECmd_NetworkList_Profiles] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[RECmd_NetworkList_Profiles] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[0] == "BatchKeyPath"{
-    abort
-  }
+    if fields[0] == "BatchKeyPath"{
+      abort
+    }
 
-  .networkname = fields[2]
-  .nametype = fields[3]
+    .networkname = fields[2]
+    .nametype = fields[3]
 
-  if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-      # Parse FirstConnectLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .firstconnectlocal, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[RECmd_NetworkList_Profiles] Unable to parse FirstConnectLocal timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+        # Parse FirstConnectLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .firstconnectlocal, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[RECmd_NetworkList_Profiles] Unable to parse FirstConnectLocal timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-      # Parse LastConnectedLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastconnectedlocal, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[RECmd_NetworkList_Profiles] Unable to parse LastConnectedLocal timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
+        # Parse LastConnectedLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastconnectedlocal, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[RECmd_NetworkList_Profiles] Unable to parse LastConnectedLocal timestamp: " + err, level: "error")
+        }
+    }
 
-  .managed = fields[6]
-  .dnssuffix = fields[7]
-  .gatewaymacaddress = fields[8]
-  .profileguid = fields[9]
-  .timestamp = .lastconnectedlocal
+    .managed = fields[6]
+    .dnssuffix = fields[7]
+    .gatewaymacaddress = fields[8]
+    .profileguid = fields[9]
+    .timestamp = .lastconnectedlocal
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_registry_networklist_profiles"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_networklist_profiles"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
   # types.Managed = bool
@@ -94,27 +94,27 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_NetworkList_csv_parser"]
   source = '''
-  if !exists(.lastconnectedlocal){
-    abort
-  }
+    if !exists(.lastconnectedlocal){
+      abort
+    }
 
-  .timestamp = .lastconnectedlocal
-  .operation = "connection"
-  .suboperation = "connection_lastconnectedlocal"
-    '''
+    .timestamp = .lastconnectedlocal
+    .operation = "connection"
+    .suboperation = "connection_lastconnectedlocal"
+  '''
 
 [transforms.RECmd_NetworkList_dedup_FirstConnectLOCAL]
   type = "remap"
   inputs = ["RECmd_NetworkList_csv_parser"]
   source = '''
-  if !exists(.firstconnectlocal){
-    abort
-  }
+    if !exists(.firstconnectlocal){
+      abort
+    }
 
-  .timestamp = .firstconnectlocal
-  .operation = "connection"
-  .suboperation = "connection_firstconnectlocal"
-    '''
+    .timestamp = .firstconnectlocal
+    .operation = "connection"
+    .suboperation = "connection_firstconnectlocal"
+  '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
 # [sinks.RECmd_NetworkList_blackhole_sink]

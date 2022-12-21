@@ -40,56 +40,55 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_CIDSizeMRU_csv_input"]
   source = '''
-  # Expect CSV header:
-  # BatchKeyPath,BatchValueName,Executable,MRUPosition,OpenedOn
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[CIDSizeMRU] Unable to split CSV: " + err, level: "error")
-  }
-
-  if fields[0] == "BatchKeyPath"{
-    abort
-  }
-
-  .executable = fields[2]
-  .mruposition = fields[3]
-
-  if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-      # Parse OpenedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .openedon, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[CIDSizeMRU] Unable to parse OpenedOn timestamp: " + err, level: "error")
-      }
-
-      .isopenedonnull = "false"
-  } else {
-      .isopenedonnull = "true"
-  }
-
-  .timestamp = .openedon
-
-  if (.file != null && .file != "") {
-    if (contains!(.file, "_Users_")) {
-     # Parse File field to extract username. Expected format: "username".
-     .user, err = parse_regex(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
-    } else if (contains!(.file, "_Utilisateurs_")) {
-     # Parse File field to extract username. Expected format: "username".
-     .user, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
+    # Expect CSV header:
+    # BatchKeyPath,BatchValueName,Executable,MRUPosition,OpenedOn
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[CIDSizeMRU] Unable to split CSV: " + err, level: "error")
     }
-  } else {
-      .user = ""
-  }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_registry_cidsizemru"
-  .sourcetype = "windows_artefact"
+    if fields[0] == "BatchKeyPath"{
+      abort
+    }
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    .executable = fields[2]
+    .mruposition = fields[3]
+
+    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+        # Parse OpenedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .openedon, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[CIDSizeMRU] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+        .isopenedonnull = "false"
+    } else {
+        .isopenedonnull = "true"
+    }
+
+    .timestamp = .openedon
+
+    if (.file != null && .file != "") {
+      if (contains!(.file, "_Users_")) {
+       # Parse File field to extract username. Expected format: "username".
+       .user = parse_regex!(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
+      } else if (contains!(.file, "_Utilisateurs_")) {
+       # Parse File field to extract username. Expected format: "username".
+       .user = parse_regex!(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
+      }
+    } else {
+        .user = ""
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_cidsizemru"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

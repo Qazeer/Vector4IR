@@ -99,7 +99,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       }
 
       # Workaround to determine the correct event timestamp.
-      # As linux auth logs do not incorporate a timestamp, parse_linux_authorization 
+      # As linux auth logs do not incorporate a timestamp, parse_linux_authorization
       # "resolves the year for messages that don't include it.
       # If the current month is January, and the message is for December, it will take the previous year.
       # Otherwise, take the current year".

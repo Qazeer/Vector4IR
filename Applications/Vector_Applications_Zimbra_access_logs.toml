@@ -38,7 +38,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     ., err = parse_apache_log(.message, format: "combined")
 
     if (err != null) {
-      log("Unable to convert to parse log line: " + err, level: "error")
+      log("Unable to convert to parse Zimbra log line: " + err, level: "error")
     }
 
     # Add the source host following the parsing.

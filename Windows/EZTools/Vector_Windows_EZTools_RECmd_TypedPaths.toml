@@ -40,55 +40,55 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_TypedPaths_csv_input"]
   source = '''
-  # Expect CSV header:
-  # HivePath,HiveType,Description,Category,KeyPath,ValueName,ValueType,ValueData,ValueData2,ValueData3,Comment,Recursive,Deleted,LastWriteTimestamp,PluginDetailFile
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[TypedPaths] Unable to split CSV: " + err, level: "error")
-  }
-
-  if fields[7] == "ValueData"{
-    abort
-  }
-
-  .category = fields[3]
-  .valuename = fields[5]
-  .valuetype = fields[6]
-  .valuedata = fields[7]
-  .deleted, err = to_bool(fields[12])
-
-  if (fields[13] != null && fields[13] != "" && fields[13] != "\r") {
-    # Parse LastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-    .lastwritetimestamp, err = parse_timestamp(fields[13], format: "%Y-%m-%d %H:%M:%S.%f")
+    # Expect CSV header:
+    # HivePath,HiveType,Description,Category,KeyPath,ValueName,ValueType,ValueData,ValueData2,ValueData3,Comment,Recursive,Deleted,LastWriteTimestamp,PluginDetailFile
+    fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[TypedPaths] Unable to parse LastWriteTimestamp timestamp: " + err, level: "error")
+      log("[TypedPaths] Unable to split CSV: " + err, level: "error")
     }
-  }
 
-  .timestamp = .lastwritetimestamp
+    if fields[7] == "ValueData"{
+      abort
+    }
 
-  if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
-      if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
-        # Parse HivePath field to extract username. Expected format: "username".
-        .user, err = parse_regex(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user"
-      } else if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
-        # Parse HivePath field to extract username. Expected format: "username".
-        .user, err = parse_regex(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user"
+    .category = fields[3]
+    .valuename = fields[5]
+    .valuetype = fields[6]
+    .valuedata = fields[7]
+    .deleted = to_bool!(fields[12])
+
+    if (fields[13] != null && fields[13] != "" && fields[13] != "\r") {
+      # Parse LastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+      .lastwritetimestamp, err = parse_timestamp(fields[13], format: "%Y-%m-%d %H:%M:%S.%f")
+      if err != null {
+        log("[TypedPaths] Unable to parse LastWriteTimestamp timestamp: " + err, level: "error")
       }
-  } else {
-      .user = ""
-  }
+    }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_registry_explorer_typedpaths"
-  .sourcetype = "windows_artefact"
+    .timestamp = .lastwritetimestamp
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+        if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
+          # Parse HivePath field to extract username. Expected format: "username".
+          .user = parse_regex!(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user"
+        } else if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
+          # Parse HivePath field to extract username. Expected format: "username".
+          .user = parse_regex!(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user"
+        }
+    } else {
+        .user = ""
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_explorer_typedpaths"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

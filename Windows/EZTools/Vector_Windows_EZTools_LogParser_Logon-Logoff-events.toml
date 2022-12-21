@@ -54,45 +54,45 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["LogParser_Logon-Logoff-events_csv_input"]
   source = '''
-  # Expect CSV header:
-  # Date,EventID,Description,Username,Domain,CredentialsUsed,LogonID,SessionName,LogonType,Status,SubStatus,AuthPackage,Workstation,SourceIP
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[EVTX Logon-Logoff-events] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # Date,EventID,Description,Username,Domain,CredentialsUsed,LogonID,SessionName,LogonType,Status,SubStatus,AuthPackage,Workstation,SourceIP
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[EVTX Logon-Logoff-events] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[1] == "EventID"{
-    abort
-  }
+    if fields[1] == "EventID"{
+      abort
+    }
 
-  if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
-    .date, err = to_timestamp(fields[0])
-  }
-  .eventid, err = to_int(fields[1])
-  .description = fields[2]
-  .username = fields[3]
-  .domain = fields[4]
-  .credentialsused = fields[5]
-  .logonid = fields[6]
-  .sessionname = fields[7]
-  .logontype = fields[8]
-  .status = fields[9]
-  .substatus = fields[10]
-  .authpackage = fields[11]
-  .workstation = fields[12]
-  .sourceip = fields[13]
-  .timestamp = .date
+    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+      .date = to_timestamp!(fields[0])
+    }
+    .eventid = to_int!(fields[1])
+    .description = fields[2]
+    .username = fields[3]
+    .domain = fields[4]
+    .credentialsused = fields[5]
+    .logonid = fields[6]
+    .sessionname = fields[7]
+    .logontype = fields[8]
+    .status = fields[9]
+    .substatus = fields[10]
+    .authpackage = fields[11]
+    .workstation = fields[12]
+    .sourceip = fields[13]
+    .timestamp = .date
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_evtx_logon-logoff"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_evtx_logon-logoff"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

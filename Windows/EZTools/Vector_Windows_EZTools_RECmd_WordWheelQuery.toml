@@ -40,42 +40,42 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_WordWheelQuery_csv_input"]
   source = '''
-  # Expect CSV header:
-  # BatchKeyPath,BatchValueName,SearchTerm,MruPosition,KeyName
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[WordWheelQuery] Unable to split CSV: " + err, level: "error")
-  }
-
-  if fields[0] == "BatchKeyPath"{
-    abort
-  }
-
-  .searchterm = fields[2]
-  .mruposition = fields[3]
-
-  if (.file != null && .file != "") {
-    if (contains!(.file, "_Users_")) {
-      # Parse File field to extract username. Expected format: "username".
-      .user, err = parse_regex(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
-    } else if (contains!(.file, "_Utilisateurs_")) {
-      # Parse File field to extract username. Expected format: "username".
-      .user, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
+    # Expect CSV header:
+    # BatchKeyPath,BatchValueName,SearchTerm,MruPosition,KeyName
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[WordWheelQuery] Unable to split CSV: " + err, level: "error")
     }
-  } else {
-      .user = ""
-  }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_registry_explorer_wordwheelquery"
-  .sourcetype = "windows_artefact"
+    if fields[0] == "BatchKeyPath"{
+      abort
+    }
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    .searchterm = fields[2]
+    .mruposition = fields[3]
+
+    if (.file != null && .file != "") {
+      if (contains!(.file, "_Users_")) {
+        # Parse File field to extract username. Expected format: "username".
+        .user = parse_regex!(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
+      } else if (contains!(.file, "_Utilisateurs_")) {
+        # Parse File field to extract username. Expected format: "username".
+        .user = parse_regex!(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
+      }
+    } else {
+        .user = ""
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_explorer_wordwheelquery"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

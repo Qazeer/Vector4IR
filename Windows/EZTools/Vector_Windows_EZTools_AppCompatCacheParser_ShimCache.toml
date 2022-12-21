@@ -38,44 +38,44 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["AppCompatCacheParser_ShimCache_csv_input"]
   source = '''
-  # Expect CSV header:
-  # ControlSet,CacheEntryPosition,Path,LastModifiedTimeUTC,Executed,Duplicate,SourceFile
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[ShimCache] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # ControlSet,CacheEntryPosition,Path,LastModifiedTimeUTC,Executed,Duplicate,SourceFile
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[ShimCache] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[0] == "ControlSet"{
-    abort
-  }
+    if fields[0] == "ControlSet"{
+      abort
+    }
 
-  .controlset = to_int!(fields[0])
-  .cacheentryposition = to_int!(fields[1])
-  .path = fields[2]
+    .controlset = to_int!(fields[0])
+    .cacheentryposition = to_int!(fields[1])
+    .path = fields[2]
 
-  if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-      # Parse LastModifiedTimeUTC field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastmodifiedtimeutc, err = parse_timestamp(fields[3], format: "%Y-%m-%d %H:%M:%S")
-      if err != null {
-        log("[Amcache_ProgramEntries] Unable to parse LastModifiedTimeUTC timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
+        # Parse LastModifiedTimeUTC field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastmodifiedtimeutc, err = parse_timestamp(fields[3], format: "%Y-%m-%d %H:%M:%S")
+        if err != null {
+          log("[Amcache_ProgramEntries] Unable to parse LastModifiedTimeUTC timestamp: " + err, level: "error")
+        }
+    }
 
-  .executed = fields[4]
-  .duplicate = to_bool!(fields[5])
-  .sourcefile = fields[6]
-  .timestamp = .lastmodifiedtimeutc
+    .executed = fields[4]
+    .duplicate = to_bool!(fields[5])
+    .sourcefile = fields[6]
+    .timestamp = .lastmodifiedtimeutc
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_shimcache"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_shimcache"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
@@ -84,11 +84,11 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 #   inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
 
 # Sink to send processed logs to the console, for debugging.
-[sinks.AppCompatCacheParser_ShimCache_console_sink]
-  type = "console"
-  inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
-  target = "stdout"
-  encoding.codec = "json"
+# [sinks.AppCompatCacheParser_ShimCache_console_sink]
+#   type = "console"
+#   inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
+#   target = "stdout"
+#   encoding.codec = "json"
 
 # Sink transform to send processed logs to an ELK instance.
 # [sinks.AppCompatCacheParser_ShimCache_ELK_sink]

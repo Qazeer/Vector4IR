@@ -36,7 +36,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   inputs = ["Linux_stat_timeline_input"]
   source = '''
     # Parse the key-value pairs.
-    ., err = parse_key_value(.message, key_value_delimiter: "=", field_delimiter: " ")   
+    ., err = parse_key_value(.message, key_value_delimiter: "=", field_delimiter: " ")
     if (err != null) {
       log("Unable to convert to parse log line: " + err, level: "error")
     }

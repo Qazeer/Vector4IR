@@ -38,48 +38,48 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["MFTECmd_UsnJrnl_csv_input"]
   source = '''
-  # Expect CSV header:
-  # Name,Extension,EntryNumber,SequenceNumber,ParentEntryNumber,ParentSequenceNumber,UpdateSequenceNumber,UpdateTimestamp,UpdateReasons,FileAttributes,OffsetToData,SourceFile
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[UsnJrnl] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # Name,Extension,EntryNumber,SequenceNumber,ParentEntryNumber,ParentSequenceNumber,UpdateSequenceNumber,UpdateTimestamp,UpdateReasons,FileAttributes,OffsetToData,SourceFile
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[UsnJrnl] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[2] == "EntryNumber"{
-    abort
-  }
+    if fields[2] == "EntryNumber"{
+      abort
+    }
 
-  .name = fields[0]
-  .extension = fields[1]
-  .entrynumber, err = to_int(fields[2])
-  .sequencenumber, err = to_int(fields[3])
-  .parententrynumber, err = to_int(fields[4])
-  .parentsequencenumber, err = to_int(fields[5])
-  .updatesequencenumber, err = to_int(fields[6])
+    .name = fields[0]
+    .extension = fields[1]
+    .entrynumber = to_int!(fields[2])
+    .sequencenumber = to_int!(fields[3])
+    .parententrynumber = to_int!(fields[4])
+    .parentsequencenumber = to_int!(fields[5])
+    .updatesequencenumber = to_int!(fields[6])
 
-  if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-       # Parse UpdateTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-       .updatetimestamp, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
-       if err != null {
-         log("[UsnJrnl] Unable to parse UpdateTimestamp timestamp: " + err, level: "error")
-       }
-  }
+    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
+         # Parse UpdateTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+         .updatetimestamp, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
+         if err != null {
+           log("[UsnJrnl] Unable to parse UpdateTimestamp timestamp: " + err, level: "error")
+         }
+    }
 
-  .updatereasons = fields[8]
-  .fileattributes = fields[9]
-  .offsettodata, err = to_int(fields[10])
-  .timestamp = .updatetimestamp
+    .updatereasons = fields[8]
+    .fileattributes = fields[9]
+    .offsettodata = to_int!(fields[10])
+    .timestamp = .updatetimestamp
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_usnjrnl"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_usnjrnl"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

@@ -41,41 +41,41 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_BamDam_csv_input"]
   source = '''
-  # Expect CSV header:
-  # BatchKeyPath,BatchValueName,Program,ExecutionTime
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[Registry_BamDam] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # BatchKeyPath,BatchValueName,Program,ExecutionTime
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[Registry_BamDam] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[2] == "Program"{
-    abort
-  }
+    if fields[2] == "Program"{
+      abort
+    }
 
-  .program = fields[2]
+    .program = fields[2]
 
-  if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-      # Parse ExecutionTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .executiontime, err = parse_timestamp(fields[3], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[Registry_BamDam] Unable to parse ExecutionTime timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
+        # Parse ExecutionTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .executiontime, err = parse_timestamp(fields[3], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[Registry_BamDam] Unable to parse ExecutionTime timestamp: " + err, level: "error")
+        }
+    }
 
-  .timestamp = .executiontime
-  # Parse BatchKeyPath field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
-  .user_sid, err = parse_regex(fields[0], r'UserSettings\\(?P<sid>.*)')."sid"
+    .timestamp = .executiontime
+    # Parse BatchKeyPath field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
+    .user_sid = parse_regex!(fields[0], r'UserSettings\\(?P<sid>.*)')."sid"
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_registry_bamdam"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_bamdam"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

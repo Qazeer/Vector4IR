@@ -44,59 +44,58 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_LastVisitedMRU_csv_input"]
   source = '''
-  # Expect CSV header:
-  # BatchKeyPath,BatchValueName,ValueName,MruPosition,Executable,AbsolutePath,OpenedOn,Details
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[LastVisitedMRU] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # BatchKeyPath,BatchValueName,ValueName,MruPosition,Executable,AbsolutePath,OpenedOn,Details
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[LastVisitedMRU] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[0] == "BatchKeyPath"{
-    abort
-  }
+    if fields[0] == "BatchKeyPath"{
+      abort
+    }
 
-  .mruposition = fields[3]
-  .executable = fields[4]
-  .absolutepath = fields[5]
+    .mruposition = fields[3]
+    .executable = fields[4]
+    .absolutepath = fields[5]
 
-  if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-      # Parse OpenedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .openedon, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[LastVisitedMRU] Unable to parse OpenedOn timestamp: " + err, level: "error")
-      }
+    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
+        # Parse OpenedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .openedon, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[LastVisitedMRU] Unable to parse OpenedOn timestamp: " + err, level: "error")
+        }
+        .isopenedonnull = "false"
+    } else {
+        .isopenedonnull = "true"
+    }
 
-      .isopenedonnull = "false"
-  } else {
-      .isopenedonnull = "true"
-  }
+    .details = fields[7]
 
-  .details = fields[7]
+    .timestamp = .openedon
 
-  .timestamp = .openedon
+    if (.file != null && .file != "") {
+        if (contains!(.file, "_Users_")) {
+          # Parse File field to extract username. Expected format: "username".
+          .user = parse_regex!(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
+        } else if (contains!(.file, "_Utilisateurs_")) {
+          # Parse File field to extract username. Expected format: "username".
+          .user = parse_regex!(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
+        }
+    } else {
+        .user = ""
+    }
 
-  if (.file != null && .file != "") {
-      if (contains!(.file, "_Users_")) {
-        # Parse File field to extract username. Expected format: "username".
-        .user, err = parse_regex(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
-      } else if (contains!(.file, "_Utilisateurs_")) {
-        # Parse File field to extract username. Expected format: "username".
-        .user, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
-      }
-  } else {
-      .user = ""
-  }
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_lastvisitedmru"
+    .sourcetype = "windows_artefact"
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_registry_lastvisitedmru"
-  .sourcetype = "windows_artefact"
-
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

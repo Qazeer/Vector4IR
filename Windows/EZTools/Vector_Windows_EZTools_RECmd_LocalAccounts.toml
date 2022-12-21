@@ -40,172 +40,169 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_input"]
   source = '''
-  # Expect CSV header:
-  # BatchKeyPath,BatchValueName,UserId,InvalidLoginCount,TotalLoginCount,CreatedOn,LastLoginTime,LastPasswordChange,LastIncorrectPassword,ExpiresOn,UserName,FullName,PasswordHint,Groups,Comment,UserComment,HomeDirectory,AccountDisabled,HomeDirectoryRequired,PasswordNotRequired,TempDuplicateAccount,NormalUserAccount,MnsLogonAccount,InterdomainTrustAccount,WorkstationTrustAccount,ServerTrustAccount,PasswordDoesNotExpire,AutoLocked
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[LocalAccounts] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # BatchKeyPath,BatchValueName,UserId,InvalidLoginCount,TotalLoginCount,CreatedOn,LastLoginTime,LastPasswordChange,LastIncorrectPassword,ExpiresOn,UserName,FullName,PasswordHint,Groups,Comment,UserComment,HomeDirectory,AccountDisabled,HomeDirectoryRequired,PasswordNotRequired,TempDuplicateAccount,NormalUserAccount,MnsLogonAccount,InterdomainTrustAccount,WorkstationTrustAccount,ServerTrustAccount,PasswordDoesNotExpire,AutoLocked
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[LocalAccounts] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[0] == "BatchKeyPath"{
-    abort
-  }
+    if fields[0] == "BatchKeyPath"{
+      abort
+    }
 
-  .userid, err = to_int(fields[2])
-  .invalidlogincount, err = to_int(fields[3])
-  .totallogincount, err = to_int(fields[4])
+    .userid = to_int!(fields[2])
+    .invalidlogincount = to_int!(fields[3])
+    .totallogincount = to_int!(fields[4])
 
-  if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-      # Parse CreatedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .createdon, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[LocalAccounts] Unable to parse CreatedOn timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
+        # Parse CreatedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .createdon, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[LocalAccounts] Unable to parse CreatedOn timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-      # Parse LastLoginTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastlogintime, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[LocalAccounts] Unable to parse LastLoginTime timestamp: " + err, level: "error")
-      }
+    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
+        # Parse LastLoginTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastlogintime, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[LocalAccounts] Unable to parse LastLoginTime timestamp: " + err, level: "error")
+        }
+        .islastlogintimenull = "false"
+    } else {
+        .islastlogintimenull = "true"
+    }
 
-      .islastlogintimenull = "false"
-  } else {
-      .islastlogintimenull = "true"
-  }
-
-  if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-      # Parse LastPasswordChange field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastpasswordchange, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[LocalAccounts] Unable to parse LastPasswordChange timestamp: " + err, level: "error")
-      }
-
-      .islastpasswordchangenull = "false"
-  } else {
-      .islastpasswordchangenull = "true"
-  }
+    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
+        # Parse LastPasswordChange field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastpasswordchange, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[LocalAccounts] Unable to parse LastPasswordChange timestamp: " + err, level: "error")
+        }
+        .islastpasswordchangenull = "false"
+    } else {
+        .islastpasswordchangenull = "true"
+    }
 
 
-  if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-       # Parse LastIncorrectPassword field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-       .lastincorrectpassword, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
-       if err != null {
-         log("[LocalAccounts] Unable to parse LastIncorrectPassword timestamp: " + err, level: "error")
-       }
+    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
+         # Parse LastIncorrectPassword field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+         .lastincorrectpassword, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
+         if err != null {
+           log("[LocalAccounts] Unable to parse LastIncorrectPassword timestamp: " + err, level: "error")
+         }
+         .islastincorrectpassword = "false"
+    } else {
+         .islastincorrectpassword = "false"
+    }
 
-       .islastincorrectpassword = "false"
-  } else {
-       .islastincorrectpassword = "false"
-  }
 
+    if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
+         # Parse ExpiresOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+         .expireson, err = parse_timestamp(fields[9], format: "%Y-%m-%d %H:%M:%S.%f")
+         if err != null {
+           log("[LocalAccounts] Unable to parse ExpiresOn timestamp: " + err, level: "error")
+         }
+    }
 
-  if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
-       # Parse ExpiresOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-       .expireson, err = parse_timestamp(fields[9], format: "%Y-%m-%d %H:%M:%S.%f")
-       if err != null {
-         log("[LocalAccounts] Unable to parse ExpiresOn timestamp: " + err, level: "error")
-       }
-  }
+    .username = fields[10]
+    .fullname = fields[11]
+    .passwordhint = fields[12]
+    .groups = fields[13]
+    .comment = fields[14]
+    .usercomment = fields[15]
+    .homedirectory = fields[16]
+    .accountdisabled = fields[17]
+    .homedirectoryrequired = fields[18]
+    .passwordnotrequired = fields[19]
+    .tempduplicateaccount = fields[20]
+    .normaluseraccount = fields[21]
+    .mnslogonaccount = fields[22]
+    .interdomaintrustaccount = fields[23]
+    .workstationtrustaccount = fields[24]
+    .servertrustaccount = fields[25]
+    .passworddoesnotexpire = fields[26]
+    .autolocked = fields[27]
 
-  .username = fields[10]
-  .fullname = fields[11]
-  .passwordhint = fields[12]
-  .groups = fields[13]
-  .comment = fields[14]
-  .usercomment = fields[15]
-  .homedirectory = fields[16]
-  .accountdisabled = fields[17]
-  .homedirectoryrequired = fields[18]
-  .passwordnotrequired = fields[19]
-  .tempduplicateaccount = fields[20]
-  .normaluseraccount = fields[21]
-  .mnslogonaccount = fields[22]
-  .interdomaintrustaccount = fields[23]
-  .workstationtrustaccount = fields[24]
-  .servertrustaccount = fields[25]
-  .passworddoesnotexpire = fields[26]
-  .autolocked = fields[27]
+    .timestamp = .createdon
 
-  .timestamp = .createdon
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_localaccounts"
+    .sourcetype = "windows_artefact"
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_registry_localaccounts"
-  .sourcetype = "windows_artefact"
-
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 [transforms.RECmd_LocalAccounts_dedup_CreatedOn]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
-  if !exists(.createdon){
-    abort
-  }
+    if !exists(.createdon){
+      abort
+    }
 
-  .timestamp = .createdon
-  .operation = "creation"
-  .suboperation = "creation_localaccount_createdon"
-    '''
+    .timestamp = .createdon
+    .operation = "creation"
+    .suboperation = "creation_localaccount_createdon"
+  '''
 
 [transforms.RECmd_LocalAccounts_dedup_LastLoginTime]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
-  if !exists(.lastlogintime){
-    abort
-  }
+    if !exists(.lastlogintime){
+      abort
+    }
 
-  .timestamp = .lastlogintime
-  .operation = "connection"
-  .suboperation = "connection_lastlogintime"
-    '''
+    .timestamp = .lastlogintime
+    .operation = "connection"
+    .suboperation = "connection_lastlogintime"
+  '''
 
 [transforms.RECmd_LocalAccounts_dedup_LastPasswordChange]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
-  if !exists(.lastpasswordchange){
-    abort
-  }
+    if !exists(.lastpasswordchange){
+      abort
+    }
 
-  .timestamp = .lastpasswordchange
-  .operation = "modification"
-  .suboperation = "modification_lastpasswordchange"
-    '''
+    .timestamp = .lastpasswordchange
+    .operation = "modification"
+    .suboperation = "modification_lastpasswordchange"
+  '''
 
 [transforms.RECmd_LocalAccounts_dedup_LastIncorrectPassword]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
-  if !exists(.lastincorrectpassword){
-    abort
-  }
+    if !exists(.lastincorrectpassword){
+      abort
+    }
 
-  .timestamp = .lastincorrectpassword
-  .operation = "connection"
-  .suboperation = "connection_lastincorrectpassword"
-    '''
+    .timestamp = .lastincorrectpassword
+    .operation = "connection"
+    .suboperation = "connection_lastincorrectpassword"
+  '''
 
 [transforms.RECmd_LocalAccounts_dedup_ExpiresOn]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
-  if !exists(.expireson){
-    abort
-  }
+    if !exists(.expireson){
+      abort
+    }
 
-  .timestamp = .expireson
-  .operation = "expiration"
-  .suboperation = "expiration_expireson"
-    '''
+    .timestamp = .expireson
+    .operation = "expiration"
+    .suboperation = "expiration_expireson"
+  '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
 # [sinks.RECmd_LocalAccounts_blackhole_sink]

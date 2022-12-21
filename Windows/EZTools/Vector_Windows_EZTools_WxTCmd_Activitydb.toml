@@ -38,152 +38,152 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["WxTCmd_Activitydb_csv_input"]
   source = '''
-  # Expect CSV header:
-  # Id,Executable,DisplayText,ContentInfo,StartTime,EndTime,LastModifiedTime,ExpirationTime,CreatedInCloud,LastModifiedOnClient,OriginalLastModifiedOnClient,ActivityType,IsLocalOnly,ETag,PackageIdHash,PlatformDeviceId,Duration
+    # Expect CSV header:
+    # Id,Executable,DisplayText,ContentInfo,StartTime,EndTime,LastModifiedTime,ExpirationTime,CreatedInCloud,LastModifiedOnClient,OriginalLastModifiedOnClient,ActivityType,IsLocalOnly,ETag,PackageIdHash,PlatformDeviceId,Duration
 
-  # Remove CSV parsing error on DisplayText value which is under following format: "Téléchargez le navigateur Firefox, rapide, sécurisé...".
-  .message, err = replace(.message, s'"', s'\"')
-  if err != null {
-    log("[Activitydb] Unable to remove whitespaces: " + err, level: "error")
-  }
+    # Remove CSV parsing error on DisplayText value which is under following format: "Téléchargez le navigateur Firefox, rapide, sécurisé...".
+    .message, err = replace(.message, s'"', s'\"')
+    if err != null {
+      log("[Activitydb] Unable to remove whitespaces: " + err, level: "error")
+    }
 
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[Activitydb] Unable to split CSV: " + err, level: "error")
-  }
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[Activitydb] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[1] == "Executable"{
-    abort
-  }
+    if fields[1] == "Executable"{
+      abort
+    }
 
-  .id = fields[0]
-  .executable = fields[1]
-  .displaytext = fields[2]
-  .contentinfo = fields[3]
+    .id = fields[0]
+    .executable = fields[1]
+    .displaytext = fields[2]
+    .contentinfo = fields[3]
 
-  if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-    .starttime, err = to_timestamp(fields[4])
-  }
+    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+      .starttime = to_timestamp!(fields[4])
+    }
 
-  if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-    .endtime, err = to_timestamp(fields[5])
-  }
+    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
+      .endtime = to_timestamp!(fields[5])
+    }
 
-  if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-    .lastmodifiedtime, err = to_timestamp(fields[6])
-  }
+    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
+      .lastmodifiedtime = to_timestamp!(fields[6])
+    }
 
-  if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-    .expirationtime, err = to_timestamp(fields[7])
-  }
+    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
+      .expirationtime = to_timestamp!(fields[7])
+    }
 
-  .createdincloud = fields[8]
+    .createdincloud = fields[8]
 
-  if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
-    .lastmodifiedonclient, err = to_timestamp(fields[9])
-  }
+    if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
+      .lastmodifiedonclient = to_timestamp!(fields[9])
+    }
 
-  if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
-    .originallastmodifiedonclient, err = to_timestamp(fields[10])
-  }
+    if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
+      .originallastmodifiedonclient = to_timestamp!(fields[10])
+    }
 
-  .activitytype, err = to_int(fields[11])
-  .islocalonly = fields[12]
-  .etag, err = to_int(fields[13])
-  .packageidhash = fields[14]
-  .platformdeviceid = fields[15]
-  .duration = fields[16]
-  .timestamp = .starttime
+    .activitytype = to_int!(fields[11])
+    .islocalonly = fields[12]
+    .etag = to_int!(fields[13])
+    .packageidhash = fields[14]
+    .platformdeviceid = fields[15]
+    .duration = fields[16]
+    .timestamp = .starttime
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_activitydb"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_activitydb"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 [transforms.WxTCmd_Activitydb_dedup_StartTime]
   type = "remap"
   inputs = ["WxTCmd_Activitydb_csv_parser"]
   source = '''
-  if !exists(.starttime){
-    abort
-  }
+    if !exists(.starttime){
+      abort
+    }
 
-  .timestamp = .starttime
-  .operation = "execution"
-  .suboperation = "execution_starttime"
-    '''
+    .timestamp = .starttime
+    .operation = "execution"
+    .suboperation = "execution_starttime"
+  '''
 
 [transforms.WxTCmd_Activitydb_dedup_EndTime]
   type = "remap"
   inputs = ["WxTCmd_Activitydb_csv_parser"]
   source = '''
-  if !exists(.endtime){
-    abort
-  }
+    if !exists(.endtime){
+      abort
+    }
 
-  .timestamp = .endtime
-  .operation = "execution"
-  .suboperation = "execution_endtime"
-    '''
+    .timestamp = .endtime
+    .operation = "execution"
+    .suboperation = "execution_endtime"
+  '''
 
 [transforms.WxTCmd_Activitydb_dedup_LastModifiedTime]
   type = "remap"
   inputs = ["WxTCmd_Activitydb_csv_parser"]
   source = '''
-  if !exists(.lastmodifiedtime){
-    abort
-  }
+    if !exists(.lastmodifiedtime){
+      abort
+    }
 
-  .timestamp = .lastmodifiedtime
-  .operation = "modification"
-  .suboperation = "database_modification_lastmodifiedtime"
-    '''
+    .timestamp = .lastmodifiedtime
+    .operation = "modification"
+    .suboperation = "database_modification_lastmodifiedtime"
+  '''
 
 [transforms.WxTCmd_Activitydb_dedup_ExpirationTime]
   type = "remap"
   inputs = ["WxTCmd_Activitydb_csv_parser"]
   source = '''
-  if !exists(.expirationtime){
-    abort
-  }
+    if !exists(.expirationtime){
+      abort
+    }
 
-  .timestamp = .expirationtime
-  .operation = "expiration"
-  .suboperation = "expirationtime"
-    '''
+    .timestamp = .expirationtime
+    .operation = "expiration"
+    .suboperation = "expirationtime"
+  '''
 
 [transforms.WxTCmd_Activitydb_dedup_LastModifiedOnClient]
   type = "remap"
   inputs = ["WxTCmd_Activitydb_csv_parser"]
   source = '''
-  if !exists(.lastmodifiedonclient){
-    abort
-  }
+    if !exists(.lastmodifiedonclient){
+      abort
+    }
 
-  .timestamp = .lastmodifiedonclient
-  .operation = "modification"
-  .suboperation = "database_modification_lastmodifiedonclient"
-    '''
+    .timestamp = .lastmodifiedonclient
+    .operation = "modification"
+    .suboperation = "database_modification_lastmodifiedonclient"
+  '''
 
 [transforms.WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient]
   type = "remap"
   inputs = ["WxTCmd_Activitydb_csv_parser"]
   source = '''
-  if !exists(.originallastmodifiedonclient){
-    abort
-  }
+    if !exists(.originallastmodifiedonclient){
+      abort
+    }
 
-  .timestamp = .originallastmodifiedonclient
-  .operation = "modification"
-  .suboperation = "database_modification_originallastmodifiedonclient"
-    '''
+    .timestamp = .originallastmodifiedonclient
+    .operation = "modification"
+    .suboperation = "database_modification_originallastmodifiedonclient"
+  '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
 # [sinks.WxTCmd_Activitydb_blackhole_sink]

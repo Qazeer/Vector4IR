@@ -40,61 +40,60 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_RegistryServices_csv_input"]
   source = '''
-  # Expect CSV header:
-  # BatchKeyPath,BatchValueName,Name,Description,DisplayName,StartMode,ServiceType,NameKeyLastWrite,ParametersKeyLastWrite,Group,ImagePath,ServiceDLL,RequiredPrivileges
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[RegistryServices] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # BatchKeyPath,BatchValueName,Name,Description,DisplayName,StartMode,ServiceType,NameKeyLastWrite,ParametersKeyLastWrite,Group,ImagePath,ServiceDLL,RequiredPrivileges
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[RegistryServices] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[0] == "BatchKeyPath"{
-    abort
-  }
+    if fields[0] == "BatchKeyPath"{
+      abort
+    }
 
-  .batchkeypath = fields[0]
-  .name = fields[2]
-  .description = fields[3]
-  .displayname = fields[4]
-  .startmode = fields[5]
-  .servicetype = fields[6]
+    .batchkeypath = fields[0]
+    .name = fields[2]
+    .description = fields[3]
+    .displayname = fields[4]
+    .startmode = fields[5]
+    .servicetype = fields[6]
 
-  if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-      # Parse NameKeyLastWrite field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .namekeylastwrite, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[RegistryServices] Unable to parse NameKeyLastWrite timestamp: " + err, level: "error")
-      }
+    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
+        # Parse NameKeyLastWrite field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .namekeylastwrite, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[RegistryServices] Unable to parse NameKeyLastWrite timestamp: " + err, level: "error")
+        }
+        .isnamekeylastwritenull = "false"
+    } else {
+        .isnamekeylastwritenull = "true"
+    }
 
-      .isnamekeylastwritenull = "false"
-  } else {
-      .isnamekeylastwritenull = "true"
-  }
+    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
+        # Parse ParametersKeyLastWrite field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .parameterskeylastwrite, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[RegistryServices] Unable to parse ParametersKeyLastWrite timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-      # Parse ParametersKeyLastWrite field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .parameterskeylastwrite, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[RegistryServices] Unable to parse ParametersKeyLastWrite timestamp: " + err, level: "error")
-      }
-  }
+    .group = fields[9]
+    .imagepath = fields[10]
+    .servicedll = fields[11]
+    .requiredprivileges = fields[12]
 
-  .group = fields[9]
-  .imagepath = fields[10]
-  .servicedll = fields[11]
-  .requiredprivileges = fields[12]
+    .timestamp = .namekeylastwrite
 
-  .timestamp = .namekeylastwrite
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_services"
+    .sourcetype = "windows_artefact"
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_registry_services"
-  .sourcetype = "windows_artefact"
-
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

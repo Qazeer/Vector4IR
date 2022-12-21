@@ -40,60 +40,59 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_UserAssist_csv_input"]
   source = '''
-  # Expect CSV header:
-  # BatchKeyPath,BatchValueName,ProgramName,RunCounter,FocusCount,FocusTime,LastExecuted
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[UserAssist] Unable to split CSV: " + err, level: "error")
-  }
-
-  if fields[0] == "BatchKeyPath"{
-    abort
-  }
-
-  .batchkeypath = fields[0]
-  .batchvaluename = fields[1]
-  .programname = fields[2]
-  .runcounter, err = to_int(fields[3])
-  .focuscount = fields[4]
-  .focustime = fields[5]
-
-  if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-      # Parse LastExecuted field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastexecuted, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[UserAssist] Unable to parse LastExecuted timestamp: " + err, level: "error")
-      }
-
-      .islastexecutednull = "false"
-  } else {
-      .islastexecutednull = "true"
-  }
-
-  .timestamp = .lastexecuted
-
-  if (.file != null && .file != "") {
-    if (contains!(.file, "_Users_")) {
-      # Parse File field to extract username. Expected format: "username".
-      .user, err = parse_regex(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
-    } else if (contains!(.file, "_Utilisateurs_")) {
-      # Parse File field to extract username. Expected format: "username".
-      .user, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
+    # Expect CSV header:
+    # BatchKeyPath,BatchValueName,ProgramName,RunCounter,FocusCount,FocusTime,LastExecuted
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[UserAssist] Unable to split CSV: " + err, level: "error")
     }
-  } else {
-      .user = ""
-  }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_registry_explorer_userassist"
-  .sourcetype = "windows_artefact"
+    if fields[0] == "BatchKeyPath"{
+      abort
+    }
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    .batchkeypath = fields[0]
+    .batchvaluename = fields[1]
+    .programname = fields[2]
+    .runcounter, err = to_int(fields[3])
+    .focuscount = fields[4]
+    .focustime = fields[5]
+
+    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
+        # Parse LastExecuted field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastexecuted, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[UserAssist] Unable to parse LastExecuted timestamp: " + err, level: "error")
+        }
+        .islastexecutednull = "false"
+    } else {
+        .islastexecutednull = "true"
+    }
+
+    .timestamp = .lastexecuted
+
+    if (.file != null && .file != "") {
+      if (contains!(.file, "_Users_")) {
+        # Parse File field to extract username. Expected format: "username".
+        .user = parse_regex!(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
+      } else if (contains!(.file, "_Utilisateurs_")) {
+        # Parse File field to extract username. Expected format: "username".
+        .user = parse_regex!(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
+      }
+    } else {
+        .user = ""
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_explorer_userassist"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.

@@ -48,202 +48,202 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["MFTECmd_MFT_json_input"]
   source = '''
-  splitted, err = split(.message, "\n")
-	if err != null {
-	  log("[MFT] Unable to split message on newlines: " + err, level: "error")
-	}
+    splitted, err = split(.message, "\n")
+	  if err != null {
+	    log("[MFT] Unable to split message on newlines: " + err, level: "error")
+	  }
 
-  . = map_values(splitted, true) -> |value| {
-    parsed_value, err = parse_json(value)
-    parsed_value.file = .file
+    . = map_values(splitted, true) -> |value| {
+      parsed_value, err = parse_json(value)
+      parsed_value.file = .file
 
-    if err != null {
-      log("[MFT] Unable to parse JSON: " + err, level: "error")
-      null
-    } else {
-      parsed_value
+      if err != null {
+        log("[MFT] Unable to parse JSON: " + err, level: "error")
+        null
+      } else {
+        parsed_value
+      }
     }
-  }
 
-  . = map_keys(object!(.[0])) -> |key| { downcase(key) }
+    . = map_keys(object!(.[0])) -> |key| { downcase(key) }
 
-  if (.created0x10 != null && .created0x10 != "" && .created0x10 != "\r") {
-    .created0x10, err = to_timestamp(.created0x10)
-    if err != null {
-      log("[MFT] Unable to parse Created0x10 timestamp: " + err, level: "error")
+    if (.created0x10 != null && .created0x10 != "" && .created0x10 != "\r") {
+      .created0x10, err = to_timestamp(.created0x10)
+      if err != null {
+        log("[MFT] Unable to parse Created0x10 timestamp: " + err, level: "error")
+      }
     }
-  }
 
-  if (.created0x30 != null && .created0x30 != "" && .created0x30 != "\r") {
-    .created0x30, err = to_timestamp(.created0x30)
-    if err != null {
-      log("[MFT] Unable to parse created0x30 timestamp: " + err, level: "error")
+    if (.created0x30 != null && .created0x30 != "" && .created0x30 != "\r") {
+      .created0x30, err = to_timestamp(.created0x30)
+      if err != null {
+        log("[MFT] Unable to parse created0x30 timestamp: " + err, level: "error")
+      }
     }
-  }
 
-  if (.lastmodified0x10 != null && .lastmodified0x10 != "" && .lastmodified0x10 != "\r") {
-    .lastmodified0x10, err = to_timestamp(.lastmodified0x10)
-    if err != null {
-      log("[MFT] Unable to parse lastmodified0x10 timestamp: " + err, level: "error")
+    if (.lastmodified0x10 != null && .lastmodified0x10 != "" && .lastmodified0x10 != "\r") {
+      .lastmodified0x10, err = to_timestamp(.lastmodified0x10)
+      if err != null {
+        log("[MFT] Unable to parse lastmodified0x10 timestamp: " + err, level: "error")
+      }
     }
-  }
 
-  if (.lastmodified0x30 != null && .lastmodified0x30 != "" && .lastmodified0x30 != "\r") {
-    .lastmodified0x30, err = to_timestamp(.lastmodified0x30)
-    if err != null {
-      log("[MFT] Unable to parse lastmodified0x30 timestamp: " + err, level: "error")
+    if (.lastmodified0x30 != null && .lastmodified0x30 != "" && .lastmodified0x30 != "\r") {
+      .lastmodified0x30, err = to_timestamp(.lastmodified0x30)
+      if err != null {
+        log("[MFT] Unable to parse lastmodified0x30 timestamp: " + err, level: "error")
+      }
     }
-  }
 
-  if (.lastrecordchange0x10 != null && .lastrecordchange0x10 != "" && .lastrecordchange0x10 != "\r") {
-    .lastrecordchange0x10, err = to_timestamp(.lastrecordchange0x10)
-    if err != null {
-      log("[MFT] Unable to parse lastrecordchange0x10 timestamp: " + err, level: "error")
+    if (.lastrecordchange0x10 != null && .lastrecordchange0x10 != "" && .lastrecordchange0x10 != "\r") {
+      .lastrecordchange0x10, err = to_timestamp(.lastrecordchange0x10)
+      if err != null {
+        log("[MFT] Unable to parse lastrecordchange0x10 timestamp: " + err, level: "error")
+      }
     }
-  }
 
-  if (.lastrecordchange0x30 != null && .lastrecordchange0x30 != "" && .lastrecordchange0x30 != "\r") {
-    .lastrecordchange0x30, err = to_timestamp(.lastrecordchange0x30)
-    if err != null {
-      log("[MFT] Unable to parse lastrecordchange0x30 timestamp: " + err, level: "error")
+    if (.lastrecordchange0x30 != null && .lastrecordchange0x30 != "" && .lastrecordchange0x30 != "\r") {
+      .lastrecordchange0x30, err = to_timestamp(.lastrecordchange0x30)
+      if err != null {
+        log("[MFT] Unable to parse lastrecordchange0x30 timestamp: " + err, level: "error")
+      }
     }
-  }
 
-  if (.lastaccess0x10 != null && .lastaccess0x10 != "" && .lastaccess0x10 != "\r") {
-    .lastaccess0x10, err = to_timestamp(.lastaccess0x10)
-    if err != null {
-      log("[MFT] Unable to parse lastaccess0x10 timestamp: " + err, level: "error")
+    if (.lastaccess0x10 != null && .lastaccess0x10 != "" && .lastaccess0x10 != "\r") {
+      .lastaccess0x10, err = to_timestamp(.lastaccess0x10)
+      if err != null {
+        log("[MFT] Unable to parse lastaccess0x10 timestamp: " + err, level: "error")
+      }
     }
-  }
 
-  if (.lastaccess0x30 != null && .lastaccess0x30 != "" && .lastaccess0x30 != "\r") {
-    .lastaccess0x30, err = to_timestamp(.lastaccess0x30)
-    if err != null {
-      log("[MFT] Unable to parse lastaccess0x30 timestamp: " + err, level: "error")
+    if (.lastaccess0x30 != null && .lastaccess0x30 != "" && .lastaccess0x30 != "\r") {
+      .lastaccess0x30, err = to_timestamp(.lastaccess0x30)
+      if err != null {
+        log("[MFT] Unable to parse lastaccess0x30 timestamp: " + err, level: "error")
+      }
     }
-  }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_mft"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_mft"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.file)
+    del(.message)
   '''
 
 [transforms.MFTECmd_MFT_csv_parser]
   type = "remap"
   inputs = ["MFTECmd_MFT_csv_input"]
   source = '''
-  # Expect CSV header:
-  # EntryNumber,SequenceNumber,InUse,ParentEntryNumber,ParentSequenceNumber,ParentPath,FileName,Extension,FileSize,ReferenceCount,ReparseTarget,IsDirectory,HasAds,IsAds,SI<FN,uSecZeros,Copied,SiFlags,NameType,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30,UpdateSequenceNumber,LogfileSequenceNumber,SecurityId,ObjectIdFileDroid,LoggedUtilStream,ZoneIdContents
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[MFT] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # EntryNumber,SequenceNumber,InUse,ParentEntryNumber,ParentSequenceNumber,ParentPath,FileName,Extension,FileSize,ReferenceCount,ReparseTarget,IsDirectory,HasAds,IsAds,SI<FN,uSecZeros,Copied,SiFlags,NameType,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30,UpdateSequenceNumber,LogfileSequenceNumber,SecurityId,ObjectIdFileDroid,LoggedUtilStream,ZoneIdContents
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[MFT] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[7] == "Extension"{
-    abort
-  }
+    if fields[7] == "Extension"{
+      abort
+    }
 
-  .entrynumber, err = to_int(fields[0])
-  .inuse, err = to_bool(fields[2])
-  .parentpath = fields[5]
-  .filename = fields[6]
-  .extension = fields[7]
-  .filesize, err = to_int(fields[8])
-  .referencecount, err = to_int(fields[9])
-  .reparsetarget = fields[10]
-  .hasads, err = to_bool(fields[12])
-  .isads, err = to_bool(fields[13])
-  .siltfn, err = to_bool(fields[14])
-  .useczeros, err = to_bool(fields[15])
-  .copied, err = to_bool(fields[16])
-  .siflags = fields[17]
-  .nametype = fields[18]
+    .entrynumber = to_int!(fields[0])
+    .inuse = to_bool!(fields[2])
+    .parentpath = fields[5]
+    .filename = fields[6]
+    .extension = fields[7]
+    .filesize = to_int!(fields[8])
+    .referencecount = to_int!(fields[9])
+    .reparsetarget = fields[10]
+    .hasads = to_bool!(fields[12])
+    .isads = to_bool!(fields[13])
+    .siltfn = to_bool!(fields[14])
+    .useczeros = to_bool!(fields[15])
+    .copied = to_bool!(fields[16])
+    .siflags = fields[17]
+    .nametype = fields[18]
 
-  if (fields[19] != null && fields[19] != "" && fields[19] != "\r") {
-      # Parse Created0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .created0x10, err = parse_timestamp(fields[19], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[MFT] Unable to parse Created0x10 timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[19] != null && fields[19] != "" && fields[19] != "\r") {
+        # Parse Created0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .created0x10, err = parse_timestamp(fields[19], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse Created0x10 timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[20] != null && fields[20] != "" && fields[20] != "\r") {
-      # Parse Created0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .created0x30, err = parse_timestamp(fields[20], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[MFT] Unable to parse Created0x30 timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[20] != null && fields[20] != "" && fields[20] != "\r") {
+        # Parse Created0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .created0x30, err = parse_timestamp(fields[20], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse Created0x30 timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[21] != null && fields[21] != "" && fields[21] != "\r") {
-      # Parse LastModified0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastmodified0x10, err = parse_timestamp(fields[21], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[MFT] Unable to parse LastModified0x10 timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[21] != null && fields[21] != "" && fields[21] != "\r") {
+        # Parse LastModified0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastmodified0x10, err = parse_timestamp(fields[21], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse LastModified0x10 timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
-      # Parse LastModified0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastmodified0x30, err = parse_timestamp(fields[22], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[MFT] Unable to parse LastModified0x30 timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
+        # Parse LastModified0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastmodified0x30, err = parse_timestamp(fields[22], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse LastModified0x30 timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
-      # Parse LastRecordChange0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastrecordchange0x10, err = parse_timestamp(fields[23], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[MFT] Unable to parse LastRecordChange0x10 timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
+        # Parse LastRecordChange0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastrecordchange0x10, err = parse_timestamp(fields[23], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse LastRecordChange0x10 timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[24] != null && fields[24] != "" && fields[24] != "\r") {
-      # Parse LastRecordChange0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastrecordchange0x30, err = parse_timestamp(fields[24], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[MFT] Unable to parse LastRecordChange0x30 timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[24] != null && fields[24] != "" && fields[24] != "\r") {
+        # Parse LastRecordChange0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastrecordchange0x30, err = parse_timestamp(fields[24], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse LastRecordChange0x30 timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
-      # Parse LastAccess0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastaccess0x10, err = parse_timestamp(fields[25], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[MFT] Unable to parse LastAccess0x10 timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
+        # Parse LastAccess0x10 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastaccess0x10, err = parse_timestamp(fields[25], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse LastAccess0x10 timestamp: " + err, level: "error")
+        }
+    }
 
-  if (fields[26] != null && fields[26] != "" && fields[26] != "\r") {
-      # Parse LastAccess0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .lastaccess0x30, err = parse_timestamp(fields[26], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[MFT] Unable to parse LastAccess0x30 timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[26] != null && fields[26] != "" && fields[26] != "\r") {
+        # Parse LastAccess0x30 field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .lastaccess0x30, err = parse_timestamp(fields[26], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[MFT] Unable to parse LastAccess0x30 timestamp: " + err, level: "error")
+        }
+    }
 
-  .updatesequencenumber = fields[27]
-  .logfilesequencenumber = fields[28]
-  .securityid, err = to_int(fields[29])
-  .timestamp = .lastmodified0x10
+    .updatesequencenumber = fields[27]
+    .logfilesequencenumber = fields[28]
+    .securityid = to_int!(fields[29])
+    .timestamp = .lastmodified0x10
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_mft"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_mft"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 [transforms.MFTECmd_MFT_dedup_LastModified0x10]
@@ -253,14 +253,14 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     "MFTECmd_MFT_json_parser"
   ]
   source = '''
-  if !exists(.lastmodified0x10){
-    abort
-  }
+    if !exists(.lastmodified0x10){
+      abort
+    }
 
-  .timestamp = .lastmodified0x10
-  .operation = "modification"
-  .suboperation = "file_modification_stdinfo"
-    '''
+    .timestamp = .lastmodified0x10
+    .operation = "modification"
+    .suboperation = "file_modification_stdinfo"
+  '''
 
 [transforms.MFTECmd_MFT_dedup_Created0x10]
   type = "remap"
@@ -269,14 +269,14 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     "MFTECmd_MFT_json_parser"
   ]
   source = '''
-  if !exists(.created0x10){
-    abort
-  }
+    if !exists(.created0x10){
+      abort
+    }
 
-  .timestamp = .created0x10
-  .operation = "creation"
-  .suboperation = "file_creation_stdinfo"
-    '''
+    .timestamp = .created0x10
+    .operation = "creation"
+    .suboperation = "file_creation_stdinfo"
+  '''
 
 [transforms.MFTECmd_MFT_dedup_LastRecordChange0x10]
   type = "remap"
@@ -285,14 +285,14 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     "MFTECmd_MFT_json_parser"
   ]
   source = '''
-  if !exists(.lastrecordchange0x10){
-    abort
-  }
+    if !exists(.lastrecordchange0x10){
+      abort
+    }
 
-  .timestamp = .lastrecordchange0x10
-  .operation = "modification"
-  .suboperation = "file_modification_stdinfo"
-    '''
+    .timestamp = .lastrecordchange0x10
+    .operation = "modification"
+    .suboperation = "file_modification_stdinfo"
+  '''
 
 [transforms.MFTECmd_MFT_dedup_LastAccess0x10]
   type = "remap"
@@ -301,14 +301,14 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     "MFTECmd_MFT_json_parser"
   ]
   source = '''
-  if !exists(.lastaccess0x10){
-    abort
-  }
+    if !exists(.lastaccess0x10){
+      abort
+    }
 
-  .timestamp = .lastaccess0x10
-  .operation = "access"
-  .suboperation = "file_access_stdinfo"
-    '''
+    .timestamp = .lastaccess0x10
+    .operation = "access"
+    .suboperation = "file_access_stdinfo"
+  '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
 # [sinks.MFTECmd_MFT_blackhole_sink]

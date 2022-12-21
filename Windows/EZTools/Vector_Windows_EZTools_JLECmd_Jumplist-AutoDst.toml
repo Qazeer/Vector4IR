@@ -38,226 +38,226 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_input"]
   source = '''
-  # Expect CSV header:
-  # SourceFile,SourceCreated,SourceModified,SourceAccessed,AppId,AppIdDescription,DestListVersion,LastUsedEntryNumber,MRU,EntryNumber,CreationTime,LastModified,Hostname,MacAddress,Path,InteractionCount,PinStatus,FileBirthDroid,FileDroid,VolumeBirthDroid,VolumeDroid,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments,Notes
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[Jumplist-AutoDst] Unable to split CSV: " + err, level: "error")
-  }
-
-  if fields[22] == "TargetModified"{
-    abort
-  }
-
-  .sourcefile = fields[0]
-
-  if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-    .sourcecreated, err = to_timestamp(fields[1])
-  }
-
-  if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
-    .sourcemodified, err = to_timestamp(fields[2])
-  }
-
-  if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-    .sourceaccessed, err = to_timestamp(fields[3])
-  }
-
-  .appid = fields[4]
-  .appiddescription = fields[5]
-  .lastusedentrynumber = fields[7]
-  .mru, err = to_int(fields[8])
-  .entrynumber, err = to_int(fields[9])
-
-  if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
-    .creationtime, err = to_timestamp(fields[10])
-  }
-
-  if (fields[11] != "1601-01-01 00:00:00") {
-      .lastmodified, err = to_timestamp(fields[11])
-  }
-
-  .hostname = fields[12]
-  .macaddress = fields[13]
-  .path = fields[14]
-  .interactioncount, err = to_int(fields[15])
-  .pinstatus, err = to_bool(fields[16])
-
-  if (fields[21] != null && fields[21] != "" && fields[21] != "\r") {
-    .targetcreated, err = to_timestamp(fields[21])
-  }
-
-  if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
-    .targetmodified, err = to_timestamp(fields[22])
-  }
-
-  if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
-    .targetaccessed, err = to_timestamp(fields[23])
-  }
-
-  .filesize, err = to_int(fields[24])
-  .relativepath = fields[25]
-  .workingdirectory = fields[26]
-  .fileattributes = fields[27]
-  .headerflags = fields[28]
-  .drivetype = fields[29]
-  .volumeserialnumber = fields[30]
-  .volumelabel = fields[31]
-  .localpath = fields[32]
-  .commonpath = fields[33]
-  .targetidabsolutepath = fields[34]
-  .targetmftentrynumber = fields[35]
-  .machineid = fields[37]
-  .machinemacaddress = fields[38]
-
-  if (fields[39] != null && fields[39] != "" && fields[39] != "\r") {
-    .trackercreatedon, err = to_timestamp(fields[39])
-  }
-
-  .arguments = fields[41]
-
-  .timestamp = .lastmodified
-
-  if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
-    if ((parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
-      # Parse SourceFile field to extract username. Expected format: "username".
-      .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
-    } else if ((parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
-      # Parse SourceFile field to extract username. Expected format: "username".
-      .user, err = parse_regex(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
+    # Expect CSV header:
+    # SourceFile,SourceCreated,SourceModified,SourceAccessed,AppId,AppIdDescription,DestListVersion,LastUsedEntryNumber,MRU,EntryNumber,CreationTime,LastModified,Hostname,MacAddress,Path,InteractionCount,PinStatus,FileBirthDroid,FileDroid,VolumeBirthDroid,VolumeDroid,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments,Notes
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[Jumplist-AutoDst] Unable to split CSV: " + err, level: "error")
     }
-  } else {
-      .user = ""
-  }
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_jumplist-autodst"
-  .sourcetype = "windows_artefact"
+    if fields[22] == "TargetModified"{
+      abort
+    }
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    .sourcefile = fields[0]
+
+    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
+      .sourcecreated = to_timestamp!(fields[1])
+    }
+
+    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
+      .sourcemodified = to_timestamp!(fields[2])
+    }
+
+    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
+      .sourceaccessed = to_timestamp!(fields[3])
+    }
+
+    .appid = fields[4]
+    .appiddescription = fields[5]
+    .lastusedentrynumber = fields[7]
+    .mru = to_int!(fields[8])
+    .entrynumber = to_int!(fields[9])
+
+    if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
+      .creationtime = to_timestamp!(fields[10])
+    }
+
+    if (fields[11] != "1601-01-01 00:00:00") {
+        .lastmodified = to_timestamp!(fields[11])
+    }
+
+    .hostname = fields[12]
+    .macaddress = fields[13]
+    .path = fields[14]
+    .interactioncount = to_int!(fields[15])
+    .pinstatus = to_bool!(fields[16])
+
+    if (fields[21] != null && fields[21] != "" && fields[21] != "\r") {
+      .targetcreated = to_timestamp!(fields[21])
+    }
+
+    if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
+      .targetmodified = to_timestamp!(fields[22])
+    }
+
+    if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
+      .targetaccessed = to_timestamp!(fields[23])
+    }
+
+    .filesize = to_int!(fields[24])
+    .relativepath = fields[25]
+    .workingdirectory = fields[26]
+    .fileattributes = fields[27]
+    .headerflags = fields[28]
+    .drivetype = fields[29]
+    .volumeserialnumber = fields[30]
+    .volumelabel = fields[31]
+    .localpath = fields[32]
+    .commonpath = fields[33]
+    .targetidabsolutepath = fields[34]
+    .targetmftentrynumber = fields[35]
+    .machineid = fields[37]
+    .machinemacaddress = fields[38]
+
+    if (fields[39] != null && fields[39] != "" && fields[39] != "\r") {
+      .trackercreatedon = to_timestamp!(fields[39])
+    }
+
+    .arguments = fields[41]
+
+    .timestamp = .lastmodified
+
+    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+      if ((parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
+        # Parse SourceFile field to extract username. Expected format: "username".
+        .user = parse_regex!(fields[0], r'[a-zA-Z]\\Users\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
+      } else if ((parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user") != null) {
+        # Parse SourceFile field to extract username. Expected format: "username".
+        .user = parse_regex!(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\AppData\\Roaming\\Microsoft\\Windows\\Recent*')."user"
+      }
+    } else {
+        .user = ""
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_jumplist-autodst"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 [transforms.JLECmd_Jumplist-AutoDst_dedup_LastModified]
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_parser"]
   source = '''
-  if !exists(.lastmodified){
-    abort
-  }
+    if !exists(.lastmodified){
+      abort
+    }
 
-  .timestamp = .lastmodified
-  .operation = "modification"
-  .suboperation = "file_modification_lastmodified"
-    '''
+    .timestamp = .lastmodified
+    .operation = "modification"
+    .suboperation = "file_modification_lastmodified"
+  '''
 
 [transforms.JLECmd_Jumplist-AutoDst_dedup_SourceCreated]
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_parser"]
   source = '''
-  if !exists(.sourcecreated){
-    abort
-  }
+    if !exists(.sourcecreated){
+      abort
+    }
 
-  .timestamp = .sourcecreated
-  .operation = "creation"
-  .suboperation = "file_creation_sourcecreated"
-    '''
+    .timestamp = .sourcecreated
+    .operation = "creation"
+    .suboperation = "file_creation_sourcecreated"
+  '''
 
 [transforms.JLECmd_Jumplist-AutoDst_dedup_SourceModified]
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_parser"]
   source = '''
-  if !exists(.sourcemodified){
-    abort
-  }
+    if !exists(.sourcemodified){
+      abort
+    }
 
-  .timestamp = .sourcemodified
-  .operation = "modification"
-  .suboperation = "file_modification_sourcemodified"
-    '''
+    .timestamp = .sourcemodified
+    .operation = "modification"
+    .suboperation = "file_modification_sourcemodified"
+  '''
 
 [transforms.JLECmd_Jumplist-AutoDst_dedup_SourceAccessed]
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_parser"]
   source = '''
-  if !exists(.sourceaccessed){
-    abort
-  }
+    if !exists(.sourceaccessed){
+      abort
+    }
 
-  .timestamp = .sourceaccessed
-  .operation = "access"
-  .suboperation = "file_access_sourceaccessed"
-    '''
+    .timestamp = .sourceaccessed
+    .operation = "access"
+    .suboperation = "file_access_sourceaccessed"
+  '''
 
 [transforms.JLECmd_Jumplist-AutoDst_dedup_CreationTime]
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_parser"]
   source = '''
-  if !exists(.creationtime){
-    abort
-  }
+    if !exists(.creationtime){
+      abort
+    }
 
-  .timestamp = .creationtime
-  .operation = "creation"
-  .suboperation = "file_creation_creationtime"
-    '''
+    .timestamp = .creationtime
+    .operation = "creation"
+    .suboperation = "file_creation_creationtime"
+  '''
 
 [transforms.JLECmd_Jumplist-AutoDst_dedup_TargetCreated]
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_parser"]
   source = '''
-  if !exists(.targetcreated){
-    abort
-  }
+    if !exists(.targetcreated){
+      abort
+    }
 
-  .timestamp = .targetcreated
-  .operation = "creation"
-  .suboperation = "file_creation_targetcreated"
-    '''
+    .timestamp = .targetcreated
+    .operation = "creation"
+    .suboperation = "file_creation_targetcreated"
+  '''
 
 [transforms.JLECmd_Jumplist-AutoDst_dedup_TargetModified]
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_parser"]
   source = '''
-  if !exists(.targetmodified){
-    abort
-  }
+    if !exists(.targetmodified){
+      abort
+    }
 
-  .timestamp = .targetmodified
-  .operation = "modification"
-  .suboperation = "file_modification_targetmodified"
-    '''
+    .timestamp = .targetmodified
+    .operation = "modification"
+    .suboperation = "file_modification_targetmodified"
+  '''
 
 [transforms.JLECmd_Jumplist-AutoDst_dedup_TargetAccessed]
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_parser"]
   source = '''
-  if !exists(.targetaccessed){
-    abort
-  }
+    if !exists(.targetaccessed){
+      abort
+    }
 
-  .timestamp = .targetaccessed
-  .operation = "access"
-  .suboperation = "file_access_targetaccessed"
-    '''
+    .timestamp = .targetaccessed
+    .operation = "access"
+    .suboperation = "file_access_targetaccessed"
+  '''
 
 [transforms.JLECmd_Jumplist-AutoDst_dedup_TrackerCreatedOn]
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_csv_parser"]
   source = '''
-  if !exists(.trackercreatedon){
-    abort
-  }
+    if !exists(.trackercreatedon){
+      abort
+    }
 
-  .timestamp = .trackercreatedon
-  .operation = "creation"
-  .suboperation = "file_creation_trackercreatedon"
-    '''
+    .timestamp = .trackercreatedon
+    .operation = "creation"
+    .suboperation = "file_creation_trackercreatedon"
+  '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
 # [sinks.JLECmd_Jumplist-AutoDst_blackhole_sink]

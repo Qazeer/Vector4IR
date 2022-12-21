@@ -38,44 +38,44 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RBCmd_RecycleBin_csv_input"]
   source = '''
-  # Expect CSV header:
-  # SourceName,FileType,FileName,FileSize,DeletedOn
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[RecycleBin] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # SourceName,FileType,FileName,FileSize,DeletedOn
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[RecycleBin] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[0] == "SourceName"{
-    abort
-  }
+    if fields[0] == "SourceName"{
+      abort
+    }
 
-  .sourcename = fields[0]
-  .filetype = fields[1]
-  .filename = fields[2]
-  .filesize, err = to_int(fields[3])
+    .sourcename = fields[0]
+    .filetype = fields[1]
+    .filename = fields[2]
+    .filesize = to_int!(fields[3])
 
-  if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-      # Parse DeletedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .deletedon, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[RecycleBin] Unable to parse DeletedOn timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
+        # Parse DeletedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .deletedon, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[RecycleBin] Unable to parse DeletedOn timestamp: " + err, level: "error")
+        }
+    }
 
-  .timestamp = .deletedon
-  # Parse SourceName field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
-  .user_sid, err = parse_regex(.sourcename, r'\$$Recycle.Bin\\(?P<sid>.*)\\')."sid"
+    .timestamp = .deletedon
+    # Parse SourceName field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
+    .user_sid = parse_regex!(.sourcename, r'\$$Recycle.Bin\\(?P<sid>.*)\\')."sid"
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .source = "windows_recyclebin"
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_recyclebin"
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
 
 # Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
