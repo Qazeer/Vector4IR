@@ -1,0 +1,4 @@
+version account-id interface-id srcaddr dstaddr srcport dstport protocol packets bytes start end action log-status
+2 305681518678 eni-0b32176c39b101bce - - - - - - - 1619987659 1619987672 - NODATA
+2 305681518678 eni-0aabbbb083ae46926 1.2.3.4 172.31.9.253 443 47030 6 19 6552 1619987677 1619987689 ACCEPT OK
+2 305681518678 eni-0aabbbb083ae46926 2.3.4.5 172.31.9.253 443 41680 6 30 1200 1619987677 1619987689 ACCEPT OK
