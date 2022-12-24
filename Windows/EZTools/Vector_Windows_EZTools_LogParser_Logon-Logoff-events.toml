@@ -1,6 +1,7 @@
 # Vector_Windows_EZTools_LogParser_Logon-Logoff-events config.
 # Description: Process Windows artefacts parsed with LogParser (CSV output).
 #              Filename should match: "*Logon-Logoff-events.csv"
+#              source = "windows_evtx_logon-logoff" & sourcetype = "windows_artefact"
 #              LogParser command: LogParser.exe -stats:OFF -i:EVT -o CSV "SELECT TO_UTCTIME(TimeGenerated) AS Date, EventID, CASE EventID WHEN 4624 THEN 'An account was successfully logged on' WHEN 4625 THEN 'An account failed to log on' WHEN 4634 THEN 'An account was logged off' WHEN 4647 THEN 'User initiated logoff' WHEN 4648 THEN 'A logon was attempted using explicit credentials' WHEN 4672 THEN 'Special privileges assigned to new logon' WHEN 4778 THEN 'A session was reconnected to a Window
 #              Station' WHEN 4779 THEN 'A session was disconnected from a Window Station' WHEN 4800 THEN 'The workstation was locked' WHEN 4801 THEN 'The workstation was unlocked' WHEN 4802 THEN 'The screen saver was invoked' WHEN 4803 THEN 'The screen saver was dismissed' END as Description, CASE EventID WHEN 4624 THEN EXTRACT_TOKEN(Strings, 5, '|') WHEN 4625 THEN EXTRACT_TOKEN(Strings, 5, '|') WHEN 4634 THEN EXTRACT_TOKEN(Strings, 1, '|') WHEN 4647 THEN EXTRACT_TOKEN(Strings, 1, '|') WHEN
 #              4648 THEN EXTRACT_TOKEN(Strings, 1, '|') WHEN 4672 THEN EXTRACT_TOKEN(Strings, 1, '|') WHEN 4778 THEN EXTRACT_TOKEN(Strings, 0, '|') WHEN 4779 THEN EXTRACT_TOKEN(Strings, 0, '|') WHEN 4800 THEN EXTRACT_TOKEN(Strings, 1, '|') WHEN 4801 THEN EXTRACT_TOKEN(Strings, 1, '|') WHEN 4802 THEN EXTRACT_TOKEN(Strings, 1, '|') WHEN 4803 THEN EXTRACT_TOKEN(Strings, 1, '|') END as Username, CASE EventID WHEN 4624 THEN EXTRACT_TOKEN(Strings, 6, '|') WHEN 4625 THEN EXTRACT_TOKEN(Strings, 6, '|')
@@ -25,17 +26,7 @@
 # Required environment variables:
 #   INPUT_FOLDER = "<INPUT_FOLDER>"
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
-#   INDEX = "<INDEX>"
 #   SOURCE_HOST = "<SOURCE_HOST>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = windows_evtx_logon-logoff & sourcetype = windows_artefact (windows_event pour evtx).
-#   ELK_IP = "<IP>"
-#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
-#   ELK_USERNAME = "<USERNAME>"
-#   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = windows_evtx_logon-logoff & sourcetype = windows_artefact (windows_event pour evtx).
-#   SPLUNK_IP = "<IP>"
-#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
-#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
@@ -50,7 +41,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.LogParser_Logon-Logoff-events_csv_parser]
+[transforms.LogParser_Logon-Logoff-events_csv_parser_to_sink]
   type = "remap"
   inputs = ["LogParser_Logon-Logoff-events_csv_input"]
   source = '''
@@ -94,40 +85,3 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.file)
     del(.message)
   '''
-
-# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-# [sinks.LogParser_Logon-Logoff-events_blackhole_sink]
-#   type = "blackhole"
-#   inputs = ["LogParser_Logon-Logoff-events_csv_parser"]
-
-# Sink to send processed logs to the console, for debugging.
-# [sinks.LogParser_Logon-Logoff-events_console_sink]
-#   type = "console"
-#   inputs = ["LogParser_Logon-Logoff-events_csv_parser"]
-#   target = "stdout"
-#   encoding.codec = "json"
-
-# Sink transform to send processed logs to an ELK instance.
-# [sinks.LogParser_Logon-Logoff-events_ELK_sink]
-#   type = "elasticsearch"
-#   inputs = ["LogParser_Logon-Logoff-events_csv_parser"]
-#   bulk.index = "${INDEX}-{{ sourcehost }}-logon-logoff_events"
-#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-#   auth.strategy = "basic"
-#   auth.user = "${ELK_LOGIN}"
-#   auth.password = "${ELK_PASSWORD}"
-#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-# Sink transform to send processed logs to a Splunk instance.
-# [sinks.LogParser_Logon-Logoff-events_Splunk_sink]
-#   type = "splunk_hec_logs"
-#   inputs = ["LogParser_Logon-Logoff-events_csv_parser"]
-#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-#   compression = "none"
-#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-#   host_key = "host"
-#   source = "{{ source }}"
-#   sourcetype = "{{ sourcetype }}"
-#   tls.verify_certificate = false
-#   encoding.codec = "json"

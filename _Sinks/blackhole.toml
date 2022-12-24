@@ -1,0 +1,5 @@
+# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
+
+[sinks.blackhole_sink]
+  type = "blackhole"
+  inputs = ["*to_sink"]

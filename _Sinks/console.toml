@@ -1,0 +1,7 @@
+# Sink to send processed logs to the console, for debugging.
+
+[sinks.console_sink]
+  type = "console"
+  inputs = ["*to_sink"]
+  target = "stdout"
+  encoding.codec = "json"

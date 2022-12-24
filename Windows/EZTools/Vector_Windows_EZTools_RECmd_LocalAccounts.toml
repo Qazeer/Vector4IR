@@ -5,23 +5,14 @@
 #              Registry key path: SAM\Domains\Account\Users
 #              RECmd command: RECmd\RECmd.exe -d %sourceDirectory% --bn RECmd\RECmd_Batch_MC.reb --nl --csv %destinationDirectory% -q
 #              Example command: RECmd\RECmd.exe -d "C:\" --bn RECmd\RECmd_Batch_MC.reb --nl --csv <YOUR_OUTPUT> -q
+#              source = "windows_registry_localaccounts" & sourcetype = "windows_artefact"
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
 # Required environment variables:
 #   INPUT_FOLDER = "<INPUT_FOLDER>"
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
-#   INDEX = "<INDEX>"
 #   SOURCE_HOST = "<SOURCE_HOST>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = windows_registry_localaccounts & sourcetype = windows_artefact (windows_event pour evtx).
-#   ELK_IP = "<IP>"
-#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
-#   ELK_USERNAME = "<USERNAME>"
-#   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = windows_registry_localaccounts & sourcetype = windows_artefact (windows_event pour evtx).
-#   SPLUNK_IP = "<IP>"
-#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
-#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
@@ -139,7 +130,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.RECmd_LocalAccounts_dedup_CreatedOn]
+[transforms.RECmd_LocalAccounts_dedup_CreatedOn_to_sink]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
@@ -152,7 +143,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "creation_localaccount_createdon"
   '''
 
-[transforms.RECmd_LocalAccounts_dedup_LastLoginTime]
+[transforms.RECmd_LocalAccounts_dedup_LastLoginTime_to_sink]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
@@ -165,7 +156,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "connection_lastlogintime"
   '''
 
-[transforms.RECmd_LocalAccounts_dedup_LastPasswordChange]
+[transforms.RECmd_LocalAccounts_dedup_LastPasswordChange_to_sink]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
@@ -178,7 +169,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "modification_lastpasswordchange"
   '''
 
-[transforms.RECmd_LocalAccounts_dedup_LastIncorrectPassword]
+[transforms.RECmd_LocalAccounts_dedup_LastIncorrectPassword_to_sink]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
@@ -191,7 +182,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "connection_lastincorrectpassword"
   '''
 
-[transforms.RECmd_LocalAccounts_dedup_ExpiresOn]
+[transforms.RECmd_LocalAccounts_dedup_ExpiresOn_to_sink]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
   source = '''
@@ -203,64 +194,3 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .operation = "expiration"
     .suboperation = "expiration_expireson"
   '''
-
-# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-# [sinks.RECmd_LocalAccounts_blackhole_sink]
-#   type = "blackhole"
-#   inputs = [
-#     "RECmd_LocalAccounts_dedup_CreatedOn",
-#     "RECmd_LocalAccounts_dedup_LastLoginTime",
-#     "RECmd_LocalAccounts_dedup_LastPasswordChange",
-#     "RECmd_LocalAccounts_dedup_LastIncorrectPassword",
-#     "RECmd_LocalAccounts_dedup_ExpiresOn"
-#   ]
-
-# Sink to send processed logs to the console, for debugging.
-# [sinks.RECmd_LocalAccounts_console_sink]
-#   type = "console"
-#   inputs = [
-#     "RECmd_LocalAccounts_dedup_CreatedOn",
-#     "RECmd_LocalAccounts_dedup_LastLoginTime",
-#     "RECmd_LocalAccounts_dedup_LastPasswordChange",
-#     "RECmd_LocalAccounts_dedup_LastIncorrectPassword",
-#     "RECmd_LocalAccounts_dedup_ExpiresOn"
-#   ]
-#   target = "stdout"
-#   encoding.codec = "json"
-
-# Sink transform to send processed logs to an ELK instance.
-# [sinks.RECmd_LocalAccounts_ELK_sink]
-#   type = "elasticsearch"
-#   inputs = [
-#     "RECmd_LocalAccounts_dedup_CreatedOn",
-#     "RECmd_LocalAccounts_dedup_LastLoginTime",
-#     "RECmd_LocalAccounts_dedup_LastPasswordChange",
-#     "RECmd_LocalAccounts_dedup_LastIncorrectPassword",
-#     "RECmd_LocalAccounts_dedup_ExpiresOn"
-#   ]
-#   bulk.index = "${INDEX}-{{ sourcehost }}-registry_localaccounts"
-#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-#   auth.strategy = "basic"
-#   auth.user = "${ELK_LOGIN}"
-#   auth.password = "${ELK_PASSWORD}"
-#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-# Sink transform to send processed logs to a Splunk instance.
-# [sinks.RECmd_LocalAccounts_Splunk_sink]
-#   type = "splunk_hec_logs"
-#   inputs = [
-#     "RECmd_LocalAccounts_dedup_CreatedOn",
-#     "RECmd_LocalAccounts_dedup_LastLoginTime",
-#     "RECmd_LocalAccounts_dedup_LastPasswordChange",
-#     "RECmd_LocalAccounts_dedup_LastIncorrectPassword",
-#     "RECmd_LocalAccounts_dedup_ExpiresOn"
-#   ]
-#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-#   compression = "none"
-#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-#   host_key = "host"
-#   source = "{{ source }}"
-#   sourcetype = "{{ sourcetype }}"
-#   tls.verify_certificate = false
-#   encoding.codec = "json"

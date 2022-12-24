@@ -1,0 +1,19 @@
+# Sink to send processed logs to an ELK instance.
+
+#   ELK sink specific variables.
+#   INDEX = "<INDEX>"
+#   ELK_IP = "<IP>"
+#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
+#   ELK_USERNAME = "<USERNAME>"
+#   ELK_PASSWORD = "<PASSWORD>"
+
+[sinks.elk_sink]
+  type = "elasticsearch"
+  inputs = ["*to_sink"]
+  mode="bulk"
+  bulk.index = "${INDEX:?An index name must be specified for the ELK index}"
+  endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+  auth.strategy = "basic"
+  auth.user = "${ELK_USERNAME:?ELK_USERNAME is required}"
+  auth.password = "${ELK_PASSWORD:?ELK_PASSWORD is required}"
+  suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x

@@ -3,23 +3,14 @@
 #              Filename should match: "*PECmd_Output.csv"
 #              PECmd command: PECmd.exe -d %sourceDirectory% --csv %destinationDirectory% -q
 #              Example command: PECmd.exe -d "C:\Windows\Prefetch" --csv <YOUR_OUTPUT> -q
+#              source = "windows_prefetch" & sourcetype = "windows_artefact"
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
 # Required environment variables:
 #   INPUT_FOLDER = "<INPUT_FOLDER>"
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
-#   INDEX = "<INDEX>"
 #   SOURCE_HOST = "<SOURCE_HOST>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = windows_prefetch & sourcetype = windows_artefact (windows_event pour evtx).
-#   ELK_IP = "<IP>"
-#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
-#   ELK_USERNAME = "<USERNAME>"
-#   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = windows_prefetch & sourcetype = windows_artefact (windows_event pour evtx).
-#   SPLUNK_IP = "<IP>"
-#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
-#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
@@ -142,7 +133,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.PECmd_Prefetch_dedup_LastRun]
+[transforms.PECmd_Prefetch_dedup_LastRun_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -155,7 +146,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "execution_lastrun"
   '''
 
-[transforms.PECmd_Prefetch_dedup_PreviousRun0]
+[transforms.PECmd_Prefetch_dedup_PreviousRun0_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -168,7 +159,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "execution_previousrun0"
   '''
 
-[transforms.PECmd_Prefetch_dedup_PreviousRun1]
+[transforms.PECmd_Prefetch_dedup_PreviousRun1_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -181,7 +172,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "execution_previousrun1"
   '''
 
-[transforms.PECmd_Prefetch_dedup_PreviousRun2]
+[transforms.PECmd_Prefetch_dedup_PreviousRun2_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -194,7 +185,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "execution_previousrun2"
   '''
 
-[transforms.PECmd_Prefetch_dedup_PreviousRun3]
+[transforms.PECmd_Prefetch_dedup_PreviousRun3_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -207,7 +198,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "execution_previousrun3"
   '''
 
-[transforms.PECmd_Prefetch_dedup_PreviousRun4]
+[transforms.PECmd_Prefetch_dedup_PreviousRun4_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -220,7 +211,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "execution_previousrun4"
   '''
 
-[transforms.PECmd_Prefetch_dedup_PreviousRun5]
+[transforms.PECmd_Prefetch_dedup_PreviousRun5_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -233,7 +224,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "execution_previousrun5"
   '''
 
-[transforms.PECmd_Prefetch_dedup_PreviousRun6]
+[transforms.PECmd_Prefetch_dedup_PreviousRun6_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -246,7 +237,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "execution_previousrun6"
   '''
 
-[transforms.PECmd_Prefetch_dedup_SourceCreated]
+[transforms.PECmd_Prefetch_dedup_SourceCreated_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -259,7 +250,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_creation_sourcecreated"
   '''
 
-[transforms.PECmd_Prefetch_dedup_SourceModified]
+[transforms.PECmd_Prefetch_dedup_SourceModified_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -272,7 +263,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_modification_sourcemodified"
   '''
 
-[transforms.PECmd_Prefetch_dedup_SourceAccessed]
+[transforms.PECmd_Prefetch_dedup_SourceAccessed_to_sink]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
   source = '''
@@ -284,88 +275,3 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .operation = "access"
     .suboperation = "file_access_sourceaccessed"
   '''
-
-# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-# [sinks.PECmd_Prefetch_blackhole_sink]
-#   type = "blackhole"
-#   inputs = [
-#     "PECmd_Prefetch_dedup_LastRun",
-#     "PECmd_Prefetch_dedup_PreviousRun0",
-#     "PECmd_Prefetch_dedup_PreviousRun1",
-#     "PECmd_Prefetch_dedup_PreviousRun2",
-#     "PECmd_Prefetch_dedup_PreviousRun3",
-#     "PECmd_Prefetch_dedup_PreviousRun4",
-#     "PECmd_Prefetch_dedup_PreviousRun5",
-#     "PECmd_Prefetch_dedup_PreviousRun6",
-#     "PECmd_Prefetch_dedup_SourceCreated",
-#     "PECmd_Prefetch_dedup_SourceModified",
-#     "PECmd_Prefetch_dedup_SourceAccessed"
-#   ]
-
-# Sink to send processed logs to the console, for debugging.
-# [sinks.PECmd_Prefetch_console_sink]
-#   type = "console"
-#   inputs = [
-#     "PECmd_Prefetch_dedup_LastRun",
-#     "PECmd_Prefetch_dedup_PreviousRun0",
-#     "PECmd_Prefetch_dedup_PreviousRun1",
-#     "PECmd_Prefetch_dedup_PreviousRun2",
-#     "PECmd_Prefetch_dedup_PreviousRun3",
-#     "PECmd_Prefetch_dedup_PreviousRun4",
-#     "PECmd_Prefetch_dedup_PreviousRun5",
-#     "PECmd_Prefetch_dedup_PreviousRun6",
-#     "PECmd_Prefetch_dedup_SourceCreated",
-#     "PECmd_Prefetch_dedup_SourceModified",
-#     "PECmd_Prefetch_dedup_SourceAccessed"
-#   ]
-#   target = "stdout"
-#   encoding.codec = "json"
-
-# Sink transform to send processed logs to an ELK instance.
-# [sinks.PECmd_Prefetch_ELK_sink]
-#   type = "elasticsearch"
-#   inputs = [
-#     "PECmd_Prefetch_dedup_LastRun",
-#     "PECmd_Prefetch_dedup_PreviousRun0",
-#     "PECmd_Prefetch_dedup_PreviousRun1",
-#     "PECmd_Prefetch_dedup_PreviousRun2",
-#     "PECmd_Prefetch_dedup_PreviousRun3",
-#     "PECmd_Prefetch_dedup_PreviousRun4",
-#     "PECmd_Prefetch_dedup_PreviousRun5",
-#     "PECmd_Prefetch_dedup_PreviousRun6",
-#     "PECmd_Prefetch_dedup_SourceCreated",
-#     "PECmd_Prefetch_dedup_SourceModified",
-#     "PECmd_Prefetch_dedup_SourceAccessed"
-#   ]
-#   bulk.index = "${INDEX}-{{ sourcehost }}-prefetch"
-#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-#   auth.strategy = "basic"
-#   auth.user = "${ELK_LOGIN}"
-#   auth.password = "${ELK_PASSWORD}"
-#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-# Sink transform to send processed logs to a Splunk instance.
-# [sinks.PECmd_Prefetch_Splunk_sink]
-#   type = "splunk_hec_logs"
-#   inputs = [
-#     "PECmd_Prefetch_dedup_LastRun",
-#     "PECmd_Prefetch_dedup_PreviousRun0",
-#     "PECmd_Prefetch_dedup_PreviousRun1",
-#     "PECmd_Prefetch_dedup_PreviousRun2",
-#     "PECmd_Prefetch_dedup_PreviousRun3",
-#     "PECmd_Prefetch_dedup_PreviousRun4",
-#     "PECmd_Prefetch_dedup_PreviousRun5",
-#     "PECmd_Prefetch_dedup_PreviousRun6",
-#     "PECmd_Prefetch_dedup_SourceCreated",
-#     "PECmd_Prefetch_dedup_SourceModified",
-#     "PECmd_Prefetch_dedup_SourceAccessed"
-#   ]
-#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-#   compression = "none"
-#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-#   host_key = "host"
-#   source = "{{ source }}"
-#   sourcetype = "{{ sourcetype }}"
-#   tls.verify_certificate = false
-#   encoding.codec = "json"

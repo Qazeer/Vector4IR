@@ -1,0 +1,20 @@
+# Sink to send processed logs to a Splunk instance.
+
+#   Splunk sink specific variables.
+#   INDEX = "<INDEX>"
+#   SPLUNK_IP = "<IP>"
+#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
+#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
+
+[sinks.Splunk_sink]
+  type = "splunk_hec_logs"
+  inputs = ["*to_sink"]
+  endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
+  default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
+  compression = "none"
+  index = "${INDEX:?An index name must be specified for the Splunk index}"
+  host_key = "host"
+  source = "{{ source }}"
+  sourcetype = "{{ sourcetype }}"
+  tls.verify_certificate = false
+  encoding.codec = "json"

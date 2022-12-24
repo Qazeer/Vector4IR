@@ -3,23 +3,14 @@
 #              Filename should match: "*LECmd_Output.csv"
 #              LECmd command: LECmd.exe -d %sourceDirectory% --csv %destinationDirectory% -q
 #              Example command: LECmd.exe -d "C:\" --csv <YOUR_OUTPUT> -q
+#              source = "windows_lnk-files" & sourcetype = "windows_artefact"
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
 # Required environment variables:
 #   INPUT_FOLDER = "<INPUT_FOLDER>"
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
-#   INDEX = "<INDEX>"
 #   SOURCE_HOST = "<SOURCE_HOST>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = windows_lnk-files & sourcetype = windows_artefact (windows_event pour evtx).
-#   ELK_IP = "<IP>"
-#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
-#   ELK_USERNAME = "<USERNAME>"
-#   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = windows_lnk-files & sourcetype = windows_artefact (windows_event pour evtx).
-#   SPLUNK_IP = "<IP>"
-#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
-#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
@@ -120,7 +111,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.LECmd_Lnk_dedup_SourceModified]
+[transforms.LECmd_Lnk_dedup_SourceModified_to_sink]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
@@ -133,7 +124,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_modification_sourcemodified"
   '''
 
-[transforms.LECmd_Lnk_dedup_SourceCreated]
+[transforms.LECmd_Lnk_dedup_SourceCreated_to_sink]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
@@ -146,7 +137,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_creation_sourcecreated"
   '''
 
-[transforms.LECmd_Lnk_dedup_SourceAccessed]
+[transforms.LECmd_Lnk_dedup_SourceAccessed_to_sink]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
@@ -159,7 +150,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_access_sourceaccessed"
   '''
 
-[transforms.LECmd_Lnk_dedup_TargetCreated]
+[transforms.LECmd_Lnk_dedup_TargetCreated_to_sink]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
@@ -172,7 +163,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_creation_targetcreated"
   '''
 
-[transforms.LECmd_Lnk_dedup_TargetModified]
+[transforms.LECmd_Lnk_dedup_TargetModified_to_sink]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
@@ -185,7 +176,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_modification_targetmodified"
   '''
 
-[transforms.LECmd_Lnk_dedup_TargetAccessed]
+[transforms.LECmd_Lnk_dedup_TargetAccessed_to_sink]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
@@ -198,7 +189,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_access_targetaccessed"
   '''
 
-[transforms.LECmd_Lnk_dedup_TrackerCreatedOn]
+[transforms.LECmd_Lnk_dedup_TrackerCreatedOn_to_sink]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
   source = '''
@@ -210,72 +201,3 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .operation = "creation"
     .suboperation = "file_creation_trackercreatedon"
   '''
-
-# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-# [sinks.LECmd_Lnk_blackhole_sink]
-#   type = "blackhole"
-#   inputs = [
-#     "LECmd_Lnk_dedup_SourceModified",
-#     "LECmd_Lnk_dedup_SourceCreated",
-#     "LECmd_Lnk_dedup_SourceAccessed",
-#     "LECmd_Lnk_dedup_TargetCreated",
-#     "LECmd_Lnk_dedup_TargetModified",
-#     "LECmd_Lnk_dedup_TargetAccessed",
-#     "LECmd_Lnk_dedup_TrackerCreatedOn"
-#   ]
-
-# Sink to send processed logs to the console, for debugging.
-# [sinks.LECmd_Lnk_console_sink]
-#   type = "console"
-#   inputs = [
-#     "LECmd_Lnk_dedup_SourceModified",
-#     "LECmd_Lnk_dedup_SourceCreated",
-#     "LECmd_Lnk_dedup_SourceAccessed",
-#     "LECmd_Lnk_dedup_TargetCreated",
-#     "LECmd_Lnk_dedup_TargetModified",
-#     "LECmd_Lnk_dedup_TargetAccessed",
-#     "LECmd_Lnk_dedup_TrackerCreatedOn"
-#   ]
-#   target = "stdout"
-#   encoding.codec = "json"
-
-# Sink transform to send processed logs to an ELK instance.
-# [sinks.LECmd_Lnk_ELK_sink]
-#   type = "elasticsearch"
-#   inputs = [
-#     "LECmd_Lnk_dedup_SourceModified",
-#     "LECmd_Lnk_dedup_SourceCreated",
-#     "LECmd_Lnk_dedup_SourceAccessed",
-#     "LECmd_Lnk_dedup_TargetCreated",
-#     "LECmd_Lnk_dedup_TargetModified",
-#     "LECmd_Lnk_dedup_TargetAccessed",
-#     "LECmd_Lnk_dedup_TrackerCreatedOn"
-#   ]
-#   bulk.index = "${INDEX}-{{ sourcehost }}-lnkfiles"
-#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-#   auth.strategy = "basic"
-#   auth.user = "${ELK_LOGIN}"
-#   auth.password = "${ELK_PASSWORD}"
-#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-# Sink transform to send processed logs to a Splunk instance.
-# [sinks.LECmd_Lnk_Splunk_sink]
-#   type = "splunk_hec_logs"
-#   inputs = [
-#     "LECmd_Lnk_dedup_SourceModified",
-#     "LECmd_Lnk_dedup_SourceCreated",
-#     "LECmd_Lnk_dedup_SourceAccessed",
-#     "LECmd_Lnk_dedup_TargetCreated",
-#     "LECmd_Lnk_dedup_TargetModified",
-#     "LECmd_Lnk_dedup_TargetAccessed",
-#     "LECmd_Lnk_dedup_TrackerCreatedOn"
-#   ]
-#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-#   compression = "none"
-#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-#   host_key = "host"
-#   source = "{{ source }}"
-#   sourcetype = "{{ sourcetype }}"
-#   tls.verify_certificate = false
-#   encoding.codec = "json"

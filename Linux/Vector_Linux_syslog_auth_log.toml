@@ -1,22 +1,13 @@
 # Description: Process Linux Authorization (auth) logs (syslog AUTH and AUTHPRIV facilities).
 #              Filename should match: [Debian / Ubuntu] "*auth.log*" or [RedHat / CentOS] "secure*"
 #              Default path on disk: /var/log/auth.log* or /var/log/secure*
+#              source = "linux_auth" & sourcetype = "linux_artefact"
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-01
 # Required environment variables:
 #   INPUT_FOLDER = "<INPUT_FOLDER>"
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
-#   INDEX = "<INDEX>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = "linux_auth" & sourcetype = "linux_artefact".
-#   ELK_IP = "<IP>"
-#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
-#   ELK_USERNAME = "<USERNAME>"
-#   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = "linux_auth" & sourcetype = "linux_artefact".
-#   SPLUNK_IP = "<IP>"
-#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
-#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
@@ -39,7 +30,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.Linux_auth_parser]
+[transforms.Linux_auth_parser_to_sink]
   type = "remap"
   inputs = [
     "Linux_auth_input__auth_log",
@@ -117,42 +108,3 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       .sourcetype = "linux_artefact"
     }
   '''
-
-# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-# [sinks.Linux_auth_blackhole_sink]
-#   type = "blackhole"
-#   inputs = ["Linux_auth_parser"]
-
-# Sink to send processed logs to the console, for debugging.
-# [sinks.Linux_auth_console_sink]
-#   type = "console"
-#   inputs = ["Linux_auth_parser"]
-#   target = "stdout"
-#   encoding.codec = "json"
-
-# Sink transform to send processed logs to an ELK instance.
-# [sinks.Linux_auth_ELK_sink]
-#   type = "elasticsearch"
-#   inputs = ["Linux_auth_parser"]
-#   mode="bulk"
-#   # bulk.action = "create"
-#   bulk.index = "${INDEX:?An index name must be specified for ELK / Splunk index}"
-#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-#   auth.strategy = "basic"
-#   auth.user = "${ELK_USERNAME:?ELK_USERNAME is required}"
-#   auth.password = "${ELK_PASSWORD:?ELK_PASSWORD is required}"
-#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-# Sink transform to send processed logs to a Splunk instance.
-# [sinks.Linux_auth_Splunk_sink]
-#   type = "splunk_hec_logs"
-#   inputs = ["Linux_auth_parser"]
-#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-#   compression = "none"
-#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-#   host_key = "host"
-#   source = "{{ source }}"
-#   sourcetype = "{{ sourcetype }}"
-#   tls.verify_certificate = false
-#   encoding.codec = "json"

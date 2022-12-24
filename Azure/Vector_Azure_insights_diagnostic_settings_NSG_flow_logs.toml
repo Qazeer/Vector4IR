@@ -1,23 +1,14 @@
 # Description: Process Azure Netflow logs (CSV output).
 #              Filename should match: "PT1H.json" and must be present in the default folder "insights-logs-networksecuritygroupflowevent".
 #              Reference: https://learn.microsoft.com/en-us/azure/network-watcher/network-watcher-nsg-flow-logging-overview
+#              source = "azure_nsg_flow" & sourcetype = "azure_artefact"
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-12-16
 # Required environment variables:
 #   INPUT_FOLDER = "<INPUT_FOLDER>"
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
-#   INDEX = "<INDEX>"
 #   SOURCE_HOST = "<SOURCE_HOST>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = azure_nsg_flow & sourcetype = azure_artefact (windows_event pour evtx).
-#   ELK_IP = "<IP>"
-#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
-#   ELK_USERNAME = "<USERNAME>"
-#   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = azure_nsg_flow & sourcetype = azure_artefact (windows_event pour evtx).
-#   SPLUNK_IP = "<IP>"
-#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
-#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
@@ -59,7 +50,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     . = extracted_flow
   '''
 
-[transforms.Azure_NSG_flow_logs_parser_flowTuples_parse_csv]
+[transforms.Azure_NSG_flow_logs_parser_flowTuples_parse_csv_to_sink]
   type = "remap"
   inputs = ["Azure_NSG_flow_logs_parser_extract_flowTuples"]
   source = '''
@@ -100,40 +91,3 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .sourcetype = "azure_artefact"
     .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
   '''
-
-# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-[sinks.Azure_NSG_flow_logs_blackhole_sink]
-  type = "blackhole"
-  inputs = ["Azure_NSG_flow_logs_parser_flowTuples_parse_csv"]
-
-# Sink to send processed logs to the console, for debugging.
-# [sinks.Azure_NSG_flow_logs_console_sink]
-#   type = "console"
-#   inputs = ["Azure_NSG_flow_logs_parser_flowTuples_parse_csv"]
-#   target = "stdout"
-#   encoding.codec = "json"
-
-# Sink transform to send processed logs to an ELK instance.
-# [sinks.Azure_NSG_flow_logs_ELK_sink]
-#   type = "elasticsearch"
-#   inputs = ["Azure_NSG_flow_logs_parser_flowTuples_parse_csv"]
-#   bulk.index = "${INDEX}-{{ sourcehost }}-amcache-drivebinaries"
-#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-#   auth.strategy = "basic"
-#   auth.user = "${ELK_LOGIN}"
-#   auth.password = "${ELK_PASSWORD}"
-#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-# Sink transform to send processed logs to a Splunk instance.
-[sinks.Azure_NSG_flow_logs_Splunk_sink]
-  type = "splunk_hec_logs"
-  inputs = ["Azure_NSG_flow_logs_parser_flowTuples_parse_csv"]
-  endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-  default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-  compression = "none"
-  index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-  host_key = "host"
-  source = "{{ source }}"
-  sourcetype = "{{ sourcetype }}"
-  tls.verify_certificate = false
-  encoding.codec = "json"

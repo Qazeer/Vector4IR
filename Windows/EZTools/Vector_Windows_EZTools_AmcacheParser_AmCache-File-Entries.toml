@@ -3,23 +3,14 @@
 #              Filename should match: "*Amcache_AssociatedFileEntries.csv" and "*Amcache_UnassociatedFileEntries.csv"
 #              AmcacheParser command: AmcacheParser.exe -f %sourceFile% --csv %destinationDirectory% -i
 #              Example command: AmcacheParser.exe -f "C:\Windows\appcompat\Programs\Amcache.hve" --csv <YOUR_OUTPUT>
+#              source = "windows_amcache-associatedfileentries|windows_amcache-unassociatedfileentries" & sourcetype = "windows_artefact"
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
 # Required environment variables:
 #   INPUT_FOLDER = "<INPUT_FOLDER>"
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
-#   INDEX = "<INDEX>"
 #   SOURCE_HOST = "<SOURCE_HOST>"
-#   -- ELK sink specific variables. ELK index = <INDEX> & source = (windows_amcache-associatedfileentries|windows_amcache-unassociatedfileentries) & sourcetype = windows_artefact (windows_event pour evtx).
-#   ELK_IP = "<IP>"
-#   ELK_PORT = "<PORT>" -- ELK bulk HTTP API port. Defaults to 9200.
-#   ELK_USERNAME = "<USERNAME>"
-#   ELK_PASSWORD = "<PASSWORD>"
-#   -- Splunk sink specific variables. Splunk index = <INDEX> & source = (windows_amcache-associatedfileentries|windows_amcache-unassociatedfileentries) & sourcetype = windows_artefact (windows_event pour evtx).
-#   SPLUNK_IP = "<IP>"
-#   SPLUNK_PORT = "<PORT>" -- Splunk HTTP Event Collector port. Defaults to 8088.
-#   SPLUNK_HEC_TOKEN = "<SPLUNK_HEC_TOKEN>" -- Splunk HEC token: https://docs.splunk.com/Documentation/Splunk/9.0.1/Data/UsetheHTTPEventCollector.
 
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
@@ -37,111 +28,74 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.AmcacheParser_AmCache-File-Entries_csv_parser]
+[transforms.AmcacheParser_AmCache-File-Entries_csv_parser_to_sink]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-File-Entries_csv_input"]
   source = '''
-  # Expect CSV header:
-  # ApplicationName,ProgramId,FileKeyLastWriteTimestamp,SHA1,IsOsComponent,FullPath,Name,FileExtension,LinkDate,ProductName,Size,Version,ProductVersion,LongPathHash,BinaryType,IsPeFile,BinFileVersion,BinProductVersion,Language,Usn,Description
-  fields, err = parse_csv(.message, delimiter: ",")
-  if err != null {
-    log("[Amcache_FileEntries] Unable to split CSV: " + err, level: "error")
-  }
+    # Expect CSV header:
+    # ApplicationName,ProgramId,FileKeyLastWriteTimestamp,SHA1,IsOsComponent,FullPath,Name,FileExtension,LinkDate,ProductName,Size,Version,ProductVersion,LongPathHash,BinaryType,IsPeFile,BinFileVersion,BinProductVersion,Language,Usn,Description
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[Amcache_FileEntries] Unable to split CSV: " + err, level: "error")
+    }
 
-  if fields[1] == "ProgramId" {
-    abort
-  }
+    if fields[1] == "ProgramId" {
+      abort
+    }
 
-  .applicationname = fields[0]
-  .programid = fields[1]
+    .applicationname = fields[0]
+    .programid = fields[1]
 
-  if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
-      # Parse FileKeyLastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .filekeylastwritetimestamp, err = parse_timestamp(fields[2], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[Amcache_FileEntries] Unable to parse FileKeyLastWriteTimestamp timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
+        # Parse FileKeyLastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .filekeylastwritetimestamp, err = parse_timestamp(fields[2], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[Amcache_FileEntries] Unable to parse FileKeyLastWriteTimestamp timestamp: " + err, level: "error")
+        }
+    }
 
-  .sha1 = fields[3]
-  .isoscomponent = to_bool!(fields[4])
-  .fullpath = fields[5]
-  .name = fields[6]
-  .fileextension = fields[7]
+    .sha1 = fields[3]
+    .isoscomponent = to_bool!(fields[4])
+    .fullpath = fields[5]
+    .name = fields[6]
+    .fileextension = fields[7]
 
-  if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-      # Parse LinkDate field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-      .linkdate, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
-      if err != null {
-        log("[Amcache_FileEntries] Unable to parse LinkDate timestamp: " + err, level: "error")
-      }
-  }
+    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
+        # Parse LinkDate field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
+        .linkdate, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
+        if err != null {
+          log("[Amcache_FileEntries] Unable to parse LinkDate timestamp: " + err, level: "error")
+        }
+    }
 
-  .productname = fields[9]
-  .size = to_int!(fields[10])
-  .version = fields[11]
-  .productversion = fields[12]
-  .longpathhash = fields[13]
-  .binarytype = fields[14]
-  .ispefile = to_bool!(fields[15])
-  .binfileversion = fields[16]
-  .binproductversion = fields[17]
-  .usn = fields[18]
-  .language = fields[19]
-  .description = fields[20]
+    .productname = fields[9]
+    .size = to_int!(fields[10])
+    .version = fields[11]
+    .productversion = fields[12]
+    .longpathhash = fields[13]
+    .binarytype = fields[14]
+    .ispefile = to_bool!(fields[15])
+    .binfileversion = fields[16]
+    .binproductversion = fields[17]
+    .usn = fields[18]
+    .language = fields[19]
+    .description = fields[20]
 
-  if (contains!(.file, "Amcache_AssociatedFileEntries.csv")) {
-      .source = "windows_amcache-associatedfileentries"
-  } else if (contains!(.file, "Amcache_UnassociatedFileEntries.csv")) {
-      .source = "windows_amcache-unassociatedfileentries"
-  }
+    if (contains!(.file, "Amcache_AssociatedFileEntries.csv")) {
+        .source = "windows_amcache-associatedfileentries"
+    } else if (contains!(.file, "Amcache_UnassociatedFileEntries.csv")) {
+        .source = "windows_amcache-unassociatedfileentries"
+    }
 
-  .timestamp = .filekeylastwritetimestamp
+    .timestamp = .filekeylastwritetimestamp
 
-  # Add the metadata fields following the parsing.
-  .sourcehost = "${SOURCE_HOST:?The source host is required}"
-  .host = .sourcehost
-  .sourcetype = "windows_artefact"
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .sourcetype = "windows_artefact"
 
-  # Delete irrelevant default fields.
-  del(.source_type)
-  del(.file)
-  del(.message)
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
   '''
-
-# Sink to send processed logs to void, for validating that the pipeline doest not raise errors.
-# [sinks.AmcacheParser_AmCache-File-Entries_blackhole_sink]
-#   type = "blackhole"
-#   inputs = ["AmcacheParser_AmCache-File-Entries_csv_parser"]
-
-# Sink to send processed logs to the console, for debugging.
-# [sinks.AmcacheParser_AmCache-File-Entries_console_sink]
-#   type = "console"
-#   inputs = ["AmcacheParser_AmCache-File-Entries_csv_parser"]
-#   target = "stdout"
-#   encoding.codec = "json"
-
-# Sink transform to send processed logs to an ELK instance.
-# [sinks.AmcacheParser_AmCache-File-Entries_ELK_sink]
-#   type = "elasticsearch"
-#   inputs = ["AmcacheParser_AmCache-File-Entries_csv_parser"]
-#   bulk.index = "${INDEX}-{{ sourcehost }}-amcache-fileentries"
-#   endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
-#   auth.strategy = "basic"
-#   auth.user = "${ELK_LOGIN}"
-#   auth.password = "${ELK_PASSWORD}"
-#   suppress_type_name = true # type field in header is deprecated since ELK 7.x and has been removed from ELK 8.x
-
-# Sink transform to send processed logs to a Splunk instance.
-# [sinks.AmcacheParser_AmCache-File-Entries_Splunk_sink]
-#   type = "splunk_hec_logs"
-#   inputs = ["AmcacheParser_AmCache-File-Entries_csv_parser"]
-#   endpoint = "https://${SPLUNK_IP:?Splunk IP is required}:${SPLUNK_PORT:-8088}"
-#   default_token = "${SPLUNK_HEC_TOKEN:?Splunk HEC token is required}"
-#   compression = "none"
-#   index = "${INDEX:?An index name must be specified for the ELK / Splunk index}"
-#   host_key = "host"
-#   source = "{{ source }}"
-#   sourcetype = "{{ sourcetype }}"
-#   tls.verify_certificate = false
-#   encoding.codec = "json"
