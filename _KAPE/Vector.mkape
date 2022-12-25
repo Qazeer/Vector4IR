@@ -1,0 +1,11 @@
+Description: Execute Vector through KAPE
+Category: Vector
+Author: Thomas DIOT
+Version: 1.0
+Id: 4944eb5e-30c2-4fdb-a5ce-0c17dab1b5f0
+ExportFormat: ""
+Processors:
+    -
+        Executable: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+        CommandLine: "& '%kapeDirectory%\\Modules\\bin\\Vector_for_IR\\_KAPE\\Start-VectorThroughKAPE.ps1' -TargetPath \"%destinationDirectory%\\..\" -OutputPath \"%destinationDirectory%\" -Sinks \"%sinks%\" -EnvVariables \"INDEX=%INDEX%,SOURCE_HOST=%SOURCE_HOST%,ELK_IP=%ELK_IP%,ELK_USERNAME=%ELK_USERNAME%,ELK_PASSWORD=%ELK_PASSWORD%,SPLUNK_IP=%SPLUNK_IP%,SPLUNK_HEC_TOKEN=%SPLUNK_HEC_TOKEN%\""
+        ExportFormat: ""
