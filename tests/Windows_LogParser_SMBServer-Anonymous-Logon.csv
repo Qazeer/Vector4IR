@@ -1,0 +1,2 @@
+Date,EventID,Description,UserName,ClientName
+2021-07-10 12:49:45,551,Client attempted to access SMB via an anonymous logon.,NT AUTHORITY\ANONYMOUS LOGON,\\127.0.0.1

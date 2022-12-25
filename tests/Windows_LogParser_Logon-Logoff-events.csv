@@ -1,0 +1,5 @@
+Date,EventID,Description,Username,Domain,CredentialsUsed,LogonID,SessionName,LogonType,Status,SubStatus,AuthPackage,Workstation,SourceIP
+2022-11-29 18:34:08,4634,An account was logged off,username,DOMAIN,,0xa942f6,,Network Logon,,,,,
+2022-11-29 18:34:09,4624,An account was successfully logged on,username2,DOMAIN.FQDN,,0xa94604,,Network Logon,,,Kerberos,-,1.2.3.4
+2022-11-29 18:34:17,4672,Special privileges assigned to new logon,adminuser,DOMAIN,,0xa959f7,,,,,,,
+2022-11-30 07:47:29,4624,An account was successfully logged on,adminuser,DOMAIN,,0x985f0a6,,Remote interactive logon (RDP),,,User32 ,MACHINENAME_SOURCE,2.3.4.5

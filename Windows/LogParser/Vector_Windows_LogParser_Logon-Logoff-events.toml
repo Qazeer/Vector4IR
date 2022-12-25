@@ -1,5 +1,5 @@
 # Vector_Windows_EZTools_LogParser_Logon-Logoff-events config.
-# Description: Process Windows artefacts parsed with LogParser (CSV output).
+# Description: Process Windows logon and logoff as parsed with LogParser (CSV output).
 #              Filename should match: "*Logon-Logoff-events.csv"
 #              source = "windows_evtx_logon-logoff" & sourcetype = "windows_artefact"
 #              LogParser command: LogParser.exe -stats:OFF -i:EVT -o CSV "SELECT TO_UTCTIME(TimeGenerated) AS Date, EventID, CASE EventID WHEN 4624 THEN 'An account was successfully logged on' WHEN 4625 THEN 'An account failed to log on' WHEN 4634 THEN 'An account was logged off' WHEN 4647 THEN 'User initiated logoff' WHEN 4648 THEN 'A logon was attempted using explicit credentials' WHEN 4672 THEN 'Special privileges assigned to new logon' WHEN 4778 THEN 'A session was reconnected to a Window

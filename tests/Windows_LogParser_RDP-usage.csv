@@ -1,0 +1,2 @@
+Date,SourceName,EventID,User,Description,SessionID,SourceSessionID,ReasonCode,SourceIP
+2021-05-26 12:36:23,Microsoft-Windows-TerminalServices-LocalSessionManager,21,LT073444\User,Session logon succeeded,2,,,

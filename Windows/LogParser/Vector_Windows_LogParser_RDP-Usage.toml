@@ -1,0 +1,71 @@
+# Vector_Windows_EZTools_LogParser_RDP-Usage config.
+# Description: Process Windows RDP usage events parsed with LogParser (CSV output).
+#              Filename should match: "*RDP-Usage.csv"
+#              source = "windows_evtx_rdp-usage" & sourcetype = "windows_artefact"
+#              LogParser command: XXX
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.LogParser_RDP-Usage_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the LogParser RDP usage events files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*RDP-Usage.csv"]
+  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.LogParser_RDP-Usage_csv_parser_to_sink]
+  type = "remap"
+  inputs = ["LogParser_RDP-Usage_csv_input"]
+  source = '''
+    # Expect CSV header:
+    # Date,SourceName,EventID,User,Description,SessionID,SourceSessionID,ReasonCode,SourceIP
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[EVTX RDP-Usage] Unable to split CSV: " + err, level: "error")
+    }
+
+    if fields[1] == "SourceName" {
+      abort
+    }
+
+    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
+      .date = to_timestamp!(fields[0])
+    }
+    .sourcename = fields[1]
+    .eventid = to_int!(fields[2])
+    .user = fields[3]
+    .description = fields[4]
+    if is_integer(.fields[5]) {
+      .sessionid = to_int!(.fields[5])
+    }
+    if is_integer(.fields[6]) {
+      .source_sessionid = to_int!(.fields[6])
+    }
+    if is_integer(.fields[7]) {
+      .reasoncode = to_int!(.fields[7])
+    }
+    .sourceip = fields[8]
+    .timestamp = .date
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_evtx_rdp-usage"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+  '''
