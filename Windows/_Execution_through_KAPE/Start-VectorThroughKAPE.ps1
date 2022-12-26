@@ -32,7 +32,8 @@ Param(
 )
 
 # Define the Vector_for_IR root folder (.\KAPE\Modules\bin\Vector_for_IR).
-$RootFolder = Join-Path -Resolve $PSScriptRoot ".."
+
+$RootFolder = [IO.Path]::Combine($PSScriptRoot, '..', '..')
 
 # Set the INPUT_FOLDER containing the files to process with Vector.
 [Environment]::SetEnvironmentVariable("INPUT_FOLDER", $TargetPath.Replace("\", "\\"))
