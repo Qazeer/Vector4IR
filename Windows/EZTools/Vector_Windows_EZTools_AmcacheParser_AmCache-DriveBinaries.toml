@@ -25,7 +25,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.AmcacheParser_AmCache-DriveBinaries_csv_parser_to_sink]
+[transforms.AmcacheParser_AmCache-DriveBinaries_csv_parser]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-DriveBinaries_csv_input"]
   source = '''
@@ -45,47 +45,26 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     .keyname = fields[0]
-
-    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-        # Parse KeyLastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .keylastwritetimestamp, err = parse_timestamp(fields[1], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[Amcache_DriveBinaries] Unable to parse KeyLastWriteTimestamp timestamp: " + err, level: "error")
-        }
-    }
-
-    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
-        # Parse DriverTimeStamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .drivertimestamp, err = parse_timestamp(fields[2], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[Amcache_DriveBinaries] Unable to parse DriverTimeStamp timestamp: " + err, level: "error")
-        }
-    }
-
-    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-        # Parse DriverLastWriteTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .driverlastwritetime, err = parse_timestamp(fields[3], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[Amcache_DriveBinaries] Unable to parse DriverLastWriteTime timestamp: " + err, level: "error")
-        }
-    }
-
+    .keylastwritetimestamp = fields[1]
+    .drivertimestamp = fields[2]
+    .driverlastwritetime = fields[3]
     .drivername = fields[4]
-    .driverinbox = to_bool!(fields[5])
-    .driveriskernelmode = to_bool!(fields[6])
-    .driversigned = to_bool!(fields[7])
-    .driverchecksum = to_int!(fields[8])
+    .driverinbox = fields[5]
+    .driveriskernelmode = fields[6]
+    .driversigned = fields[7]
+    .driverchecksum = fields[8]
     .drivercompany = fields[9]
     .driverid = fields[10]
     .driverpackagestrongname = fields[11]
     .drivertype = fields[12]
     .driverversion = fields[13]
-    .imagesize = to_int!(fields[14])
+    .imagesize = fields[14]
     .inf = fields[15]
     .product = fields[16]
     .productversion = fields[17]
     .service = fields[18]
     .wdfversion = fields[19]
+
     .timestamp = .driverlastwritetime
 
     # Add the metadata fields following the parsing.
@@ -98,4 +77,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.AmcacheParser_AmCache-DriveBinaries_coerce_to_sink]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-DriveBinaries_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

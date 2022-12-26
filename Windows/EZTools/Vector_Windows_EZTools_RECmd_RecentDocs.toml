@@ -27,7 +27,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.RECmd_RecentDocs_csv_parser_to_sink]
+[transforms.RECmd_RecentDocs_csv_parser]
   type = "remap"
   inputs = ["RECmd_RecentDocs_csv_input"]
   source = '''
@@ -46,32 +46,14 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
 
+    .batchkeypath = fields[0]
+    .batchvaluename = fields[1]
     .extension = fields[2]
     .targetname = fields[4]
     .lnkname = fields[5]
     .mruposition = fields[6]
-
-    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-        # Parse OpenedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .openedon, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[RecentDocs] Unable to parse OpenedOn timestamp: " + err, level: "error")
-        }
-        .isopenedonnull = "false"
-    } else {
-        .isopenedonnull = "true"
-    }
-
-    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-        # Parse ExtensionLastOpened field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .extensionlastopened, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[RecentDocs] Unable to parse extensionlastopened timestamp: " + err, level: "error")
-        }
-        .isextensionlastopenednull = "false"
-    } else {
-        .isextensionlastopenednull = "true"
-    }
+    .openedon = fields[7]
+    .extensionlastopened = fields[8]
 
     .timestamp = .openedon
 
@@ -97,4 +79,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.RECmd_RecentDocs_coerce_to_sink]
+  type = "remap"
+  inputs = ["RECmd_RecentDocs_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

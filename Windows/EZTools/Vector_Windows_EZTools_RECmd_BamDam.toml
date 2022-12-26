@@ -28,7 +28,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.RECmd_BamDam_csv_parser_to_sink]
+[transforms.RECmd_BamDam_csv_parser]
   type = "remap"
   inputs = ["RECmd_BamDam_csv_input"]
   source = '''
@@ -47,17 +47,13 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
 
+    .batchkeypath = fields[0]
+    .batchvaluename = fields[1]
     .program = fields[2]
-
-    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-        # Parse ExecutionTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .executiontime, err = parse_timestamp(fields[3], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[Registry_BamDam] Unable to parse ExecutionTime timestamp: " + err, level: "error")
-        }
-    }
+    .executiontime = fields[3]
 
     .timestamp = .executiontime
+
     # Parse BatchKeyPath field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
     .user_sid = parse_regex!(fields[0], r'UserSettings\\(?P<sid>.*)')."sid"
 
@@ -71,4 +67,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.RECmd_BamDam_coerce_to_sink]
+  type = "remap"
+  inputs = ["RECmd_BamDam_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

@@ -41,7 +41,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.LogParser_Logon-Logoff-events_csv_parser_to_sink]
+[transforms.LogParser_Logon-Logoff-events_csv_parser]
   type = "remap"
   inputs = ["LogParser_Logon-Logoff-events_csv_input"]
   source = '''
@@ -60,10 +60,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
 
-    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
-      .date = to_timestamp!(fields[0])
-    }
-    .eventid = to_int!(fields[1])
+    .date = fields[0]
+    .eventid = fields[1]
     .description = fields[2]
     .username = fields[3]
     .domain = fields[4]
@@ -76,6 +74,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .authpackage = fields[11]
     .workstation = fields[12]
     .sourceip = fields[13]
+
     .timestamp = .date
 
     # Add the metadata fields following the parsing.
@@ -88,4 +87,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.LogParser_Logon-Logoff-events_coerce_to_sink]
+  type = "remap"
+  inputs = ["LogParser_Logon-Logoff-events_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

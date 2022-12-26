@@ -28,7 +28,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.AmcacheParser_AmCache-File-Entries_csv_parser_to_sink]
+[transforms.AmcacheParser_AmCache-File-Entries_csv_parser]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-File-Entries_csv_input"]
   source = '''
@@ -49,36 +49,20 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     .applicationname = fields[0]
     .programid = fields[1]
-
-    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
-        # Parse FileKeyLastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .filekeylastwritetimestamp, err = parse_timestamp(fields[2], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[Amcache_FileEntries] Unable to parse FileKeyLastWriteTimestamp timestamp: " + err, level: "error")
-        }
-    }
-
+    .filekeylastwritetimestamp = fields[2]
     .sha1 = fields[3]
-    .isoscomponent = to_bool!(fields[4])
+    .isoscomponent = fields[4]
     .fullpath = fields[5]
     .name = fields[6]
     .fileextension = fields[7]
-
-    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-        # Parse LinkDate field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .linkdate, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[Amcache_FileEntries] Unable to parse LinkDate timestamp: " + err, level: "error")
-        }
-    }
-
+    .linkdate = fields[8]
     .productname = fields[9]
-    .size = to_int!(fields[10])
+    .size = fields[10]
     .version = fields[11]
     .productversion = fields[12]
     .longpathhash = fields[13]
     .binarytype = fields[14]
-    .ispefile = to_bool!(fields[15])
+    .ispefile = fields[15]
     .binfileversion = fields[16]
     .binproductversion = fields[17]
     .usn = fields[18]
@@ -102,4 +86,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.AmcacheParser_AmCache-File-Entries_coerce_to_sink]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-File-Entries_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

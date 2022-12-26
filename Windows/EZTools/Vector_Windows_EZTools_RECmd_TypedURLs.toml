@@ -27,7 +27,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.RECmd_TypedURLs_csv_parser_to_sink]
+[transforms.RECmd_TypedURLs_csv_parser]
   type = "remap"
   inputs = ["RECmd_TypedURLs_csv_input"]
   source = '''
@@ -46,17 +46,10 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
 
-    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
-        # Parse Timestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .timestamp, err = parse_timestamp(fields[2], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[TypedURLs] Unable to parse Timestamp timestamp: " + err, level: "error")
-        }
-        .istimestampnull = "false"
-    } else {
-        .istimestampnull = "true"
-    }
 
+    .batchkeypath = fields[0]
+    .batchvaluename = fields[1]
+    .timestamp = fields[2]
     .url = fields[3]
 
     if (.file != null && .file != "") {
@@ -84,4 +77,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.RECmd_TypedURLs_coerce_to_sink]
+  type = "remap"
+  inputs = ["RECmd_TypedURLs_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

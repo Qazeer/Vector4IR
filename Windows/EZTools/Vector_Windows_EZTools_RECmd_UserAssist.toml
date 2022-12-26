@@ -27,7 +27,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.RECmd_UserAssist_csv_parser_to_sink]
+[transforms.RECmd_UserAssist_csv_parser]
   type = "remap"
   inputs = ["RECmd_UserAssist_csv_input"]
   source = '''
@@ -49,20 +49,10 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .batchkeypath = fields[0]
     .batchvaluename = fields[1]
     .programname = fields[2]
-    .runcounter, err = to_int(fields[3])
+    .runcounter = fields[3]
     .focuscount = fields[4]
     .focustime = fields[5]
-
-    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-        # Parse LastExecuted field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .lastexecuted, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[UserAssist] Unable to parse LastExecuted timestamp: " + err, level: "error")
-        }
-        .islastexecutednull = "false"
-    } else {
-        .islastexecutednull = "true"
-    }
+    .lastexecuted = fields[6]
 
     .timestamp = .lastexecuted
 
@@ -88,4 +78,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.RECmd_UserAssist_coerce_to_sink]
+  type = "remap"
+  inputs = ["RECmd_UserAssist_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

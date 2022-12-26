@@ -46,61 +46,16 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
 
-    .userid = to_int!(fields[2])
-    .invalidlogincount = to_int!(fields[3])
-    .totallogincount = to_int!(fields[4])
-
-    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-        # Parse CreatedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .createdon, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[LocalAccounts] Unable to parse CreatedOn timestamp: " + err, level: "error")
-        }
-    }
-
-    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-        # Parse LastLoginTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .lastlogintime, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[LocalAccounts] Unable to parse LastLoginTime timestamp: " + err, level: "error")
-        }
-        .islastlogintimenull = "false"
-    } else {
-        .islastlogintimenull = "true"
-    }
-
-    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-        # Parse LastPasswordChange field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .lastpasswordchange, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[LocalAccounts] Unable to parse LastPasswordChange timestamp: " + err, level: "error")
-        }
-        .islastpasswordchangenull = "false"
-    } else {
-        .islastpasswordchangenull = "true"
-    }
-
-
-    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-         # Parse LastIncorrectPassword field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-         .lastincorrectpassword, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
-         if err != null {
-           log("[LocalAccounts] Unable to parse LastIncorrectPassword timestamp: " + err, level: "error")
-         }
-         .islastincorrectpassword = "false"
-    } else {
-         .islastincorrectpassword = "false"
-    }
-
-
-    if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
-         # Parse ExpiresOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-         .expireson, err = parse_timestamp(fields[9], format: "%Y-%m-%d %H:%M:%S.%f")
-         if err != null {
-           log("[LocalAccounts] Unable to parse ExpiresOn timestamp: " + err, level: "error")
-         }
-    }
-
+    .batchkeypath = fields[0]
+    .batchvaluename = fields[1]
+    .userid = fields[2]
+    .invalidlogincount = fields[3]
+    .totallogincount = fields[4]
+    .createdon = fields[5]
+    .lastlogintime = fields[6]
+    .lastpasswordchange = fields[7]
+    .lastincorrectpassword = fields[8]
+    .expireson = fields[9]
     .username = fields[10]
     .fullname = fields[11]
     .passwordhint = fields[12]
@@ -134,9 +89,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.RECmd_LocalAccounts_dedup_CreatedOn_to_sink]
+[transforms.RECmd_LocalAccounts_coerce]
   type = "remap"
   inputs = ["RECmd_LocalAccounts_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+[transforms.RECmd_LocalAccounts_dedup_CreatedOn_to_sink]
+  type = "remap"
+  inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
     if !exists(.createdon){
       abort
@@ -149,7 +123,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.RECmd_LocalAccounts_dedup_LastLoginTime_to_sink]
   type = "remap"
-  inputs = ["RECmd_LocalAccounts_csv_parser"]
+  inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
     if !exists(.lastlogintime){
       abort
@@ -162,7 +136,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.RECmd_LocalAccounts_dedup_LastPasswordChange_to_sink]
   type = "remap"
-  inputs = ["RECmd_LocalAccounts_csv_parser"]
+  inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
     if !exists(.lastpasswordchange){
       abort
@@ -175,7 +149,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.RECmd_LocalAccounts_dedup_LastIncorrectPassword_to_sink]
   type = "remap"
-  inputs = ["RECmd_LocalAccounts_csv_parser"]
+  inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
     if !exists(.lastincorrectpassword){
       abort
@@ -188,7 +162,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.RECmd_LocalAccounts_dedup_ExpiresOn_to_sink]
   type = "remap"
-  inputs = ["RECmd_LocalAccounts_csv_parser"]
+  inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
     if !exists(.expireson){
       abort

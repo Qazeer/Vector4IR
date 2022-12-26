@@ -25,7 +25,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.AppCompatCacheParser_ShimCache_csv_parser_to_sink]
+[transforms.AppCompatCacheParser_ShimCache_csv_parser]
   type = "remap"
   inputs = ["AppCompatCacheParser_ShimCache_csv_input"]
   source = '''
@@ -44,21 +44,14 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
 
-    .controlset = to_int!(fields[0])
-    .cacheentryposition = to_int!(fields[1])
+    .controlset = fields[0]
+    .cacheentryposition = fields[1]
     .path = fields[2]
-
-    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-        # Parse LastModifiedTimeUTC field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .lastmodifiedtimeutc, err = parse_timestamp(fields[3], format: "%Y-%m-%d %H:%M:%S")
-        if err != null {
-          log("[Amcache_ProgramEntries] Unable to parse LastModifiedTimeUTC timestamp: " + err, level: "error")
-        }
-    }
-
+    .lastmodifiedtimeutc = fields[3]
     .executed = fields[4]
-    .duplicate = to_bool!(fields[5])
+    .duplicate = fields[5]
     .sourcefile = fields[6]
+
     .timestamp = .lastmodifiedtimeutc
 
     # Add the metadata fields following the parsing.
@@ -71,4 +64,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.AppCompatCacheParser_ShimCache_coerce_to_sink]
+  type = "remap"
+  inputs = ["AppCompatCacheParser_ShimCache_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

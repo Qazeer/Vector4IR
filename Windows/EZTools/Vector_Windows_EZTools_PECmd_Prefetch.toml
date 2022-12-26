@@ -47,80 +47,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .sourcefilename = fields[1]
     .executablename = fields[5]
     .hash = fields[6]
-    .size = to_int!(fields[7])
+    .size = fields[7]
     .version = fields[8]
-    .runcount = to_int!(fields[9])
-
-    if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
-        .islastrunnull = "false"
-        .lastrun = to_timestamp!(fields[10])
-    } else {
-        .islastrunnull = "true"
-    }
-
-    if (fields[11] != null && fields[11] != "" && fields[11] != "\r") {
-        .ispreviousrun0null = "false"
-        .previousrun0 = to_timestamp!(fields[11])
-    } else {
-        .ispreviousrun0null = "true"
-    }
-
-    if (fields[12] != null && fields[12] != "" && fields[12] != "\r") {
-        .ispreviousrun1null = "false"
-        .previousrun1 = to_timestamp!(fields[12])
-    } else {
-        .ispreviousrun1null = "true"
-    }
-
-    if (fields[13] != null && fields[13] != "" && fields[13] != "\r") {
-        .ispreviousrun2null = "false"
-        .previousrun2 = to_timestamp!(fields[13])
-    } else {
-        .ispreviousrun2null = "true"
-    }
-
-    if (fields[14] != null && fields[14] != "" && fields[14] != "\r") {
-        .ispreviousrun3null = "false"
-        .previousrun3 = to_timestamp!(fields[14])
-    } else {
-        .ispreviousrun3null = "true"
-    }
-
-    if (fields[15] != null && fields[15] != "" && fields[15] != "\r") {
-        .ispreviousrun4null = "false"
-        .previousrun4 = to_timestamp!(fields[15])
-    } else {
-        .ispreviousrun4null = "true"
-    }
-
-    if (fields[16] != null && fields[16] != "" && fields[16] != "\r") {
-        .ispreviousrun5null = "false"
-        .previousrun5 = to_timestamp!(fields[16])
-    } else {
-        .ispreviousrun5null = "true"
-    }
-
-    if (fields[17] != null && fields[17] != "" && fields[17] != "\r") {
-        .ispreviousrun6null = "false"
-        .previousrun6 = to_timestamp!(fields[17])
-    } else {
-        .ispreviousrun6null = "true"
-    }
-
+    .runcount = fields[9]
+    .lastrun = fields[10]
+    .previousrun0 = fields[11]
+    .previousrun1 = fields[12]
+    .previousrun2 = fields[13]
+    .previousrun3 = fields[14]
+    .previousrun4 = fields[15]
+    .previousrun5 = fields[16]
+    .previousrun6 = fields[17]
     .volume0name = fields[18]
     .volume0serial = fields[19]
-
-    if (fields[20] != null && fields[20] != "" && fields[20] != "\r") {
-      .volume0created = to_timestamp!(fields[20])
-    }
-
+    .volume0created = fields[20]
     .volume1name = fields[21]
     .volume1serial = fields[22]
-
-    if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
-      .volume1created = to_timestamp!(fields[23])
-    }
-
+    .volume1created = fields[23]
     .directories = fields[24]
     .filesloaded = fields[25]
     .parsingerror = fields[26]
@@ -137,9 +80,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.PECmd_Prefetch_dedup_LastRun_to_sink]
+[transforms.PECmd_Prefetch_coerce]
   type = "remap"
   inputs = ["PECmd_Prefetch_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+[transforms.PECmd_Prefetch_dedup_LastRun_to_sink]
+  type = "remap"
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.lastrun){
       abort
@@ -152,7 +114,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_PreviousRun0_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.previousrun0){
       abort
@@ -165,7 +127,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_PreviousRun1_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.previousrun1){
       abort
@@ -178,7 +140,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_PreviousRun2_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.previousrun2){
       abort
@@ -191,7 +153,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_PreviousRun3_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.previousrun3){
       abort
@@ -204,7 +166,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_PreviousRun4_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.previousrun4){
       abort
@@ -217,7 +179,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_PreviousRun5_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.previousrun5){
       abort
@@ -230,7 +192,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_PreviousRun6_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.previousrun6){
       abort
@@ -243,7 +205,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_SourceCreated_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.sourcecreated){
       abort
@@ -256,7 +218,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_SourceModified_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.sourcemodified){
       abort
@@ -269,7 +231,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.PECmd_Prefetch_dedup_SourceAccessed_to_sink]
   type = "remap"
-  inputs = ["PECmd_Prefetch_csv_parser"]
+  inputs = ["PECmd_Prefetch_coerce"]
   source = '''
     if !exists(.sourceaccessed){
       abort

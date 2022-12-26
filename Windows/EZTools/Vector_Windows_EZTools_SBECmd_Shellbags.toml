@@ -53,51 +53,14 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .absolutepath = fields[4]
     .shelltype = fields[5]
     .value = fields[6]
-    .childbags = to_int!(fields[7])
-
-    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-        .iscreatedonnull = "false"
-        .createdon = to_timestamp!(fields[8])
-    } else {
-        .iscreatedonnull = "true"
-    }
-
-    if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
-        .ismodifiedonnull = "false"
-        .modifiedon = to_timestamp!(fields[9])
-    } else {
-        .ismodifiedonnull = "true"
-    }
-
-    if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
-        .isaccessedonnull = "false"
-        .accessedon = to_timestamp!(fields[10])
-    } else {
-        .isaccessedonnull = "true"
-    }
-
-    if (fields[11] != null && fields[11] != "" && fields[11] != "\r") {
-        .islastwritetimenull = "false"
-        .lastwritetime = to_timestamp!(fields[11])
-    } else {
-        .islastwritetimenull = "true"
-    }
-
+    .childbags = fields[7]
+    .createdon = fields[8]
+    .modifiedon = fields[9]
+    .accessedon = fields[10]
+    .lastwritetime = fields[11]
     .mftentry = fields[12]
-
-    if (fields[15] != null && fields[15] != "" && fields[15] != "\r") {
-        .isfirstinteractednull = "false"
-        .firstinteracted = to_timestamp!(fields[15])
-    } else {
-        .isfirstinteractednull = "true"
-    }
-
-    if (fields[16] != null && fields[16] != "" && fields[16] != "\r") {
-        .islastinteractednull = "false"
-        .lastinteracted = to_timestamp!(fields[16])
-    } else {
-        .islastinteractednull = "true"
-    }
+    .firstinteracted = fields[15]
+    .lastinteracted = fields[16]
 
     if (.file != null && .file != "") {
       if (contains!(.file, "_Users_")) {
@@ -139,9 +102,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.SBECmd_Shellbags_dedup_LastWriteTime_to_sink]
+[transforms.SBECmd_Shellbags_coerce]
   type = "remap"
   inputs = ["SBECmd_Shellbags_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+[transforms.SBECmd_Shellbags_dedup_LastWriteTime_to_sink]
+  type = "remap"
+  inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
     if !exists(.lastwritetime){
       abort
@@ -154,7 +136,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.SBECmd_Shellbags_dedup_CreatedOn_to_sink]
   type = "remap"
-  inputs = ["SBECmd_Shellbags_csv_parser"]
+  inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
     if !exists(.createdon){
       abort
@@ -167,7 +149,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.SBECmd_Shellbags_dedup_ModifiedOn_to_sink]
   type = "remap"
-  inputs = ["SBECmd_Shellbags_csv_parser"]
+  inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
     if !exists(.modifiedon){
       abort
@@ -180,7 +162,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.SBECmd_Shellbags_dedup_AccessedOn_to_sink]
   type = "remap"
-  inputs = ["SBECmd_Shellbags_csv_parser"]
+  inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
     if !exists(.accessedon){
       abort
@@ -193,7 +175,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.SBECmd_Shellbags_dedup_FirstInteracted_to_sink]
   type = "remap"
-  inputs = ["SBECmd_Shellbags_csv_parser"]
+  inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
     if !exists(.firstinteracted){
       abort
@@ -206,7 +188,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.SBECmd_Shellbags_dedup_LastInteracted_to_sink]
   type = "remap"
-  inputs = ["SBECmd_Shellbags_csv_parser"]
+  inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
     if !exists(.lastinteracted){
       abort

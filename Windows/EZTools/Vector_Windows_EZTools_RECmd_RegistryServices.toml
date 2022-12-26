@@ -27,7 +27,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.RECmd_RegistryServices_csv_parser_to_sink]
+[transforms.RECmd_RegistryServices_csv_parser]
   type = "remap"
   inputs = ["RECmd_RegistryServices_csv_input"]
   source = '''
@@ -47,31 +47,13 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     .batchkeypath = fields[0]
-    .name = fields[2]
+    .batchvaluename = fields[1]
     .description = fields[3]
     .displayname = fields[4]
     .startmode = fields[5]
     .servicetype = fields[6]
-
-    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-        # Parse NameKeyLastWrite field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .namekeylastwrite, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[RegistryServices] Unable to parse NameKeyLastWrite timestamp: " + err, level: "error")
-        }
-        .isnamekeylastwritenull = "false"
-    } else {
-        .isnamekeylastwritenull = "true"
-    }
-
-    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-        # Parse ParametersKeyLastWrite field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .parameterskeylastwrite, err = parse_timestamp(fields[8], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[RegistryServices] Unable to parse ParametersKeyLastWrite timestamp: " + err, level: "error")
-        }
-    }
-
+    .namekeylastwrite = fields[7]
+    .parameterskeylastwrite = fields[8]
     .group = fields[9]
     .imagepath = fields[10]
     .servicedll = fields[11]
@@ -89,4 +71,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.RECmd_RegistryServices_coerce_to_sink]
+  type = "remap"
+  inputs = ["RECmd_RegistryServices_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

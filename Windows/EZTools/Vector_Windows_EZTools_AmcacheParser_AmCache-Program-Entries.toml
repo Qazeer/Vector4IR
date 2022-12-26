@@ -45,39 +45,15 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     .programid = fields[0]
-
-    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-        # Parse KeyLastWriteTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .keylastwritetimestamp, err = parse_timestamp(fields[1], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[Amcache_ProgramEntries] Unable to parse KeyLastWriteTimestamp timestamp: " + err, level: "error")
-        }
-    }
-
+    .keylastwritetimestamp = fields[1]
     .name = fields[2]
     .version = fields[3]
     .publisher = fields[4]
-
-    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-        # Parse InstallDateMsi field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .installdate, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[Amcache_ProgramEntries] Unable to parse InstallDateMsi timestamp: " + err, level: "error")
-        }
-    }
-
+    .installdate = fields[5]
     .osversionatinstalltime = fields[6]
     .bundlemanifestpath = fields[7]
-    if (is_boolean(fields[8])) {
-      .hiddenarp = to_bool!(fields[8])
-    } else {
-      .hiddenarp = fields[8]
-    }
-    if (is_boolean(fields[9])) {
-      .inboxmodernapp = to_bool!(fields[9])
-    } else {
-      .inboxmodernapp = fields[9]
-    }
+    .hiddenarp = fields[8]
+    .inboxmodernapp = fields[9]
     .language = fields[10]
     .manifestpath = fields[11]
     .msipackagecode = fields[12]
@@ -90,23 +66,11 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .source = fields[19]
     .storeapptype = fields[20]
     .uninstallstring = fields[21]
-
-    if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
-      # Parse InstallDateArpLastModified field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdatearplastmodified = parse_timestamp!(fields[22], format: "%m/%d/%Y %H:%M:%S")
-    }
-
-    if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
-    # Parse InstallDateMsi field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdatemsi = parse_timestamp!(fields[23], format: "%m/%d/%Y %H:%M:%S")
-    }
-
-    if (fields[24] != null && fields[24] != "" && fields[24] != "\r") {
-      # Parse InstallDateFromLinkFile field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdatefromlinkfile = parse_timestamp!(fields[24], format: "%m/%d/%Y %H:%M:%S")
-    }
-
+    .installdatearplastmodified = fields[22]
+    .installdatemsi = fields[23]
+    .installdatefromlinkfile = fields[24]
     .manufacturer = fields[25]
+
     .timestamp = .keylastwritetimestamp
 
     # Add the metadata fields following the parsing.
@@ -121,9 +85,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp_to_sink]
+[transforms.AmcacheParser_AmCache-Program-Entries_coerce]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+[transforms.AmcacheParser_AmCache-Program-Entries_dedup_KeyLastWriteTimestamp_to_sink]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
     if !exists(.keylastwritetimestamp){
       abort
@@ -135,7 +118,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDate_to_sink]
   type = "remap"
-  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
     if !exists(.installdate){
       abort
@@ -148,7 +131,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateArpLastModified_to_sink]
   type = "remap"
-  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
     if !exists(.installdatearplastmodified){
       abort
@@ -161,7 +144,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateMsi_to_sink]
   type = "remap"
-  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
     if !exists(.installdatemsi){
       abort
@@ -174,7 +157,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.AmcacheParser_AmCache-Program-Entries_dedup_InstallDateFromLinkFile_to_sink]
   type = "remap"
-  inputs = ["AmcacheParser_AmCache-Program-Entries_csv_parser"]
+  inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
     if !exists(.installdatefromlinkfile){
       abort

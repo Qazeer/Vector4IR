@@ -31,7 +31,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   multiline.timeout_ms = 1000
   max_line_bytes = 100_000_000
 
-[transforms.RECmd_LastVisitedMRU_csv_parser_to_sink]
+[transforms.RECmd_LastVisitedMRU_csv_parser]
   type = "remap"
   inputs = ["RECmd_LastVisitedMRU_csv_input"]
   source = '''
@@ -50,21 +50,12 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
 
+    .batchkeypath = fields[0]
+    .batchvaluename = fields[1]
     .mruposition = fields[3]
     .executable = fields[4]
     .absolutepath = fields[5]
-
-    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-        # Parse OpenedOn field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .openedon, err = parse_timestamp(fields[6], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[LastVisitedMRU] Unable to parse OpenedOn timestamp: " + err, level: "error")
-        }
-        .isopenedonnull = "false"
-    } else {
-        .isopenedonnull = "true"
-    }
-
+    .openedon = fields[6]
     .details = fields[7]
 
     .timestamp = .openedon
@@ -93,3 +84,21 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
+[transforms.RECmd_LastVisitedMRU_coerce_to_sink]
+  type = "remap"
+  inputs = ["RECmd_LastVisitedMRU_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''

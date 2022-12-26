@@ -46,29 +46,17 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
 
+    .batchkeypath = fields[0]
+    .batchvaluename = fields[1]
     .networkname = fields[2]
     .nametype = fields[3]
-
-    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-        # Parse FirstConnectLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .firstconnectlocal, err = parse_timestamp(fields[4], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[RECmd_NetworkList_Profiles] Unable to parse FirstConnectLocal timestamp: " + err, level: "error")
-        }
-    }
-
-    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-        # Parse LastConnectedLocal field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-        .lastconnectedlocal, err = parse_timestamp(fields[5], format: "%Y-%m-%d %H:%M:%S.%f")
-        if err != null {
-          log("[RECmd_NetworkList_Profiles] Unable to parse LastConnectedLocal timestamp: " + err, level: "error")
-        }
-    }
-
+    .firstconnectlocal = fields[4]
+    .lastconnectedlocal = fields[5]
     .managed = fields[6]
     .dnssuffix = fields[7]
     .gatewaymacaddress = fields[8]
     .profileguid = fields[9]
+
     .timestamp = .lastconnectedlocal
 
     # Add the metadata fields following the parsing.
@@ -83,11 +71,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-  # types.Managed = bool
+[transforms.RECmd_NetworkList_coerce]
+  type = "remap"
+  inputs = ["RECmd_NetworkList_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
 
 [transforms.RECmd_NetworkList_dedup_LastConnectedLOCAL_to_sink]
   type = "remap"
-  inputs = ["RECmd_NetworkList_csv_parser"]
+  inputs = ["RECmd_NetworkList_coerce"]
   source = '''
     if !exists(.lastconnectedlocal){
       abort
@@ -100,7 +105,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.RECmd_NetworkList_dedup_FirstConnectLOCAL_to_sink]
   type = "remap"
-  inputs = ["RECmd_NetworkList_csv_parser"]
+  inputs = ["RECmd_NetworkList_coerce"]
   source = '''
     if !exists(.firstconnectlocal){
       abort

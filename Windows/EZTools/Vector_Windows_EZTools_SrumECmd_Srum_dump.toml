@@ -60,285 +60,136 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     .id = fields[0]
-
-    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-        .istimestampnull = "false"
-        .timestamp = to_timestamp!(fields[1])
-    } else {
-        .istimestampnull = "true"
-    }
+    .timestamp = fields[1]
 
     if (contains!(.file, "AppResourceUseInfo")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-
-        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
-         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
-         if err != null {
-           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
-         }
-
-         .isexetimestampnull = "false"
-        } else {
-         .isexetimestampnull = "true"
-        }
-
+        .exetimestamp = fields[4]
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
-        .userid = to_int!(fields[8])
+        .userid = fields[8]
         .appid = fields[9]
-        .backgroundbytesread = to_int!(fields[10])
-        .backgroundbyteswritten = to_int!(fields[11])
-        .backgroundcontextswitches = to_int!(fields[12])
-        .backgroundcycletime = to_int!(fields[13])
-        .backgroundnumberofflushes = to_int!(fields[14])
-        .backgroundnumreadoperations = to_int!(fields[15])
-        .backgroundnumwriteoperations = to_int!(fields[16])
-        .facetime = to_int!(fields[17])
-        .foregroundbytesread = to_int!(fields[18])
-        .foregroundbyteswritten = to_int!(fields[19])
-        .foregroundcontextswitches = to_int!(fields[20])
-        .foregroundcycletime = to_int!(fields[21])
-        .foregroundnumberofflushes = to_int!(fields[22])
-        .foregroundnumreadoperations = to_int!(fields[23])
-        .foregroundnumwriteoperations = to_int!(fields[24])
+        .backgroundbytesread = fields[10]
+        .backgroundbyteswritten = fields[11]
+        .backgroundcontextswitches = fields[12]
+        .backgroundcycletime = fields[13]
+        .backgroundnumberofflushes = fields[14]
+        .backgroundnumreadoperations = fields[15]
+        .backgroundnumwriteoperations = fields[16]
+        .facetime = fields[17]
+        .foregroundbytesread = fields[18]
+        .foregroundbyteswritten = fields[19]
+        .foregroundcontextswitches = fields[20]
+        .foregroundcycletime = fields[21]
+        .foregroundnumberofflushes = fields[22]
+        .foregroundnumreadoperations = fields[23]
+        .foregroundnumwriteoperations = fields[24]
 
         .source = "windows_srum_appresourceuseinfo"
     } else if (contains!(.file, "EnergyUsage")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-
-        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
-         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
-         if err != null {
-           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
-         }
-
-         .isexetimestampnull = "false"
-        } else {
-         .isexetimestampnull = "true"
-        }
-
+        .exetimestamp = fields[4]
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
-        .userid = to_int!(fields[8])
+        .userid = fields[8]
         .appid = fields[9]
-        .islt = to_bool!(fields[10])
+        .islt = fields[10]
         .configurationhash = fields[11]
-
-        if (fields[12] != null && fields[12] != "" && fields[12] != "\r") {
-         # Parse EventTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-         .eventtimestamp, err = parse_timestamp(fields[12], format: "%Y-%m-%d %H:%M:%S.%f")
-         if err != null {
-           log("[SrumDump] Unable to parse EventTimestamp timestamp: " + err, level: "error")
-         }
-
-         .iseventtimestampnull = "false"
-        } else {
-         .iseventtimestampnull = "true"
-        }
-
-        .statetransition = to_int!(fields[13])
-        .chargelevel = to_int!(fields[14])
-        .cyclecount = to_int!(fields[15])
-        .designedcapacity = to_int!(fields[16])
-        .fullchargedcapacity = to_int!(fields[17])
-        .activeactime = to_int!(fields[18])
-        .activedctime = to_int!(fields[19])
-        .activedischargetime = to_int!(fields[20])
-        .activeenergy = to_int!(fields[21])
-        .csactime = to_int!(fields[22])
-        .csdctime = to_int!(fields[23])
-        .csdischargetime = to_int!(fields[24])
-        .csenergy = to_int!(fields[25])
+        .eventtimestamp = fields[12]
+        .statetransition = fields[13]
+        .chargelevel = fields[14]
+        .cyclecount = fields[15]
+        .designedcapacity = fields[16]
+        .fullchargedcapacity = fields[17]
+        .activeactime = fields[18]
+        .activedctime = fields[19]
+        .activedischargetime = fields[20]
+        .activeenergy = fields[21]
+        .csactime = fields[22]
+        .csdctime = fields[23]
+        .csdischargetime = fields[24]
+        .csenergy = fields[25]
 
         .source = "windows_srum_energyusage"
     } else if (contains!(.file, "NetworkConnections")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-
-        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
-         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
-         if err != null {
-           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
-         }
-
-         .isexetimestampnull = "false"
-        } else {
-         .isexetimestampnull = "true"
-        }
-
+        .exetimestamp = fields[4]
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
-        .userid = to_int!(fields[8])
+        .userid = fields[8]
         .appid = fields[9]
-        .connectedtime = to_int!(fields[10])
-
-        if (fields[11] != null && fields[11] != "" && fields[11] != "\r") {
-         # Parse ConnectStartTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-         .connectstarttime, err = parse_timestamp(fields[11], format: "%Y-%m-%d %H:%M:%S.%f")
-         if err != null {
-           log("[SrumDump] Unable to parse ConnectStartTime timestamp: " + err, level: "error")
-         }
-
-         .isconnectstarttimenull = "false"
-        } else {
-         .isconnectstarttimenull = "true"
-        }
-
+        .connectedtime = fields[10]
+        .connectstarttime = fields[11]
         .interfaceluid = fields[12]
         .interfacetype = fields[13]
-        .l2profileflags = to_int!(fields[14])
-        .l2profileid = to_int!(fields[15])
+        .l2profileflags = fields[14]
+        .l2profileid = fields[15]
         .profilename = fields[16]
 
         .source = "windows_srum_networkconnections"
     } else if (contains!(.file, "NetworkUsages")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-
-        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
-         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
-         if err != null {
-           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
-         }
-
-         .isexetimestampnull = "false"
-        } else {
-         .isexetimestampnull = "true"
-        }
-
+        .exetimestamp = fields[4]
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
-        .userid = to_int!(fields[8])
+        .userid = fields[8]
         .appid = fields[9]
-        .bytesreceived = to_int!(fields[10])
-        .bytessent = to_int!(fields[11])
+        .bytesreceived = fields[10]
+        .bytessent = fields[11]
         .interfaceluid = fields[12]
         .interfacetype = fields[13]
-        .l2profileflags = to_int!(fields[14])
-        .l2profileid = to_int!(fields[15])
+        .l2profileflags = fields[14]
+        .l2profileid = fields[15]
         .profilename = fields[16]
 
         .source = "windows_srum_networkusages"
     } else if (contains!(.file, "PushNotifications")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-
-        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
-         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
-         if err != null {
-           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
-         }
-
-         .isexetimestampnull = "false"
-        } else {
-         .isexetimestampnull = "true"
-        }
-
+        .exetimestamp = fields[4]
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
-        .userid = to_int!(fields[8])
+        .userid = fields[8]
         .appid = fields[9]
         .networktype = fields[10]
         .notificationtype = fields[11]
-        .payloadsize = to_int!(fields[12])
+        .payloadsize = fields[12]
 
         .source = "windows_srum_pushnotifications"
     } else if (contains!(.file, "Unknown312")) {
         .exeinfo = fields[2]
         .exeinfodescription = fields[3]
-
-        if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
-         .exetimestamp, err = parse_timestamp(fields[4], format: "%m/%d/%Y %H:%M:%S %:z")
-         if err != null {
-           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
-         }
-
-         .isexetimestampnull = "false"
-        } else {
-         .isexetimestampnull = "true"
-        }
-
+        .exetimestamp = fields[4]
         .sidtype = fields[5]
         .sid = fields[6]
         .username = fields[7]
-        .userid = to_int!(fields[8])
+        .userid = fields[8]
         .appid = fields[9]
-
-        if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
-         # Parse EndTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-         .endtime, err = parse_timestamp(fields[10], format: "%Y-%m-%d %H:%M:%S.%f")
-         if err != null {
-           log("[SrumDump] Unable to parse EndTime timestamp: " + err, level: "error")
-         }
-
-         .isendtimenull = "false"
-        } else {
-         .isendtimenull = "true"
-        }
-
-        .durationms = to_int!(fields[11])
+        .endtime = fields[10]
+        .durationms = fields[11]
 
         .source = "windows_srum_unknown312"
     } else if (contains!(.file, "UnknownD8F")) {
-        .userid = to_int!(fields[2])
+        .userid = fields[2]
         .appid = fields[3]
         .exeinfo = fields[4]
         .exeinfodescription = fields[5]
-
-        if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-          # Parse ExeTimestamp field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss %:z. Expected format: YYYY-MM-DD hh:mm:ss.
-         .exetimestamp, err = parse_timestamp(fields[6], format: "%m/%d/%Y %H:%M:%S %:z")
-         if err != null {
-           log("[SrumDump] Unable to parse ExeTimestamp timestamp: " + err, level: "error")
-         }
-
-         .isexetimestampnull = "false"
-        } else {
-         .isexetimestampnull = "true"
-        }
-
+        .exetimestamp = fields[6]
         .sidtype = fields[7]
         .sid = fields[8]
         .username = fields[9]
-
-        if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
-         # Parse StartTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-         .starttime, err = parse_timestamp(fields[10], format: "%Y-%m-%d %H:%M:%S.%f")
-         if err != null {
-           log("[SrumDump] Unable to parse StartTime timestamp: " + err, level: "error")
-         }
-
-         .isstarttimenull = "false"
-        } else {
-         .isstarttimenull = "true"
-        }
-
-        if (fields[11] != null && fields[11] != "" && fields[11] != "\r") {
-         # Parse EndTime field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-         .endtime, err = parse_timestamp(fields[11], format: "%Y-%m-%d %H:%M:%S.%f")
-         if err != null {
-           log("[SrumDump] Unable to parse EndTime timestamp: " + err, level: "error")
-         }
-
-         .isendtimenull = "false"
-        } else {
-         .isendtimenull = "true"
-        }
-
-        .flags = to_int!(fields[12])
+        .starttime = fields[10]
+        .endtime = fields[11]
+        .flags = fields[12]
         .duration = fields[13]
 
         .source = "windows_srum_unknownd8f"
@@ -355,9 +206,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.SrumECmd_Srum_dump_dedup_Timestamp_to_sink]
+[transforms.SrumECmd_Srum_dump_coerce]
   type = "remap"
   inputs = ["SrumECmd_Srum_dump_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+[transforms.SrumECmd_Srum_dump_dedup_Timestamp_to_sink]
+  type = "remap"
+  inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
     if !exists(.timestamp){
       abort
@@ -369,7 +239,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.SrumECmd_Srum_dump_dedup_EventTimestamp_to_sink]
   type = "remap"
-  inputs = ["SrumECmd_Srum_dump_csv_parser"]
+  inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
     if !exists(.eventtimestamp){
       abort
@@ -382,7 +252,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
   [transforms.SrumECmd_Srum_dump_dedup_ExeTimestamp_to_sink]
     type = "remap"
-    inputs = ["SrumECmd_Srum_dump_csv_parser"]
+    inputs = ["SrumECmd_Srum_dump_coerce"]
     source = '''
       if !exists(.exetimestamp) || (.exetimstamp == ""){
         abort
@@ -395,7 +265,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.SrumECmd_Srum_dump_dedup_ConnectStartTime_to_sink]
   type = "remap"
-  inputs = ["SrumECmd_Srum_dump_csv_parser"]
+  inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
     if !exists(.connectstarttime){
       abort
@@ -408,7 +278,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.SrumECmd_Srum_dump_dedup_StartTime_to_sink]
   type = "remap"
-  inputs = ["SrumECmd_Srum_dump_csv_parser"]
+  inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
     if !exists(.starttime){
       abort
@@ -421,7 +291,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.SrumECmd_Srum_dump_dedup_EndTime_to_sink]
   type = "remap"
-  inputs = ["SrumECmd_Srum_dump_csv_parser"]
+  inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
     if !exists(.endtime){
       abort

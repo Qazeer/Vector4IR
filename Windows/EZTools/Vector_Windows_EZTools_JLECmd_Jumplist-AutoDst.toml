@@ -45,7 +45,6 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     .sourcefile = fields[0]
-
     .sourcecreated = fields[1]
     .sourcemodified = fields[2]
     .sourceaccessed = fields[3]

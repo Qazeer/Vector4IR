@@ -45,9 +45,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     .sourcefile = fields[0]
-    .sourcecreated = to_timestamp!(fields[1])
-    .sourcemodified = to_timestamp!(fields[2])
-    .sourceaccessed = to_timestamp!(fields[3])
+    .sourcecreated = fields[1]
+    .sourcemodified = fields[2]
+    .sourceaccessed = fields[3]
     .filename = fields[4]
 
     if (.filename != null && .filename != "") {
@@ -75,9 +75,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.RecentFileCacheParser_RecentFileCache_dedup_SourceCreated_to_sink]
+[transforms.RecentFileCacheParser_RecentFileCache_coerce]
   type = "remap"
   inputs = ["RecentFileCacheParser_RecentFileCache_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+[transforms.RecentFileCacheParser_RecentFileCache_dedup_SourceCreated_to_sink]
+  type = "remap"
+  inputs = ["RecentFileCacheParser_RecentFileCache_coerce"]
   source = '''
     if !exists(.sourcecreated){
       abort
@@ -90,7 +109,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.RecentFileCacheParser_RecentFileCache_dedup_SourceModified_to_sink]
   type = "remap"
-  inputs = ["RecentFileCacheParser_RecentFileCache_csv_parser"]
+  inputs = ["RecentFileCacheParser_RecentFileCache_coerce"]
   source = '''
     if !exists(.sourcemodified){
       abort
@@ -103,7 +122,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.RecentFileCacheParser_RecentFileCache_dedup_SourceAccessed_to_sink]
   type = "remap"
-  inputs = ["RecentFileCacheParser_RecentFileCache_csv_parser"]
+  inputs = ["RecentFileCacheParser_RecentFileCache_coerce"]
   source = '''
     if !exists(.sourceaccessed){
       abort

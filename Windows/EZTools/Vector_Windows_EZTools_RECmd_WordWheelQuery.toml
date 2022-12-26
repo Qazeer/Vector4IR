@@ -27,7 +27,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.RECmd_WordWheelQuery_csv_parser_to_sink]
+[transforms.RECmd_WordWheelQuery_csv_parser]
   type = "remap"
   inputs = ["RECmd_WordWheelQuery_csv_input"]
   source = '''
@@ -46,6 +46,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       abort
     }
 
+    .batchkeypath = fields[0]
+    .batchvaluename = fields[1]
     .searchterm = fields[2]
     .mruposition = fields[3]
 
@@ -71,4 +73,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.RECmd_WordWheelQuery_coerce_to_sink]
+  type = "remap"
+  inputs = ["RECmd_WordWheelQuery_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

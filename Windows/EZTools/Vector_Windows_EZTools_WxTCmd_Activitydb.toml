@@ -55,39 +55,20 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .executable = fields[1]
     .displaytext = fields[2]
     .contentinfo = fields[3]
-
-    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-      .starttime = to_timestamp!(fields[4])
-    }
-
-    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-      .endtime = to_timestamp!(fields[5])
-    }
-
-    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-      .lastmodifiedtime = to_timestamp!(fields[6])
-    }
-
-    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-      .expirationtime = to_timestamp!(fields[7])
-    }
-
+    .starttime = fields[4]
+    .endtime = fields[5]
+    .lastmodifiedtime = fields[6]
+    .expirationtime = fields[7]
     .createdincloud = fields[8]
-
-    if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
-      .lastmodifiedonclient = to_timestamp!(fields[9])
-    }
-
-    if (fields[10] != null && fields[10] != "" && fields[10] != "\r") {
-      .originallastmodifiedonclient = to_timestamp!(fields[10])
-    }
-
-    .activitytype = to_int!(fields[11])
+    .lastmodifiedonclient = fields[9]
+    .originallastmodifiedonclient = fields[10]
+    .activitytype = fields[11]
     .islocalonly = fields[12]
-    .etag = to_int!(fields[13])
+    .etag = fields[13]
     .packageidhash = fields[14]
     .platformdeviceid = fields[15]
     .duration = fields[16]
+
     .timestamp = .starttime
 
     # Add the metadata fields following the parsing.
@@ -102,9 +83,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.WxTCmd_Activitydb_dedup_StartTime_to_sink]
+[transforms.WxTCmd_Activitydb_coerce]
   type = "remap"
   inputs = ["WxTCmd_Activitydb_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+[transforms.WxTCmd_Activitydb_dedup_StartTime_to_sink]
+  type = "remap"
+  inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
     if !exists(.starttime){
       abort
@@ -117,7 +117,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.WxTCmd_Activitydb_dedup_EndTime_to_sink]
   type = "remap"
-  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
     if !exists(.endtime){
       abort
@@ -130,7 +130,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.WxTCmd_Activitydb_dedup_LastModifiedTime_to_sink]
   type = "remap"
-  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
     if !exists(.lastmodifiedtime){
       abort
@@ -143,7 +143,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.WxTCmd_Activitydb_dedup_ExpirationTime_to_sink]
   type = "remap"
-  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
     if !exists(.expirationtime){
       abort
@@ -156,7 +156,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.WxTCmd_Activitydb_dedup_LastModifiedOnClient_to_sink]
   type = "remap"
-  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
     if !exists(.lastmodifiedonclient){
       abort
@@ -169,7 +169,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.WxTCmd_Activitydb_dedup_OriginalLastModifiedOnClient_to_sink]
   type = "remap"
-  inputs = ["WxTCmd_Activitydb_csv_parser"]
+  inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
     if !exists(.originallastmodifiedonclient){
       abort
