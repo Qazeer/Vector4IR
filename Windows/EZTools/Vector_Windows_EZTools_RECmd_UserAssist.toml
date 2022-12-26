@@ -39,9 +39,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     if fields[0] == "BatchKeyPath" {
+      # Special usecase as the header line may start with 'M-oM-;M-?'.
       expected_header = "BatchKeyPath,BatchValueName,ProgramName,RunCounter,FocusCount,FocusTime,LastExecuted"
       current_header = strip_whitespace(to_string!(.message))
-      # Special usecase as the header line may start with 'M-oM-;M-?'.
       header_find = find(current_header, expected_header)
       if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")

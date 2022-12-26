@@ -43,157 +43,217 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       log("[SrumDump] Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "Timestamp" {
-      expected_header_AppResourceUseInfo = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BackgroundBytesRead,BackgroundBytesWritten,BackgroundContextSwitches,BackgroundCycleTime,BackgroundNumberOfFlushes,BackgroundNumReadOperations,BackgroundNumWriteOperations,FaceTime,ForegroundBytesRead,ForegroundBytesWritten,ForegroundContextSwitches,ForegroundCycleTime,ForegroundNumberOfFlushes,ForegroundNumReadOperations,ForegroundNumWriteOperations"
-      expected_header_EnergyUsage = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,IsLt,ConfigurationHash,EventTimestamp,StateTransition,ChargeLevel,CycleCount,DesignedCapacity,FullChargedCapacity,ActiveAcTime,ActiveDcTime,ActiveDischargeTime,ActiveEnergy,CsAcTime,CsDcTime,CsDischargeTime,CsEnergy"
-      expected_header_NetworkConnections = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,ConnectedTime,ConnectStartTime,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName"
-      expected_header_NetworkUsages = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BytesReceived,BytesSent,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName"
-      expected_header_PushNotifications = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,NetworkType,NotificationType,PayloadSize"
-      expected_header_Unknown312 = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs"
-      expected_header_UnknownD8F = "Id,Timestamp,UserId,AppId,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,StartTime,EndTime,Flags,Duration"
-      current_header = strip_whitespace(string!(.message))
-
-      if expected_header_AppResourceUseInfo != current_header || expected_header_EnergyUsage != .message || expected_header_NetworkConnections != current_header || expected_header_NetworkUsages != current_header || expected_header_PushNotifications != current_header || expected_header_Unknown312 != current_header || expected_header_UnknownD8F != current_header {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Got CSV header:      " + current_header, level: "error")
-      }
-
-      abort
-    }
-
     .id = fields[0]
     .timestamp = fields[1]
 
     if (contains!(.file, "AppResourceUseInfo")) {
-        .exeinfo = fields[2]
-        .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
-        .sidtype = fields[5]
-        .sid = fields[6]
-        .username = fields[7]
-        .userid = fields[8]
-        .appid = fields[9]
-        .backgroundbytesread = fields[10]
-        .backgroundbyteswritten = fields[11]
-        .backgroundcontextswitches = fields[12]
-        .backgroundcycletime = fields[13]
-        .backgroundnumberofflushes = fields[14]
-        .backgroundnumreadoperations = fields[15]
-        .backgroundnumwriteoperations = fields[16]
-        .facetime = fields[17]
-        .foregroundbytesread = fields[18]
-        .foregroundbyteswritten = fields[19]
-        .foregroundcontextswitches = fields[20]
-        .foregroundcycletime = fields[21]
-        .foregroundnumberofflushes = fields[22]
-        .foregroundnumreadoperations = fields[23]
-        .foregroundnumwriteoperations = fields[24]
+      if fields[1] == "Timestamp" {
+        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BackgroundBytesRead,BackgroundBytesWritten,BackgroundContextSwitches,BackgroundCycleTime,BackgroundNumberOfFlushes,BackgroundNumReadOperations,BackgroundNumWriteOperations,FaceTime,ForegroundBytesRead,ForegroundBytesWritten,ForegroundContextSwitches,ForegroundCycleTime,ForegroundNumberOfFlushes,ForegroundNumReadOperations,ForegroundNumWriteOperations"
+        current_header = strip_whitespace(to_string!(.message))
+        header_find = find(current_header, expected_header)
+        if header_find == -1 || (header_find != 0 && header_find != 3) {
+          log("Unexpected CSV header for AppResourceUseInfo, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+        abort
+      }
 
-        .source = "windows_srum_appresourceuseinfo"
+      .exeinfo = fields[2]
+      .exeinfodescription = fields[3]
+      .exetimestamp = fields[4]
+      .sidtype = fields[5]
+      .sid = fields[6]
+      .username = fields[7]
+      .userid = fields[8]
+      .appid = fields[9]
+      .backgroundbytesread = fields[10]
+      .backgroundbyteswritten = fields[11]
+      .backgroundcontextswitches = fields[12]
+      .backgroundcycletime = fields[13]
+      .backgroundnumberofflushes = fields[14]
+      .backgroundnumreadoperations = fields[15]
+      .backgroundnumwriteoperations = fields[16]
+      .facetime = fields[17]
+      .foregroundbytesread = fields[18]
+      .foregroundbyteswritten = fields[19]
+      .foregroundcontextswitches = fields[20]
+      .foregroundcycletime = fields[21]
+      .foregroundnumberofflushes = fields[22]
+      .foregroundnumreadoperations = fields[23]
+      .foregroundnumwriteoperations = fields[24]
+
+      .source = "windows_srum_appresourceuseinfo"
     } else if (contains!(.file, "EnergyUsage")) {
-        .exeinfo = fields[2]
-        .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
-        .sidtype = fields[5]
-        .sid = fields[6]
-        .username = fields[7]
-        .userid = fields[8]
-        .appid = fields[9]
-        .islt = fields[10]
-        .configurationhash = fields[11]
-        .eventtimestamp = fields[12]
-        .statetransition = fields[13]
-        .chargelevel = fields[14]
-        .cyclecount = fields[15]
-        .designedcapacity = fields[16]
-        .fullchargedcapacity = fields[17]
-        .activeactime = fields[18]
-        .activedctime = fields[19]
-        .activedischargetime = fields[20]
-        .activeenergy = fields[21]
-        .csactime = fields[22]
-        .csdctime = fields[23]
-        .csdischargetime = fields[24]
-        .csenergy = fields[25]
+      if fields[1] == "Timestamp" {
+        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,IsLt,ConfigurationHash,EventTimestamp,StateTransition,ChargeLevel,CycleCount,DesignedCapacity,FullChargedCapacity,ActiveAcTime,ActiveDcTime,ActiveDischargeTime,ActiveEnergy,CsAcTime,CsDcTime,CsDischargeTime,CsEnergy"
+        current_header = strip_whitespace(to_string!(.message))
+        header_find = find(current_header, expected_header)
+        if header_find == -1 || (header_find != 0 && header_find != 3) {
+          log("Unexpected CSV header for EnergyUsage, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+        abort
+      }
 
-        .source = "windows_srum_energyusage"
+      .exeinfo = fields[2]
+      .exeinfodescription = fields[3]
+      .exetimestamp = fields[4]
+      .sidtype = fields[5]
+      .sid = fields[6]
+      .username = fields[7]
+      .userid = fields[8]
+      .appid = fields[9]
+      .islt = fields[10]
+      .configurationhash = fields[11]
+      .eventtimestamp = fields[12]
+      .statetransition = fields[13]
+      .chargelevel = fields[14]
+      .cyclecount = fields[15]
+      .designedcapacity = fields[16]
+      .fullchargedcapacity = fields[17]
+      .activeactime = fields[18]
+      .activedctime = fields[19]
+      .activedischargetime = fields[20]
+      .activeenergy = fields[21]
+      .csactime = fields[22]
+      .csdctime = fields[23]
+      .csdischargetime = fields[24]
+      .csenergy = fields[25]
+
+      .source = "windows_srum_energyusage"
     } else if (contains!(.file, "NetworkConnections")) {
-        .exeinfo = fields[2]
-        .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
-        .sidtype = fields[5]
-        .sid = fields[6]
-        .username = fields[7]
-        .userid = fields[8]
-        .appid = fields[9]
-        .connectedtime = fields[10]
-        .connectstarttime = fields[11]
-        .interfaceluid = fields[12]
-        .interfacetype = fields[13]
-        .l2profileflags = fields[14]
-        .l2profileid = fields[15]
-        .profilename = fields[16]
+      if fields[1] == "Timestamp" {
+        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,ConnectedTime,ConnectStartTime,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName"
+        current_header = strip_whitespace(to_string!(.message))
+        header_find = find(current_header, expected_header)
+        if header_find == -1 || (header_find != 0 && header_find != 3) {
+          log("Unexpected CSV header for NetworkConnections, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+        abort
+      }
 
-        .source = "windows_srum_networkconnections"
+      .exeinfo = fields[2]
+      .exeinfodescription = fields[3]
+      .exetimestamp = fields[4]
+      .sidtype = fields[5]
+      .sid = fields[6]
+      .username = fields[7]
+      .userid = fields[8]
+      .appid = fields[9]
+      .connectedtime = fields[10]
+      .connectstarttime = fields[11]
+      .interfaceluid = fields[12]
+      .interfacetype = fields[13]
+      .l2profileflags = fields[14]
+      .l2profileid = fields[15]
+      .profilename = fields[16]
+
+      .source = "windows_srum_networkconnections"
     } else if (contains!(.file, "NetworkUsages")) {
-        .exeinfo = fields[2]
-        .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
-        .sidtype = fields[5]
-        .sid = fields[6]
-        .username = fields[7]
-        .userid = fields[8]
-        .appid = fields[9]
-        .bytesreceived = fields[10]
-        .bytessent = fields[11]
-        .interfaceluid = fields[12]
-        .interfacetype = fields[13]
-        .l2profileflags = fields[14]
-        .l2profileid = fields[15]
-        .profilename = fields[16]
+      if fields[1] == "Timestamp" {
+        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BytesReceived,BytesSent,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName"
+        current_header = strip_whitespace(to_string!(.message))
+        header_find = find(current_header, expected_header)
+        if header_find == -1 || (header_find != 0 && header_find != 3) {
+          log("Unexpected CSV header for NetworkUsages, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+        abort
+      }
 
-        .source = "windows_srum_networkusages"
+      .exeinfo = fields[2]
+      .exeinfodescription = fields[3]
+      .exetimestamp = fields[4]
+      .sidtype = fields[5]
+      .sid = fields[6]
+      .username = fields[7]
+      .userid = fields[8]
+      .appid = fields[9]
+      .bytesreceived = fields[10]
+      .bytessent = fields[11]
+      .interfaceluid = fields[12]
+      .interfacetype = fields[13]
+      .l2profileflags = fields[14]
+      .l2profileid = fields[15]
+      .profilename = fields[16]
+
+      .source = "windows_srum_networkusages"
     } else if (contains!(.file, "PushNotifications")) {
-        .exeinfo = fields[2]
-        .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
-        .sidtype = fields[5]
-        .sid = fields[6]
-        .username = fields[7]
-        .userid = fields[8]
-        .appid = fields[9]
-        .networktype = fields[10]
-        .notificationtype = fields[11]
-        .payloadsize = fields[12]
+      if fields[1] == "Timestamp" {
+        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,NetworkType,NotificationType,PayloadSize"
+        current_header = strip_whitespace(to_string!(.message))
+        header_find = find(current_header, expected_header)
+        if header_find == -1 || (header_find != 0 && header_find != 3) {
+          log("Unexpected CSV header for PushNotifications, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+        abort
+      }
 
-        .source = "windows_srum_pushnotifications"
+      .exeinfo = fields[2]
+      .exeinfodescription = fields[3]
+      .exetimestamp = fields[4]
+      .sidtype = fields[5]
+      .sid = fields[6]
+      .username = fields[7]
+      .userid = fields[8]
+      .appid = fields[9]
+      .networktype = fields[10]
+      .notificationtype = fields[11]
+      .payloadsize = fields[12]
+
+      .source = "windows_srum_pushnotifications"
     } else if (contains!(.file, "Unknown312")) {
-        .exeinfo = fields[2]
-        .exeinfodescription = fields[3]
-        .exetimestamp = fields[4]
-        .sidtype = fields[5]
-        .sid = fields[6]
-        .username = fields[7]
-        .userid = fields[8]
-        .appid = fields[9]
-        .endtime = fields[10]
-        .durationms = fields[11]
+        if fields[1] == "Timestamp" {
+        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs"
+        current_header = strip_whitespace(to_string!(.message))
+        header_find = find(current_header, expected_header)
+        if header_find == -1 || (header_find != 0 && header_find != 3) {
+          log("Unexpected CSV header for Unknown312, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+        abort
+      }
 
-        .source = "windows_srum_unknown312"
+      .exeinfo = fields[2]
+      .exeinfodescription = fields[3]
+      .exetimestamp = fields[4]
+      .sidtype = fields[5]
+      .sid = fields[6]
+      .username = fields[7]
+      .userid = fields[8]
+      .appid = fields[9]
+      .endtime = fields[10]
+      .durationms = fields[11]
+
+      .source = "windows_srum_unknown312"
     } else if (contains!(.file, "UnknownD8F")) {
-        .userid = fields[2]
-        .appid = fields[3]
-        .exeinfo = fields[4]
-        .exeinfodescription = fields[5]
-        .exetimestamp = fields[6]
-        .sidtype = fields[7]
-        .sid = fields[8]
-        .username = fields[9]
-        .starttime = fields[10]
-        .endtime = fields[11]
-        .flags = fields[12]
-        .duration = fields[13]
+      if fields[1] == "Timestamp" {
+        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        expected_header = "Id,Timestamp,UserId,AppId,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,StartTime,EndTime,Flags,Duration"
+        current_header = strip_whitespace(to_string!(.message))
+        header_find = find(current_header, expected_header)
+        if header_find == -1 || (header_find != 0 && header_find != 3) {
+          log("Unexpected CSV header for UnknownD8F, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+        abort
+      }
 
-        .source = "windows_srum_unknownd8f"
+      .userid = fields[2]
+      .appid = fields[3]
+      .exeinfo = fields[4]
+      .exeinfodescription = fields[5]
+      .exetimestamp = fields[6]
+      .sidtype = fields[7]
+      .sid = fields[8]
+      .username = fields[9]
+      .starttime = fields[10]
+      .endtime = fields[11]
+      .flags = fields[12]
+      .duration = fields[13]
+
+      .source = "windows_srum_unknownd8f"
     }
 
     # Add the metadata fields following the parsing.
