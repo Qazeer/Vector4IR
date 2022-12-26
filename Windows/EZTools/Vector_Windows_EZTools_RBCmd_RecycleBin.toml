@@ -38,8 +38,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     if fields[0] == "SourceName" {
       expected_header = "SourceName,FileType,FileName,FileSize,DeletedOn"
-      if expected_header != .message {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
@@ -53,7 +54,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .timestamp = .deletedon
 
     # Parse SourceName field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
-    .user_sid = parse_regex!(.sourcename, r'\$$Recycle.Bin\\(?P<sid>.*)\\')."sid"
+    if (match_user_sid, err = parse_regex(.sourcename, r'\$$Recycle.Bin\\(?P<sid>.*)\\'); err == null) {
+      .user_sid = match_user_sid.sid
+    }
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"

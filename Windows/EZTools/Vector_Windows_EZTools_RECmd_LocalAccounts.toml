@@ -40,8 +40,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     if fields[0] == "BatchKeyPath" {
       expected_header = "BatchKeyPath,BatchValueName,UserId,InvalidLoginCount,TotalLoginCount,CreatedOn,LastLoginTime,LastPasswordChange,LastIncorrectPassword,ExpiresOn,UserName,FullName,PasswordHint,Groups,Comment,UserComment,HomeDirectory,AccountDisabled,HomeDirectoryRequired,PasswordNotRequired,TempDuplicateAccount,NormalUserAccount,MnsLogonAccount,InterdomainTrustAccount,WorkstationTrustAccount,ServerTrustAccount,PasswordDoesNotExpire,AutoLocked"
-      if expected_header != .message {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }

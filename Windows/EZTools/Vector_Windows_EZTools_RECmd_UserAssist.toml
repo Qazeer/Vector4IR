@@ -40,8 +40,11 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     if fields[0] == "BatchKeyPath" {
       expected_header = "BatchKeyPath,BatchValueName,ProgramName,RunCounter,FocusCount,FocusTime,LastExecuted"
-      if expected_header != .message {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      current_header = strip_whitespace(to_string!(.message))
+      # Special usecase as the header line may start with 'M-oM-;M-?'.
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
@@ -56,16 +59,12 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     .timestamp = .lastexecuted
 
-    if (.file != null && .file != "") {
-      if (contains!(.file, "_Users_")) {
-        # Parse File field to extract username. Expected format: "username".
-        .user = parse_regex!(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
-      } else if (contains!(.file, "_Utilisateurs_")) {
-        # Parse File field to extract username. Expected format: "username".
-        .user = parse_regex!(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
-      }
+    if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
+      .user = match_user_en.username
+    } else if (match_user_fr, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_.*_Utilisateurs_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
+      .user = match_user_fr.username
     } else {
-        .user = ""
+      .user = ""
     }
 
     # Add the metadata fields following the parsing.

@@ -38,8 +38,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     if fields[0] == "SourceFile" {
       expected_header = "SourceFile,SourceCreated,SourceModified,SourceAccessed,Filename"
-      if expected_header != .message {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
@@ -50,14 +51,12 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .sourceaccessed = fields[3]
     .filename = fields[4]
 
-    if (.filename != null && .filename != "") {
+    if (.filename != null && .filename != "" && .filename != "\r") {
       .filename = string!(.filename)
-      if (contains(.filename, "users")) {
-        # Parse Filename field to extract username. Expected format: "username".
-        .user = parse_regex!(.filename, r'[a-zA-Z]:\\users\\(?P<user>[\w]+)\\*')."user"
-      } else if (contains(.filename, "utilisateurs")) {
-        # Parse Filename field to extract username. Expected format: "username".
-        .user = parse_regex!(.filename, r'[a-zA-Z]:\\utilisateurs\\(?P<user>[\w]+)\\*')."user"
+      if (match_user_en, err = parse_regex(.filename, r'[a-zA-Z]:\\users\\(?P<username>[\w]+)\\*'); err == null) {
+        .user = match_user_en.username
+      } else if (match_user_fr, err = parse_regex(.filename, r'[a-zA-Z]:\\utilisateurs\\(?P<username>[\w]+)\\*'); err == null) {
+        .user = match_user_fr.username
       }
     } else {
         .user = ""

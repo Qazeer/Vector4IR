@@ -40,8 +40,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     if fields[7] == "ValueData" {
       expected_header = "HivePath,HiveType,Description,Category,KeyPath,ValueName,ValueType,ValueData,ValueData2,ValueData3,Comment,Recursive,Deleted,LastWriteTimestamp,PluginDetailFile"
-      if expected_header != .message {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
@@ -58,13 +59,11 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .timestamp = .lastwritetimestamp
 
     if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
-        if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
-          # Parse HivePath field to extract username. Expected format: "username".
-          .user = parse_regex!(fields[0], r'\\[a-zA-Z]\\Users\\(?P<user>.*)\\NTUSER.DAT$')."user"
-        } else if ((parse_regex!(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user") != null) {
-          # Parse HivePath field to extract username. Expected format: "username".
-          .user = parse_regex!(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<user>.*)\\NTUSER.DAT$')."user"
-        }
+      if (match_user_en, err = parse_regex(fields[0], r'\\[a-zA-Z]\\Users\\(?P<username>.*)\\NTUSER.DAT$'); err == null) {
+        .user = match_user_en.username
+      } else if (match_user_fr, err = parse_regex(fields[0], r'\\[a-zA-Z]\\Utilisateurs\\(?P<username>.*)\\NTUSER.DAT$'); err == null) {
+        .user = match_user_fr.username
+      }
     } else {
         .user = ""
     }

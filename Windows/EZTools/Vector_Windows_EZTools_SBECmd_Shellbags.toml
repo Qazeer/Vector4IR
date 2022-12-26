@@ -42,8 +42,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     if fields[11] == "LastWriteTime" {
       expected_header = "BagPath,Slot,NodeSlot,MRUPosition,AbsolutePath,ShellType,Value,ChildBags,CreatedOn,ModifiedOn,AccessedOn,LastWriteTime,MFTEntry,MFTSequenceNumber,ExtensionBlockCount,FirstInteracted,LastInteracted,HasExplored,Miscellaneous"
-      if expected_header != .message {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
@@ -62,30 +63,10 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .firstinteracted = fields[15]
     .lastinteracted = fields[16]
 
-    if (.file != null && .file != "") {
-      if (contains!(.file, "_Users_")) {
-        if (contains!(.file, "_AppData_Local_Microsoft_Windows_UsrClass")) {
-          # Parse File field to extract username. Expected format: "username".
-          .user = parse_regex!(.file, r'_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_AppData_Local_Microsoft_Windows_UsrClass.dat.csv')."user"
-        } else if (contains!(.file, "_NTUSER.DAT")) {
-          # Parse File field to extract username. Expected format: "username".
-          .user = parse_regex!(.file, r'_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
-        } else if (contains!(.file, "_ntuser.dat")) {
-          # Parse File field to extract username. Expected format: "username".
-          .user = parse_regex!(.file, r'_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_ntuser.dat.csv')."user"
-        }
-      } else if (contains!(.file, "_Utilisateurs_")) {
-        if (contains!(.file, "_AppData_Local_Microsoft_Windows_UsrClass")) {
-          # Parse File field to extract username. Expected format: "username".
-          .user = parse_regex!(.file, r'_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_AppData_Local_Microsoft_Windows_UsrClass.dat.csv')."user"
-        } else if (contains!(.file, "_NTUSER.DAT")) {
-          # Parse File field to extract username. Expected format: "username".
-          .user = parse_regex!(.file, r'_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
-        } else if (contains!(.file, "_ntuser.dat")) {
-          # Parse File field to extract username. Expected format: "username".
-          .user = parse_regex!(.file, r'_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_ntuser.dat.csv')."user"
-        }
-      }
+    if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_(AppData_Local_Microsoft_Windows_UsrClass.dat\|NTUSER.DAT\|ntuser.dat).csv'); err == null) {
+      .user = match_user_en.username
+    } else if (match_user_fr, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Utilisateurs_(?P<username>.*)_(AppData_Local_Microsoft_Windows_UsrClass.dat\|NTUSER.DAT\|ntuser.dat).csv'); err == null) {
+      .user = match_user_fr.username
     } else {
         .user = ""
     }

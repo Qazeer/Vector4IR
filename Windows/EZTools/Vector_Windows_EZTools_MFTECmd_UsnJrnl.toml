@@ -28,16 +28,19 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   inputs = ["MFTECmd_UsnJrnl_csv_input"]
   source = '''
     # Expect CSV header:
-    # Name,Extension,EntryNumber,SequenceNumber,ParentEntryNumber,ParentSequenceNumber,UpdateSequenceNumber,UpdateTimestamp,UpdateReasons,FileAttributes,OffsetToData,SourceFile
+    # Name,Extension,EntryNumber,SequenceNumber,ParentEntryNumber,ParentSequenceNumber,ParentPath,UpdateSequenceNumber,UpdateTimestamp,UpdateReasons,FileAttributes,OffsetToData,SourceFile
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("[UsnJrnl] Unable to split CSV: " + err, level: "error")
     }
 
     if fields[2] == "EntryNumber" {
-      expected_header = "Name,Extension,EntryNumber,SequenceNumber,ParentEntryNumber,ParentSequenceNumber,UpdateSequenceNumber,UpdateTimestamp,UpdateReasons,FileAttributes,OffsetToData,SourceFile"
-      if expected_header != .message {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      expected_header = "Name,Extension,EntryNumber,SequenceNumber,ParentEntryNumber,ParentSequenceNumber,ParentPath,UpdateSequenceNumber,UpdateTimestamp,UpdateReasons,FileAttributes,OffsetToData,SourceFile"
+      current_header = strip_whitespace(to_string!(.message))
+      # Special usecase as the header line may start with 'M-oM-;M-?'.
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
@@ -48,11 +51,12 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .sequencenumber = fields[3]
     .parententrynumber = fields[4]
     .parentsequencenumber = fields[5]
-    .updatesequencenumber = fields[6]
-    .updatetimestamp = fields[7]
-    .updatereasons = fields[8]
-    .fileattributes = fields[9]
-    .offsettodata = fields[10]
+    .parentpath = fields[6]
+    .updatesequencenumber = fields[7]
+    .updatetimestamp = fields[8]
+    .updatereasons = fields[9]
+    .fileattributes = fields[10]
+    .offsettodata = fields[11]
 
     .timestamp = .updatetimestamp
 

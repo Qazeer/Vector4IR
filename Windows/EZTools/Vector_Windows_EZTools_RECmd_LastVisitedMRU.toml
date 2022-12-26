@@ -44,8 +44,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     if fields[0] == "BatchKeyPath" {
       expected_header = "BatchKeyPath,BatchValueName,ValueName,MruPosition,Executable,AbsolutePath,OpenedOn,Details"
-      if expected_header != .message {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
@@ -60,16 +61,12 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     .timestamp = .openedon
 
-    if (.file != null && .file != "") {
-        if (contains!(.file, "_Users_")) {
-          # Parse File field to extract username. Expected format: "username".
-          .user = parse_regex!(.file, r'[a-zA-Z]_Users_(?P<kapeoutputfolder>.*)_Users_(?P<user>.*)_NTUSER.DAT.csv')."user"
-        } else if (contains!(.file, "_Utilisateurs_")) {
-          # Parse File field to extract username. Expected format: "username".
-          .user = parse_regex!(.file, r'[a-zA-Z]_Utilisateurs_(?P<kapeoutputfolder>.*)_Utilisateurs_(?P<user>.*)_NTUSER.DAT.csv')."user"
-        }
+    if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
+      .user = match_user_en.username
+    } else if (match_user_fr, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_.*_Utilisateurs_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
+      .user = match_user_fr.username
     } else {
-        .user = ""
+      .user = ""
     }
 
     # Add the metadata fields following the parsing.

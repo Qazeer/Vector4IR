@@ -51,9 +51,10 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       expected_header_PushNotifications = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,NetworkType,NotificationType,PayloadSize"
       expected_header_Unknown312 = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs"
       expected_header_UnknownD8F = "Id,Timestamp,UserId,AppId,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,StartTime,EndTime,Flags,Duration"
+      current_header = strip_whitespace(string!(.message))
 
-      if expected_header_AppResourceUseInfo != .message || expected_header_EnergyUsage != .message || expected_header_NetworkConnections != .message || expected_header_NetworkUsages != .message || expected_header_PushNotifications != .message || expected_header_Unknown312 != .message || expected_header_UnknownD8F != .message {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Got CSV header: " + string!(.message), level: "error")
+      if expected_header_AppResourceUseInfo != current_header || expected_header_EnergyUsage != .message || expected_header_NetworkConnections != current_header || expected_header_NetworkUsages != current_header || expected_header_PushNotifications != current_header || expected_header_Unknown312 != current_header || expected_header_UnknownD8F != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Got CSV header:      " + current_header, level: "error")
       }
 
       abort
