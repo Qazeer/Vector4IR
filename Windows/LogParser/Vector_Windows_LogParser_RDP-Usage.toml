@@ -36,6 +36,10 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     if fields[1] == "SourceName" {
+      expected_header = "Date,SourceName,EventID,User,Description,SessionID,SourceSessionID,ReasonCode,SourceIP"
+      if expected_header != .message {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      }
       abort
     }
 

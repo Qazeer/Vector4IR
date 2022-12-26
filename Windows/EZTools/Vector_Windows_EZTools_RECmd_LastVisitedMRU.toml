@@ -42,7 +42,11 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       log("[LastVisitedMRU] Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "BatchKeyPath"{
+    if fields[0] == "BatchKeyPath" {
+      expected_header = "BatchKeyPath,BatchValueName,ValueName,MruPosition,Executable,AbsolutePath,OpenedOn,Details"
+      if expected_header != .message {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      }
       abort
     }
 

@@ -1,8 +1,6 @@
 # Vector_Windows_EZTools_MFTECmd_UsnJrnl config.
 # Description: Process Windows artefacts parsed with MFTECmd (CSV output).
 #              Filename should match: "*J_Output.csv"
-#              MFTECmd command: MFTECmd.exe -f %sourceFile% --csv %destinationDirectory%
-#              Example command: MFTECmd.exe -f "C:\$Extend\$UsnJrnl$J" --csv <YOUR_OUTPUT> -q
 #              source = "windows_usnjrnl" & sourcetype = "windows_artefact"
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
@@ -25,7 +23,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.MFTECmd_UsnJrnl_csv_parser_to_sink]
+[transforms.MFTECmd_UsnJrnl_csv_parser]
   type = "remap"
   inputs = ["MFTECmd_UsnJrnl_csv_input"]
   source = '''
@@ -36,29 +34,25 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       log("[UsnJrnl] Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[2] == "EntryNumber"{
+    if fields[2] == "EntryNumber" {
+      expected_header = "Name,Extension,EntryNumber,SequenceNumber,ParentEntryNumber,ParentSequenceNumber,UpdateSequenceNumber,UpdateTimestamp,UpdateReasons,FileAttributes,OffsetToData,SourceFile"
+      if expected_header != .message {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      }
       abort
     }
 
     .name = fields[0]
     .extension = fields[1]
-    .entrynumber = to_int!(fields[2])
-    .sequencenumber = to_int!(fields[3])
-    .parententrynumber = to_int!(fields[4])
-    .parentsequencenumber = to_int!(fields[5])
-    .updatesequencenumber = to_int!(fields[6])
-
-    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-         # Parse UpdateTimestamp field to extract timestamp. Input format: YYYY-MM-DD hh:mm:ss.zzz. Expected format: YYYY-MM-DD hh:mm:ss.
-         .updatetimestamp, err = parse_timestamp(fields[7], format: "%Y-%m-%d %H:%M:%S.%f")
-         if err != null {
-           log("[UsnJrnl] Unable to parse UpdateTimestamp timestamp: " + err, level: "error")
-         }
-    }
-
+    .entrynumber = fields[2]
+    .sequencenumber = fields[3]
+    .parententrynumber = fields[4]
+    .parentsequencenumber = fields[5]
+    .updatesequencenumber = fields[6]
+    .updatetimestamp = fields[7]
     .updatereasons = fields[8]
     .fileattributes = fields[9]
-    .offsettodata = to_int!(fields[10])
+    .offsettodata = fields[10]
     .timestamp = .updatetimestamp
 
     # Add the metadata fields following the parsing.
@@ -71,4 +65,23 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.source_type)
     del(.file)
     del(.message)
+  '''
+
+[transforms.MFTECmd_UsnJrnl_coerce_to_sink]
+  type = "remap"
+  inputs = ["MFTECmd_UsnJrnl_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
   '''

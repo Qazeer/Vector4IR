@@ -36,40 +36,24 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       log("[Jumplist-CustomDst] Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[8] == "TargetModified"{
+    if fields[8] == "TargetModified" {
+      expected_header = "SourceFile,SourceCreated,SourceModified,SourceAccessed,AppId,AppIdDescription,EntryName,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments"
+      if expected_header != .message {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      }
       abort
     }
 
     .sourcefile = fields[0]
-
-    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-      .sourcecreated = to_timestamp!(fields[1])
-    }
-
-    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
-      .sourcemodified = to_timestamp!(fields[2])
-    }
-
-    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-      .sourceaccessed = to_timestamp!(fields[3])
-    }
-
+    .sourcecreated = fields[1]
+    .sourcemodified = fields[2]
+    .sourceaccessed = fields[3]
     .appid = fields[4]
     .appiddescription = fields[5]
     .entryname = fields[6]
-
-    if (fields[7] != null && fields[7] != "" && fields[7] != "\r") {
-      .targetcreated = to_timestamp!(fields[7])
-    }
-
-    if (fields[8] != null && fields[8] != "" && fields[8] != "\r") {
-      .targetmodified = to_timestamp!(fields[8])
-    }
-
-    if (fields[9] != null && fields[9] != "" && fields[9] != "\r") {
-      .targetaccessed = to_timestamp!(fields[9])
-    }
-
+    .targetcreated = fields[7]
+    .targetmodified = fields[8]
+    .targetaccessed = fields[9]
     .filesize = to_int!(fields[10])
     .relativepath = fields[11]
     .workingdirectory = fields[12]
@@ -84,11 +68,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .targetmftentrynumber = fields[21]
     .machineid = fields[23]
     .machinemacaddress = fields[24]
-
-    if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
-      .trackercreatedon = to_timestamp!(fields[25])
-    }
-
+    .trackercreatedon = fields[25]
     .arguments = fields[27]
 
     .timestamp = .sourcemodified
@@ -117,9 +97,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.JLECmd_Jumplist-CustomDst_dedup_SourceCreated_to_sink]
+[transforms.JLECmd_Jumplist-CustomDst_coerce]
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+[transforms.JLECmd_Jumplist-CustomDst_dedup_SourceCreated_to_sink]
+  type = "remap"
+  inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
     if !exists(.sourcecreated){
       abort
@@ -132,7 +131,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_SourceModified_to_sink]
   type = "remap"
-  inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+  inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
     if !exists(.sourcemodified){
       abort
@@ -145,7 +144,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_SourceAccessed_to_sink]
   type = "remap"
-  inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+  inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
     if !exists(.sourceaccessed){
       abort
@@ -158,7 +157,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_TargetCreated_to_sink]
   type = "remap"
-  inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+  inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
   if !exists(.targetcreated){
     abort
@@ -171,7 +170,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_TargetModified_to_sink]
   type = "remap"
-  inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+  inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
   if !exists(.targetmodified){
     abort
@@ -184,7 +183,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_TargetAccessed_to_sink]
   type = "remap"
-  inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+  inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
   if !exists(.targetaccessed){
     abort
@@ -197,7 +196,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.JLECmd_Jumplist-CustomDst_dedup_TrackerCreatedOn_to_sink]
   type = "remap"
-  inputs = ["JLECmd_Jumplist-CustomDst_csv_parser"]
+  inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
   if !exists(.trackercreatedon){
     abort

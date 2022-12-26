@@ -36,36 +36,22 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       log("[LNK-Files] Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "SourceFile"{
+    if fields[0] == "SourceFile" {
+      expected_header = "SourceFile,SourceCreated,SourceModified,SourceAccessed,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,NetworkPath,CommonPath,Arguments,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,MACVendor,TrackerCreatedOn,ExtraBlocksPresent"
+      if expected_header != .message {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      }
       abort
     }
 
     .sourcefile = fields[0]
-    if (fields[1] != null && fields[1] != "" && fields[1] != "\r") {
-      .sourcecreated = to_timestamp!(fields[1])
-    }
-
-    if (fields[2] != null && fields[2] != "" && fields[2] != "\r") {
-      .sourcemodified = to_timestamp!(fields[2])
-    }
-
-    if (fields[3] != null && fields[3] != "" && fields[3] != "\r") {
-      .sourceaccessed = to_timestamp!(fields[3])
-    }
-
-    if (fields[4] != null && fields[4] != "" && fields[4] != "\r") {
-      .targetcreated = to_timestamp!(fields[4])
-    }
-
-    if (fields[5] != null && fields[5] != "" && fields[5] != "\r") {
-      .targetmodified = to_timestamp!(fields[5])
-    }
-
-    if (fields[6] != null && fields[6] != "" && fields[6] != "\r") {
-      .targetaccessed = to_timestamp!(fields[6])
-    }
-
-    .filesize = to_int!(fields[7])
+    .sourcecreated = fields[1]
+    .sourcemodified = fields[2]
+    .sourceaccessed = fields[3]
+    .targetcreated = fields[4]
+    .targetmodified = fields[5]
+    .targetaccessed = fields[6]
+    .filesize = fields[7]
     .relativepath = fields[8]
     .workingdirectory = fields[9]
     .fileattributes = fields[10]
@@ -80,10 +66,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .targetmftentrynumber = fields[20]
     .machineid = fields[22]
     .machinemacaddress = fields[23]
-
-    if (fields[25] != null && fields[25] != "" && fields[25] != "\r") {
-      .trackercreatedon = to_timestamp!(fields[25])
-    }
+    .trackercreatedon = fields[25]
 
     .timestamp = .sourcemodified
 
@@ -111,9 +94,28 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.LECmd_Lnk_dedup_SourceModified_to_sink]
+[transforms.LECmd_Lnk_coerce]
   type = "remap"
   inputs = ["LECmd_Lnk_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_timestamp(value, format: "%Y-%m-%d %H:%M:%S.%f"); err == null) {
+        tmp_value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+[transforms.LECmd_Lnk_dedup_SourceModified_to_sink]
+  type = "remap"
+  inputs = ["LECmd_Lnk_coerce"]
   source = '''
     if !exists(.sourcemodified){
       abort
@@ -126,7 +128,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.LECmd_Lnk_dedup_SourceCreated_to_sink]
   type = "remap"
-  inputs = ["LECmd_Lnk_csv_parser"]
+  inputs = ["LECmd_Lnk_coerce"]
   source = '''
     if !exists(.sourcecreated){
       abort
@@ -139,7 +141,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.LECmd_Lnk_dedup_SourceAccessed_to_sink]
   type = "remap"
-  inputs = ["LECmd_Lnk_csv_parser"]
+  inputs = ["LECmd_Lnk_coerce"]
   source = '''
     if !exists(.sourceaccessed){
       abort
@@ -152,7 +154,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.LECmd_Lnk_dedup_TargetCreated_to_sink]
   type = "remap"
-  inputs = ["LECmd_Lnk_csv_parser"]
+  inputs = ["LECmd_Lnk_coerce"]
   source = '''
     if !exists(.targetcreated){
       abort
@@ -165,7 +167,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.LECmd_Lnk_dedup_TargetModified_to_sink]
   type = "remap"
-  inputs = ["LECmd_Lnk_csv_parser"]
+  inputs = ["LECmd_Lnk_coerce"]
   source = '''
     if !exists(.targetmodified){
       abort
@@ -178,7 +180,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.LECmd_Lnk_dedup_TargetAccessed_to_sink]
   type = "remap"
-  inputs = ["LECmd_Lnk_csv_parser"]
+  inputs = ["LECmd_Lnk_coerce"]
   source = '''
     if !exists(.targetaccessed){
       abort
@@ -191,7 +193,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [transforms.LECmd_Lnk_dedup_TrackerCreatedOn_to_sink]
   type = "remap"
-  inputs = ["LECmd_Lnk_csv_parser"]
+  inputs = ["LECmd_Lnk_coerce"]
   source = '''
     if !exists(.trackercreatedon){
       abort

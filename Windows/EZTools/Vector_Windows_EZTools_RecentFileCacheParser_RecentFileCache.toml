@@ -1,4 +1,4 @@
-# Vector_Windows_EZTools_RecentFileCacheParser_RecentFileCacheParser config.
+# Vector_Windows_EZTools_RecentFileCacheParser_RecentFileCache config.
 # Description: Process Windows artefacts parsed with RecentFileCacheParser (CSV output).
 #              Filename should match: "*_RecentFileCacheParser_*.csv"
 #              WxTCmd command: RecentFileCacheParser.exe -f %sourceFile% --csv %destinationDirectory%
@@ -15,7 +15,7 @@
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
-[sources.RecentFileCacheParser_RecentFileCacheParser_csv_input]
+[sources.RecentFileCacheParser_RecentFileCache_csv_input]
   type = "file"
   include = ["${INPUT_FOLDER}/**/*_RecentFileCacheParser_*.csv"]
   data_dir = "${VECTOR_TEMP_FOLDER}"
@@ -25,9 +25,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
-[transforms.RecentFileCacheParser_RecentFileCacheParser_csv_parser]
+[transforms.RecentFileCacheParser_RecentFileCache_csv_parser]
   type = "remap"
-  inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_input"]
+  inputs = ["RecentFileCacheParser_RecentFileCache_csv_input"]
   source = '''
     # Expect CSV header:
     # SourceFile,SourceCreated,SourceModified,SourceAccessed,Filename
@@ -36,7 +36,11 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       log("[RecentFileCacheParser] Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "SourceFile"{
+    if fields[0] == "SourceFile" {
+      expected_header = "SourceFile,SourceCreated,SourceModified,SourceAccessed,Filename"
+      if expected_header != .message {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      }
       abort
     }
 
@@ -47,6 +51,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .filename = fields[4]
 
     if (.filename != null && .filename != "") {
+      .filename = string!(.filename)
       if (contains(.filename, "users")) {
         # Parse Filename field to extract username. Expected format: "username".
         .user = parse_regex!(.filename, r'[a-zA-Z]:\\users\\(?P<user>[\w]+)\\*')."user"
@@ -70,9 +75,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     del(.message)
   '''
 
-[transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceCreated_to_sink]
+[transforms.RecentFileCacheParser_RecentFileCache_dedup_SourceCreated_to_sink]
   type = "remap"
-  inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
+  inputs = ["RecentFileCacheParser_RecentFileCache_csv_parser"]
   source = '''
     if !exists(.sourcecreated){
       abort
@@ -83,9 +88,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_creation_sourcecreated"
   '''
 
-[transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceModified_to_sink]
+[transforms.RecentFileCacheParser_RecentFileCache_dedup_SourceModified_to_sink]
   type = "remap"
-  inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
+  inputs = ["RecentFileCacheParser_RecentFileCache_csv_parser"]
   source = '''
     if !exists(.sourcemodified){
       abort
@@ -96,9 +101,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .suboperation = "file_modification_sourcemodified"
   '''
 
-[transforms.RecentFileCacheParser_RecentFileCacheParser_dedup_SourceAccessed_to_sink]
+[transforms.RecentFileCacheParser_RecentFileCache_dedup_SourceAccessed_to_sink]
   type = "remap"
-  inputs = ["RecentFileCacheParser_RecentFileCacheParser_csv_parser"]
+  inputs = ["RecentFileCacheParser_RecentFileCache_csv_parser"]
   source = '''
     if !exists(.sourceaccessed){
       abort

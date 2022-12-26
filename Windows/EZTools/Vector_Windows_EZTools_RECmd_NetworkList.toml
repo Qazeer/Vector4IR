@@ -38,7 +38,11 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       log("[RECmd_NetworkList_Profiles] Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "BatchKeyPath"{
+    if fields[0] == "BatchKeyPath" {
+      expected_header = "BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID"
+      if expected_header != .message {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      }
       abort
     }
 

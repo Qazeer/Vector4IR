@@ -36,7 +36,11 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       log("[AmCache-Program-Entries] Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "ProgramId"{
+    if fields[0] == "ProgramId" {
+      expected_header = "ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDateArpLastModified,InstallDate,InstallDateMsi,OSVersionAtInstallTime,InstallDateFromLinkFile,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,Manufacturer"
+      if expected_header != .message {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header: " + string!(.message), level: "error")
+      }
       abort
     }
 
@@ -64,8 +68,16 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     .osversionatinstalltime = fields[6]
     .bundlemanifestpath = fields[7]
-    .hiddenarp = to_bool!(fields[8])
-    .inboxmodernapp = to_bool!(fields[9])
+    if (is_boolean(fields[8])) {
+      .hiddenarp = to_bool!(fields[8])
+    } else {
+      .hiddenarp = fields[8]
+    }
+    if (is_boolean(fields[9])) {
+      .inboxmodernapp = to_bool!(fields[9])
+    } else {
+      .inboxmodernapp = fields[9]
+    }
     .language = fields[10]
     .manifestpath = fields[11]
     .msipackagecode = fields[12]
@@ -81,17 +93,17 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     if (fields[22] != null && fields[22] != "" && fields[22] != "\r") {
       # Parse InstallDateArpLastModified field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdatearplastmodified, err = parse_timestamp(fields[22], format: "%m/%d/%Y %H:%M:%S")
+      .installdatearplastmodified = parse_timestamp!(fields[22], format: "%m/%d/%Y %H:%M:%S")
     }
 
     if (fields[23] != null && fields[23] != "" && fields[23] != "\r") {
     # Parse InstallDateMsi field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdatemsi, err = parse_timestamp(fields[23], format: "%m/%d/%Y %H:%M:%S")
+      .installdatemsi = parse_timestamp!(fields[23], format: "%m/%d/%Y %H:%M:%S")
     }
 
     if (fields[24] != null && fields[24] != "" && fields[24] != "\r") {
       # Parse InstallDateFromLinkFile field to extract timestamp. Input format: MM/DD/YYYY hh:mm:ss. Expected format: YYYY-MM-DD hh:mm:ss.
-      .installdatefromlinkfile, err = parse_timestamp(fields[24], format: "%m/%d/%Y %H:%M:%S")
+      .installdatefromlinkfile = parse_timestamp!(fields[24], format: "%m/%d/%Y %H:%M:%S")
     }
 
     .manufacturer = fields[25]
