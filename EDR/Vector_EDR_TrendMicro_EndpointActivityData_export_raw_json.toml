@@ -1,0 +1,83 @@
+# Description: Process TrendMicro exported raw JSON logs.
+#              Filename should match: "TrendMicro*.log"
+#              source = "trendmicro_telemetry" & sourcetype = "edr_telemetry"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-12-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.TrendMicro_EndpointActivityData_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the JSON logs is required (root of the storage account export)}/**/TrendMicro*.json"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000_000_000
+
+[transforms.TrendMicro_EndpointActivityData_parser]
+  type = "remap"
+  inputs = ["TrendMicro_EndpointActivityData_input"]
+  source = '''
+    ., err = parse_json(.message)
+    if err != null {
+      log("Error parsing JSON", level: "error")
+    }
+  '''
+
+[transforms.TrendMicro_EndpointActivityData_coerce_to_sink]
+  type = "remap"
+  inputs = ["TrendMicro_EndpointActivityData_parser"]
+  source = '''
+    # Convert timestamps from Epoch (seconds or milliseconds precision) while taking into account the specified timezone.
+
+    timezone = "UTC+00:00"
+    if (exists(.timezone)) {
+      timezone = string!(.timezone)
+    }
+
+    timestamp_fields = [
+      "eventTime",
+      "processLaunchTime",
+      "objectLaunchTime",
+      "objectFileModifiedTime",
+      "processFileModifiedTime",
+      "parentFileModifiedTime",
+      "firstSeen",
+      "lastSeen",
+      "objectFirstSeen",
+      "objectLastSeen",
+      "srcFirstSeen",
+      "srcLastSeen"
+    ]
+
+    # Dynamicly get the timestamps from the timestamp_fields array and cast them.
+    map_values(timestamp_fields) -> |value| {
+      if (to_parse_timestamp, err = get(., [value]); to_parse_timestamp != null && err == null) {
+
+        if (to_parse_timestamp_string, err_string = to_string(to_parse_timestamp); to_parse_timestamp_int, err_int = to_int(to_parse_timestamp); err_string == null || err_int == null) {
+          # If milliseconds precision.
+          if length(to_parse_timestamp_string) == 13 {
+            to_parse_timestamp_string = to_string(to_int(to_parse_timestamp_int / 1000))
+          # If not milliseconds nor seconds precision.
+          } else if length(to_parse_timestamp_string) != 10 {
+            log("Timestamp is not in seconds or milliseconds" + to_parse_timestamp_string, level: "error")
+          }
+
+          if (parsed_timestamp, err = parse_timestamp(to_parse_timestamp_string + timezone, format: "%sUTC%:z"); err == null) {
+            . = set!(., [value], parsed_timestamp)
+          }
+        }
+      }
+    }
+
+    .timestamp = .eventTime
+    .source = "trendmicro_telemetry"
+    .sourcetype = "edr_telemetry"
+    .host = .endpointHostName
+  '''
