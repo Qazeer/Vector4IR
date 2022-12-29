@@ -39,7 +39,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     if fields[0] == "BatchKeyPath" {
-      expected_header = "BatchKeyPath,BatchValueName,SearchTerm,MruPosition,KeyName"
+      expected_header = "SearchTerm,BatchKeyPath,MruPosition,BatchValueName,KeyName,LastWriteTimestamp"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
@@ -51,6 +51,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .batchvaluename = fields[1]
     .searchterm = fields[2]
     .mruposition = fields[3]
+    .lastwritetimestamp = fields[4]
+
+    .timestamp = .lastwritetimestamp
 
     if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
         .user = match_user_en.username

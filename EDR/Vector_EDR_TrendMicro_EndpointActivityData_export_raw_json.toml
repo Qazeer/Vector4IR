@@ -60,7 +60,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     map_values(timestamp_fields) -> |value| {
       if (to_parse_timestamp, err = get(., [value]); to_parse_timestamp != null && err == null) {
 
-        if (to_parse_timestamp_string, err_string = to_string(to_parse_timestamp); to_parse_timestamp_int, err_int = to_int(to_parse_timestamp); err_string == null || err_int == null) {
+        if (to_parse_timestamp_string, err_string = to_string(to_parse_timestamp); to_parse_timestamp_int, err_int = to_int(to_parse_timestamp); err_string == null && err_int == null && to_parse_timestamp_int > 0) {
           # If milliseconds precision.
           if length(to_parse_timestamp_string) == 13 {
             to_parse_timestamp_string = to_string(to_int(to_parse_timestamp_int / 1000))
