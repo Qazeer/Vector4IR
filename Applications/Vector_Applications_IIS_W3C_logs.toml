@@ -1,0 +1,111 @@
+# Description: Process IIS W3C Extended Log File Format log files.
+#              Default path on disk: %SystemDrive%\inetpub\logs\LogFiles
+#              Format: https://learn.microsoft.com/en-us/windows/win32/http/w3c-logging
+#              Expected fields format: date time c-ip cs-username s-ip s-port cs-method cs-uri-stem cs-uri-query sc-status cs(User-Agent)
+#              Filename should match: "*ex*.log"
+#              source = "iis_w3c" & sourcetype = "http_event"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.IIS_W3C_log_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the IIS W3C log files is required}/**/*ex*.log"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.IIS_W3C_log_parser]
+  type = "remap"
+  inputs = ["IIS_W3C_log_input"]
+  source = '''
+    # Expect CSV header:
+    # #Fields: date time c-ip cs-username s-ip s-port cs-method cs-uri-stem cs-uri-query sc-status cs(User-Agent)
+    # Validates that the log format matches the expected header.
+    if starts_with(string!(.message), "#") {
+      if starts_with(string!(.message), "#Fields") {
+        expected_header = "#Fields: date time c-ip cs-username s-ip s-port cs-method cs-uri-stem cs-uri-query sc-status cs(User-Agent)"
+        current_header = strip_whitespace(string!(.message))
+        if expected_header != current_header {
+          log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+      }
+      abort
+    }
+
+    fields, err = parse_csv(.message, delimiter: " ")
+    if (err != null) {
+      log("Unable to parse IIS W3C log line: " + err, level: "error")
+    }
+
+    .timestamp = to_string(fields[0]) + " " + to_string(fields[1])
+    .c_ip = fields[2]
+    .src_ip = fields[2]
+    .cs_username = fields[3]
+    .src_user = fields[3]
+    .s_ip = fields[4]
+    .dst_ip = fields[4]
+    .s_port = fields[5]
+    .dst_port = fields[5]
+    .cs_method = fields[6]
+    .http_method = fields[6]
+    .cs_uri_stem = fields[7]
+    .http_uri = fields[7]
+    .cs_uri_query = fields[8]
+    .http_params = fields[8]
+    .sc_status = fields[9]
+    .http_status = fields[9]
+    .cs_User_Agent = fields[10]
+    .http_useragent = fields[10]
+
+    # Add the source host following the parsing.
+    .host = "${SOURCE_HOST:?The source host is required}"
+    .source = "IIS_W3C_logs"
+    .sourcetype = "http_event"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+  '''
+
+[transforms.IIS_W3C_log_parser_coerce_to_sink]
+  type = "remap"
+  inputs = ["IIS_W3C_log_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      if (convert_err == null && match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1]) ([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$')) {
+        tmp_value, err = parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%z")
+        if err != null {
+          log("Failed to convert timestamp: " + value_string + "+00:00", level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (convert_err == null && match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1]) ([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])\.[0-9]{1,9}$')) {
+        tmp_value, err = parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S.%f%z")
+        if err != null {
+          log("Failed to convert timestamp: " + value_string + "+00:00", level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); value != null && err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
