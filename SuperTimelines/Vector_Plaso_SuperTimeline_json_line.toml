@@ -1,0 +1,76 @@
+# Description: Process Plaso (log2timeline + psort) json_line super timelines.
+#              source = "<PLASO_data_type_FIELD>" & sourcetype = "plaso_timeline"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FILE = "<INPUT_FILE>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.Plaso_SuperTimeline_line_json_input]
+  type = "file"
+  include = ["${INPUT_FILE:?The Plaso supertimeline source file is required}"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.Plaso_SuperTimeline_line_json_parser]
+  type = "remap"
+  inputs = ["Plaso_SuperTimeline_line_json_input"]
+  source = '''
+    splitted, err = split(.message, "\n")
+    if err != null {
+      log("Unable to split message on newlines: " + err, level: "error")
+    }
+
+    . = map_values(splitted) -> |value| {
+      parsed_value, err = parse_json(value)
+      if err != null {
+        value_str = string(value)
+        log("Unable to parse JSON '" + value_str + "', error: " + err, level: "error")
+        null
+      } else {
+        parsed_value
+      }
+    }
+  '''
+
+[transforms.Plaso_SuperTimeline_line_json_enrich_to_sink]
+  type = "remap"
+  inputs = ["Plaso_SuperTimeline_line_json_parser"]
+  source = '''
+    if !is_nullish("") && .timestamp != 0 {
+        .timestamp, err = parse_timestamp(.timestamp, format: "%s")
+        if err != null {
+            timestamp_str = string(.timestamp) ?? ""
+            log("Unable to convert '" + timestamp_str + "' to timestamp: " + err, level: "error")
+        }
+    } else {
+        .timestamp = now()
+    }
+
+    # Delete irrelevant plaso fields.
+    del(.__container_type__)
+    del(.__type__)
+    del(._event_values_hash)
+    del(.date_time)
+    del(.pathspec.__type__)
+
+    # Delete irrelevant default fields
+    del(.file)
+    del(.message)
+    del(.source_type)
+
+    # Flatten JSON event.
+    . = flatten(.)
+
+    .host = "${SOURCE_HOST:?The source host is required}"
+    .source = "plaso_" + string!(.data_type)
+    .sourcetype = "plaso_timeline"
+  '''
