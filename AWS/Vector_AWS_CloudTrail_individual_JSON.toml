@@ -14,8 +14,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [sources.AWS_CloudTrail_JSON_input]
   type = "file"
-  include = ["${INPUT_FOLDER:?The source folder containing the Insights JSON logs is required}/**/*CloudTrail*.json"]
-  # include = ["${INPUT_FOLDER:?The source folder containing the CloudTrail JSON logs is required}/**/*CloudTrail*.json"]
+  include = ["${INPUT_FOLDER:?The source folder containing the CloudTrail JSON logs is required}/**/*CloudTrail*.json"]
   ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = true
@@ -34,7 +33,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     . = flatten(map_values(splitted) -> |value| {
       parsed_value, err = parse_json(value)
       if err != null {
-        log("Unable to parse JSON: " + err, level: "error")
+        value_str = string(value)
+        log("Unable to parse JSON '" + value_str + "', error: " + err, level: "error")
         null
       } else {
         parsed_value.Records
@@ -48,7 +48,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   source = '''
     .timestamp, err = parse_timestamp(.eventTime, format: "%Y-%m-%dT%H:%M:%SZ")
     if err != null {
-      log("Unable to convert to timestamp: " + err, level: "error")
+      eventTime_str = string(.eventTime) ?? ""
+      log("Unable to convert '" + eventTime_str + "' to timestamp: " + err, level: "error")
     }
 
     .host = "${SOURCE_TENANT:?The source AWS tenant / account is required}"
