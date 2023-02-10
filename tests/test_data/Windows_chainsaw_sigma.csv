@@ -1,0 +1,12 @@
+timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data
+2022-10-14T10:20:46.642350+00:00,Rare Scheduled Task Creations,4,Microsoft-Windows-TaskScheduler,106,701,hostname.domain.tld,"---
+TaskName: ""\\TASK_NAME""
+UserContext: ""Domain\\AccountName""
+"
+2022-11-29T14:11:19.059429+00:00,User with Privileges Logon,1,Microsoft-Windows-Security-Auditing,4672,5919805,hostname.domain.tld,"---
+PrivilegeList: ""SeSecurityPrivilege\r\n\t\t\tSeBackupPrivilege\r\n\t\t\tSeRestorePrivilege\r\n\t\t\tSeTakeOwnershipPrivilege\r\n\t\t\tSeDebugPrivilege\r\n\t\t\tSeSystemEnvironmentPrivilege\r\n\t\t\tSeLoadDriverPrivilege\r\n\t\t\tSeImpersonatePrivilege""
+SubjectDomainName: Domain
+SubjectLogonId: ""0xe8aac11""
+SubjectUserName: AccountName
+SubjectUserSid: S-1-5-21-123-456-789-421541
+"

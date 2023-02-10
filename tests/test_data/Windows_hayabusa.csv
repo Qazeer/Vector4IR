@@ -1,0 +1,2 @@
+Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details
+2021-05-26 11:14:57.247103+00:00,SystemHostname,Sys,7045,info,37,Svc Installed,StartType: demand start
