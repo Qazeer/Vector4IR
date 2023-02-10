@@ -165,17 +165,6 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       }
     }
 
-    # Coerce basic types.
-    . = map_values(.) -> |value| {
-      if (tmp_value, err = parse_int(value); err == null) {
-        tmp_value
-      } else if (tmp_value, err = to_bool(value); err == null) {
-        tmp_value
-      } else {
-        value
-      }
-    }
-
     # Delete irrelevant default fields
     del(.file)
     del(.message)
@@ -189,11 +178,39 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   '''
 
 # If the parsing component failed, the message field will still be present.
-[transforms.Linux_auditd_check_result_to_sink]
+[transforms.Linux_auditd_check_result]
   type = "remap"
   inputs = ["Linux_auditd_parser"]
   source = '''
     if (exists(.message)) {
       log("Parsing of the following event failed: " + to_string!(.message), level: "error")
+      abort
+    }
+  '''
+
+[transforms.Linux_auditd_coerce_to_sink]
+  type = "remap"
+  inputs = ["Linux_auditd_check_result"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      if (convert_err == null && match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%.f %z") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
     }
   '''
