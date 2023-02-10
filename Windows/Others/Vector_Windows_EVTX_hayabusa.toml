@@ -1,0 +1,120 @@
+# Description: Process Windows EVTX parsed with hayabusa (csv output).
+#              Filename should match: "*hayabusa*.csv"
+#              Hayabusa: https://github.com/Yamato-Security/hayabusa
+#              source = "windows_evtx_hayabusa" & sourcetype = "windows_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.Windows_EVTX_hayabusa_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the hayabusa CSV output files is required.}/**/*hayabusa*.csv"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.Windows_EVTX_hayabusa_parser]
+  type = "remap"
+  inputs = ["Windows_EVTX_hayabusa_input"]
+  source = '''
+    # Expect CSV header:
+    # Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("[Hayabausa] Unable to split CSV: " + err, level: "error")
+    }
+
+    if fields[0] == "Timestamp" {
+      expected_header = "Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details"
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      }
+      abort
+    }
+
+    .timestamp = fields[0]
+    .computer = fields[1]
+    .channel = fields[2]
+    .eventid = fields[3]
+    .level = fields[4]
+    .recordid = fields[5]
+    .ruletitle = fields[6]
+    .details = fields[7]
+
+    # Add the metadata fields following the parsing.
+    .host = .computer
+    .source = "windows_evtx_hayabusa"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+  '''
+
+[transforms.Windows_EVTX_hayabusa_coerce_to_sink]
+  type = "remap"
+  inputs = ["Windows_EVTX_hayabusa_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      if (convert_err == null && match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%.f %z") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+
+[[tests]]
+  name = "Vector_Windows_EVTX_hayabusa - Test 1 - header"
+  no_outputs_from = ["Windows_EVTX_hayabusa_parser"]
+  [[tests.inputs]]
+    insert_at = "Windows_EVTX_hayabusa_parser"
+    type = "log"
+    log_fields.message = "Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details"
+
+[[tests]]
+  name = "Vector_Windows_EVTX_hayabusa - Test 2 - data"
+  [[tests.inputs]]
+    insert_at = "Windows_EVTX_hayabusa_parser"
+    type = "log"
+    log_fields.message = "2021-05-26 11:14:57.247103+00:00,SystemHostname,Sys,7045,info,37,Svc Installed,StartType: demand start"
+  [[tests.outputs]]
+    extract_from = "Windows_EVTX_hayabusa_coerce_to_sink"
+    [[tests.outputs.conditions]]
+      type = "vrl"
+      source = '''
+        assert!(!exists(.message))
+        assert!(is_timestamp(.timestamp))
+        assert!(is_string(.host) && .host == "SystemHostname")
+        assert!(is_string(.channel) && .channel == "Sys")
+        assert!(is_integer(.eventid) && .eventid == 7045)
+        assert!(is_string(.level) && .level == "info")
+        assert!(is_integer(.recordid) && .recordid == 37)
+        assert!(is_string(.ruletitle) && .ruletitle == "Svc Installed")
+        assert!(is_string(.details) && .details == "StartType: demand start")
+      '''
