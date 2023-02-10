@@ -1,0 +1,155 @@
+# Description: Process Windows EVTX parsed with Chainsaw (csv output).
+#              Filename should match: "*sigma*.csv"
+#              Chainsaw: https://github.com/WithSecureLabs/chainsaw
+#              source = "windows_evtx_chainsaw" & sourcetype = "windows_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+[sources.Windows_EVTX_chainsaw_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the chainsaw CSV output files is required.}/**/*sigma*.csv"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+  [sources.Windows_EVTX_chainsaw_input.multiline]
+    mode = "halt_with"
+    start_pattern = "^"
+    condition_pattern = "^\"$"
+    timeout_ms = 1000
+
+[transforms.Windows_EVTX_chainsaw_parser]
+  type = "remap"
+  inputs = ["Windows_EVTX_chainsaw_input"]
+  source = '''
+    # Validate the CSV headern and retrieve the first log entry as the multiline parsing groups the header with the first log line.
+    # Expect CSV header:
+    # timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data
+    entry = ""
+    message_as_string = strip_whitespace(string!(.message))
+    # If the line is the header.
+    if starts_with(message_as_string, "timestamp") {
+      expected_header = "timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data"
+      if !starts_with(message_as_string, expected_header) {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header (+ first line):      " + message_as_string, level: "error")
+      } else {
+        entry = split(message_as_string, "\n", limit: 2)[1]
+      }
+    } else {
+      entry = .message
+    }
+
+    fields, err = parse_csv(entry, delimiter: ",")
+    if err != null {
+      log("[Chainsaw] Unable to split CSV: " + err, level: "error")
+    }
+
+    .timestamp = fields[0]
+    .detections = fields[1]
+    .count = fields[2]
+    .eventprovider = fields[3]
+    .eventid = fields[4]
+    .recordid = fields[5]
+    .computer = fields[6]
+    .eventdata = fields[7]
+
+    # Add the metadata fields following the parsing.
+    .host = .computer
+    .source = "windows_evtx_chainsaw"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+  '''
+
+[transforms.Windows_EVTX_chainsaw_coerce_to_sink]
+  type = "remap"
+  inputs = ["Windows_EVTX_chainsaw_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      if (convert_err == null && match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string + "+00:00", format: "%Y-%m-%d %H:%M:%S%.f %z") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
+
+
+[[tests]]
+  name = "Vector_Windows_EVTX_chainsaw - Test 1 - header"
+  [[tests.inputs]]
+    insert_at = "Windows_EVTX_chainsaw_parser"
+    type = "log"
+    log_fields.message = '''
+timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data
+2022-10-14T10:20:46.642350+00:00,Rare Scheduled Task Creations,4,Microsoft-Windows-TaskScheduler,106,701,hostname.domain.tld,"---
+TaskName: ""\\TASK_NAME""
+UserContext: ""Domain\\AccountName""
+"
+'''
+  [[tests.outputs]]
+    extract_from = "Windows_EVTX_chainsaw_coerce_to_sink"
+    [[tests.outputs.conditions]]
+      type = "vrl"
+      source = '''
+        assert!(!exists(.message))
+        assert!(is_timestamp(.timestamp))
+        assert!(is_string(.host) && .host == "hostname.domain.tld")
+        assert!(is_string(.detections) && .detections == "Rare Scheduled Task Creations")
+        assert!(is_integer(.count) && .count == 4)
+        assert!(is_string(.eventprovider) && .eventprovider == "Microsoft-Windows-TaskScheduler")
+        assert!(is_integer(.eventid) && .eventid == 106)
+        assert!(is_integer(.recordid) && .recordid == 701)
+      '''
+
+[[tests]]
+  name = "Vector_Windows_EVTX_chainsaw - Test 2 - data"
+  [[tests.inputs]]
+    insert_at = "Windows_EVTX_chainsaw_parser"
+    type = "log"
+    log_fields.message = '''
+2022-10-14T10:20:46.642350+00:00,Rare Scheduled Task Creations,4,Microsoft-Windows-TaskScheduler,106,701,hostname.domain.tld,"---
+TaskName: ""\\TASK_NAME""
+UserContext: ""Domain\\AccountName""
+"
+'''
+  [[tests.outputs]]
+    extract_from = "Windows_EVTX_chainsaw_coerce_to_sink"
+    [[tests.outputs.conditions]]
+      type = "vrl"
+      source = '''
+        assert!(!exists(.message))
+        assert!(is_timestamp(.timestamp))
+        assert!(is_string(.host) && .host == "hostname.domain.tld")
+        assert!(is_string(.detections) && .detections == "Rare Scheduled Task Creations")
+        assert!(is_integer(.count) && .count == 4)
+        assert!(is_string(.eventprovider) && .eventprovider == "Microsoft-Windows-TaskScheduler")
+        assert!(is_integer(.eventid) && .eventid == 106)
+        assert!(is_integer(.recordid) && .recordid == 701)
+      '''
