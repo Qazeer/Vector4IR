@@ -15,7 +15,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [sources.Zimbra_access_log_input]
   type = "file"
-  include = ["${INPUT_FOLDER:?The input folder containing the Zimbra access log files is required. Add '**' to process the specified folder recursively (exemple: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*access_log*"]
+  include = ["${INPUT_FOLDER:?The input folder containing the Zimbra access log files is required.}/**/*access_log*"]
   ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = true

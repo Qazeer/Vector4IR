@@ -19,7 +19,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [sources.RECmd_OpenSaveMRU_csv_input]
   type = "file"
-  include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry OpenSaveMRU files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*OpenSave*.csv"]
+  include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry OpenSaveMRU files is required.}/**/*OpenSave*.csv"]
   data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"

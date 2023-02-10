@@ -17,7 +17,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [sources.Windows_EVTX_winlogbeat_input]
   type = "file"
-  include = ["${INPUT_FOLDER:?The input folder containing the Winlogbeat JSON output files is required. Add '**' to process the specified folder recursively (exemple: \"C:\\logs\" or folder \"C:\\logs\\**\")}/*winlogbeat*"]
+  include = ["${INPUT_FOLDER:?The input folder containing the Winlogbeat JSON output files is required.}/**/*winlogbeat*"]
   ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = true

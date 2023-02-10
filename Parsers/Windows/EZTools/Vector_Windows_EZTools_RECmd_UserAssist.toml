@@ -19,7 +19,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [sources.RECmd_UserAssist_csv_input]
   type = "file"
-  include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry UserAssist files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*_UserAssist_*.csv"]
+  include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry UserAssist files is required.}/**/*_UserAssist_*.csv"]
   data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
   ignore_checkpoints = true
   read_from = "beginning"

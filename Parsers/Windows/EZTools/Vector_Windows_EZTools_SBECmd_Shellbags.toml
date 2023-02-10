@@ -18,9 +18,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 [sources.SBECmd_Shellbags_csv_input]
   type = "file"
   include = [
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags NTUSER (uppercase) files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*NTUSER.DAT.csv",
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags ntuser (lowercase) files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*ntuser.dat.csv",
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags UsrClass files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*UsrClass.dat.csv"
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags NTUSER (uppercase) files is required.}/**/*NTUSER.DAT.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags ntuser (lowercase) files is required.}/**/*ntuser.dat.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags UsrClass files is required.}/**/*UsrClass.dat.csv"
   ]
   data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
   ignore_checkpoints = true

@@ -18,8 +18,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 [sources.AmcacheParser_AmCache-File-Entries_csv_input]
   type = "file"
   include = [
-    "${INPUT_FOLDER:?The input folder containing the AmcacheParser AmCache Associated File Entries files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*Amcache_AssociatedFileEntries.csv",
-    "${INPUT_FOLDER:?The input folder containing the AmcacheParser AmCache Unassociated File Entries files is required. Add '**' to process the specified folder recursively (example: \"C:\\logs\" or folder \"C:\\logs\\**\")}/**/*Amcache_UnassociatedFileEntries.csv"
+    "${INPUT_FOLDER:?The input folder containing the AmcacheParser AmCache Associated File Entries files is required.}/**/*Amcache_AssociatedFileEntries.csv",
+    "${INPUT_FOLDER:?The input folder containing the AmcacheParser AmCache Unassociated File Entries files is required.}/**/*Amcache_UnassociatedFileEntries.csv"
   ]
   data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
   ignore_checkpoints = true
