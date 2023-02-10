@@ -1,6 +1,7 @@
 # Description: Process Windows EVTX parsed with Chainsaw (csv output).
 #              Filename should match: "*sigma*.csv"
 #              Chainsaw: https://github.com/WithSecureLabs/chainsaw
+#              Chainsaw command: Chainsaw.exe hunt %sourceDirectory% --rule "rules" --sigma "sigma" --mapping "mappings\sigma-event-logs-all.yml" --csv --output %destinationDirectory% --full --skip-errors
 #              source = "windows_evtx_chainsaw" & sourcetype = "windows_artefact"
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0

@@ -1,6 +1,7 @@
 # Description: Process Windows EVTX parsed with hayabusa (csv output).
 #              Filename should match: "*hayabusa*.csv"
 #              Hayabusa: https://github.com/Yamato-Security/hayabusa
+#              Hayabusa command: hayabusa.exe -d %sourceDirectory% --RFC-3339 --quiet -U -o %destinationDirectory%\hayabusa.csv
 #              source = "windows_evtx_hayabusa" & sourcetype = "windows_artefact"
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0
