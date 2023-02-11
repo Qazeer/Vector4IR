@@ -81,7 +81,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
         tmp_value
       } else if (tmp_value, err = to_bool(value); err == null) {
         tmp_value
-      } else if (tmp_value, err = to_float(value); err == null) {
+      # Only convert string to float (to avoid converting timestamp to float).
+      } else if (tmp_value, err = to_float(value); convert_err == null && err == null) {
         tmp_value
       } else {
         value

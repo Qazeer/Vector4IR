@@ -2,6 +2,8 @@
   type = "remap"
   inputs = ["test_only"]
   source = '''
+    .test_timestamp = now()
+
     . = map_values(.) -> |value| {
       value_string, convert_err = string(value)
       # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
@@ -17,7 +19,8 @@
         tmp_value
       } else if (tmp_value, err = to_bool(value); err == null) {
         tmp_value
-      } else if (tmp_value, err = to_float(value); err == null) {
+      # Only convert string to float (to avoid converting timestamp to float).
+      } else if (tmp_value, err = to_float(value); convert_err == null && err == null) {
         tmp_value
       } else {
         value
@@ -341,3 +344,15 @@
     [[tests.outputs.conditions]]
       type = "vrl"
       source = "assert!(is_timestamp(.message))"
+
+[[tests]]
+  name = "Vector_test_coercing_transforms - Coercing already timestamp"
+  [[tests.inputs]]
+    insert_at = "coerce"
+    type = "log"
+    log_fields.message = ""
+  [[tests.outputs]]
+    extract_from = "coerce"
+    [[tests.outputs.conditions]]
+      type = "vrl"
+      source = "assert!(is_timestamp(.test_timestamp))"
