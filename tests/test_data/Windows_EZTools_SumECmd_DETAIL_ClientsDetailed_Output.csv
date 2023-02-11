@@ -1,0 +1,2 @@
+Date,Count,DayNumber,RoleGuid,RoleDescription,AuthenticatedUserName,TotalAccesses,InsertDate,LastAccess,IpAddress,ClientName,TenantId,SourceFile
+2022-06-14,9,165,10a9226f-50ee-49d8-a393-9a501d47ce04,File Server,DOMAIN\Username,8035,2022-06-14 15:08:32,2022-09-21 08:55:12,10.1.2.3,,00000000-0000-0000-0000-000000000000,Current.mdb
