@@ -20,7 +20,10 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   include = [
     "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags NTUSER (uppercase) files is required.}/**/*NTUSER.DAT.csv",
     "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags ntuser (lowercase) files is required.}/**/*ntuser.dat.csv",
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags UsrClass files is required.}/**/*UsrClass.dat.csv"
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags NTUSER (uppercase) files is required.}/**/*NTUSER.DAT.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags ntuser (lowercase) files is required.}/**/*ntuser.dat.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags UsrClass files is required.}/**/*UsrClass.dat.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags UsrClass files is required.}/**/*UsrClass.csv"
   ]
   data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
   ignore_checkpoints = true
@@ -41,9 +44,11 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     }
 
     if fields[11] == "LastWriteTime" {
+      # Special usecase as the header line may start with 'M-oM-;M-?'.
       expected_header = "BagPath,Slot,NodeSlot,MRUPosition,AbsolutePath,ShellType,Value,ChildBags,CreatedOn,ModifiedOn,AccessedOn,LastWriteTime,MFTEntry,MFTSequenceNumber,ExtensionBlockCount,FirstInteracted,LastInteracted,HasExplored,Miscellaneous"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
@@ -63,6 +68,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .firstinteracted = fields[15]
     .lastinteracted = fields[16]
 
+    # if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_(AppData_Local_Microsoft_Windows_UsrClass\|NTUSER\|ntuser)(.dat\|.DAT)?.csv'); err == null) {
     if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_(AppData_Local_Microsoft_Windows_UsrClass.dat\|NTUSER.DAT\|ntuser.dat).csv'); err == null) {
       .user = match_user_en.username
     } else if (match_user_fr, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Utilisateurs_(?P<username>.*)_(AppData_Local_Microsoft_Windows_UsrClass.dat\|NTUSER.DAT\|ntuser.dat).csv'); err == null) {
