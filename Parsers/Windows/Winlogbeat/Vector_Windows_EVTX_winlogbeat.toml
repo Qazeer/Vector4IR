@@ -1,5 +1,5 @@
 # Description: Process Windows EVTX parsed as JSON with Winlogbeat.
-#              Filename should match: "*winlogbeat*"
+#              Filename should match: "*winlogbeat*.ndjson"
 #              The EVTX can be parsed with Winlogbeat using:
 #                - For all events, the Winlogbeat_ALL.mkape KAPE module (https://github.com/EricZimmerman/KapeFiles/blob/master/Modules/Apps/Winlogbeat_ALL.mkape)
 #                - For a filtered set of events, the Winlogbeat_Windows_EVTX_to_JSON_filtered.yml configuration file in the present repository.
@@ -17,7 +17,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [sources.Windows_EVTX_winlogbeat_input]
   type = "file"
-  include = ["${INPUT_FOLDER:?The input folder containing the Winlogbeat JSON output files is required.}/**/*winlogbeat*"]
+  include = ["${INPUT_FOLDER:?The input folder containing the Winlogbeat JSON output files is required.}/**/*winlogbeat*.ndjson"]
   ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = true
@@ -28,13 +28,18 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["Windows_EVTX_winlogbeat_input"]
   source = '''
-    ., err = parse_json(.message)
-    if (err != null) {
-      log("Unable to convert to parse log line: " + err, level: "error")
+    message_parsed, err = parse_json(.message)
+    if err != null {
+      log("Unable to parse log line: '" + string!(.message) + "'. Error: " + err, level: "error")
+      abort
+    } else {
+      . = message_parsed
     }
 
     # Rename / remove fields in the ELK format introduced by Winlogbeat.
-    .timestamp = to_timestamp!(.@timestamp)
+    if (.timestamp, err = to_timestamp(.@timestamp); err != null) {
+      log("Unable to convert timestamp: " + err, level: "warn")
+    }
     del(.@timestamp)
     del(.@metadata)
 
@@ -44,7 +49,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     # Add the source host following the parsing.
     if !(exists(.computer_name) && .computer_name != "") {
-      log("No computer name", level: "error")
+      log("The log entry does not contain a computer name", level: "warn")
     }
 
     .sourcehost = .computer_name
