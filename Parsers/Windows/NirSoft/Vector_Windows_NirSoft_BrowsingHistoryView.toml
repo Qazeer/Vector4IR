@@ -35,7 +35,7 @@ timezone = "Etc/UTC"
     # URL,Title,Visit Time,Visit Count,Visited From,Visit Type,Visit Duration,Web Browser,User Profile,Browser Profile,URL Length,Typed Count,History File,Record ID
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log\("Unable to split CSV: " + err, level: "error")
+      log("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[0] == "URL" {

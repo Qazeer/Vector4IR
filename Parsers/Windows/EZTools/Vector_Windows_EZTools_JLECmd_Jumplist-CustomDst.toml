@@ -33,7 +33,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # SourceFile,SourceCreated,SourceModified,SourceAccessed,AppId,AppIdDescription,EntryName,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log\("Unable to split CSV: " + err, level: "error")
+      log("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[8] == "TargetModified" {

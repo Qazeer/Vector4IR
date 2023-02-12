@@ -35,7 +35,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log\("Unable to split CSV: " + err, level: "error")
+      log("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[0] == "BatchKeyPath" {

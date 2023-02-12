@@ -34,12 +34,12 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # Remove CSV parsing error on DisplayText value which is under following format: "Téléchargez le navigateur Firefox, rapide, sécurisé...".
     .message, err = replace(.message, s'"', s'\"')
     if err != null {
-      log\("Unable to remove whitespaces: " + err, level: "error")
+      log("Unable to remove whitespaces: " + err, level: "error")
     }
 
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log\("Unable to split CSV: " + err, level: "error")
+      log("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[1] == "Executable" {
