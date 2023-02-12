@@ -115,7 +115,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.lastrun){
+    if !exists(.lastrun) {
       abort
     }
 
@@ -128,7 +128,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.previousrun0){
+    if !exists(.previousrun0) {
       abort
     }
 
@@ -141,7 +141,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.previousrun1){
+    if !exists(.previousrun1) {
       abort
     }
 
@@ -154,7 +154,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.previousrun2){
+    if !exists(.previousrun2) {
       abort
     }
 
@@ -167,7 +167,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.previousrun3){
+    if !exists(.previousrun3) {
       abort
     }
 
@@ -180,7 +180,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.previousrun4){
+    if !exists(.previousrun4) {
       abort
     }
 
@@ -193,7 +193,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.previousrun5){
+    if !exists(.previousrun5) {
       abort
     }
 
@@ -206,7 +206,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.previousrun6){
+    if !exists(.previousrun6) {
       abort
     }
 
@@ -219,7 +219,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.sourcecreated){
+    if !exists(.sourcecreated) {
       abort
     }
 
@@ -232,7 +232,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.sourcemodified){
+    if !exists(.sourcemodified) {
       abort
     }
 
@@ -245,7 +245,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["PECmd_Prefetch_coerce"]
   source = '''
-    if !exists(.sourceaccessed){
+    if !exists(.sourceaccessed) {
       abort
     }
 

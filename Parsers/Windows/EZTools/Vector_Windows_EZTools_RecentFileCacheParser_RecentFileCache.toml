@@ -108,7 +108,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RecentFileCacheParser_RecentFileCache_coerce"]
   source = '''
-    if !exists(.sourcecreated){
+    if !exists(.sourcecreated) {
       abort
     }
 
@@ -121,7 +121,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RecentFileCacheParser_RecentFileCache_coerce"]
   source = '''
-    if !exists(.sourcemodified){
+    if !exists(.sourcemodified) {
       abort
     }
 
@@ -134,7 +134,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RecentFileCacheParser_RecentFileCache_coerce"]
   source = '''
-    if !exists(.sourceaccessed){
+    if !exists(.sourceaccessed) {
       abort
     }
 

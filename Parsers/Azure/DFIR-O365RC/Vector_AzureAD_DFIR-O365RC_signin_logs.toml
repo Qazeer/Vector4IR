@@ -45,7 +45,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
       }
     }
 
-    if (.status.errorCode == 0 && .status.failureReason == "Other."){
+    if (.status.errorCode == 0 && .status.failureReason == "Other.") {
       .authenticationResult = "Success"
     } else {
       .authenticationResult = "Failure"

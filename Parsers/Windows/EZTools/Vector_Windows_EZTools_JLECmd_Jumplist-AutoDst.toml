@@ -33,7 +33,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # SourceFile,SourceCreated,SourceModified,SourceAccessed,AppId,AppIdDescription,DestListVersion,LastUsedEntryNumber,MRU,EntryNumber,CreationTime,LastModified,Hostname,MacAddress,Path,InteractionCount,PinStatus,FileBirthDroid,FileDroid,VolumeBirthDroid,VolumeDroid,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments,Notes
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log\("Unable to split CSV: " + err, level: "error")
+      log("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[22] == "TargetModified" {
@@ -147,7 +147,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_coerce"]
   source = '''
-    if !exists(.lastmodified){
+    if !exists(.lastmodified) {
       abort
     }
 
@@ -160,7 +160,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_coerce"]
   source = '''
-    if !exists(.sourcecreated){
+    if !exists(.sourcecreated) {
       abort
     }
 
@@ -173,7 +173,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_coerce"]
   source = '''
-    if !exists(.sourcemodified){
+    if !exists(.sourcemodified) {
       abort
     }
 
@@ -186,7 +186,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_coerce"]
   source = '''
-    if !exists(.sourceaccessed){
+    if !exists(.sourceaccessed) {
       abort
     }
 
@@ -199,7 +199,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_coerce"]
   source = '''
-    if !exists(.creationtime){
+    if !exists(.creationtime) {
       abort
     }
 
@@ -212,7 +212,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_coerce"]
   source = '''
-    if !exists(.targetcreated){
+    if !exists(.targetcreated) {
       abort
     }
 
@@ -225,7 +225,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_coerce"]
   source = '''
-    if !exists(.targetmodified){
+    if !exists(.targetmodified) {
       abort
     }
 
@@ -238,7 +238,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_coerce"]
   source = '''
-    if !exists(.targetaccessed){
+    if !exists(.targetaccessed) {
       abort
     }
 
@@ -251,7 +251,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-AutoDst_coerce"]
   source = '''
-    if !exists(.trackercreatedon){
+    if !exists(.trackercreatedon) {
       abort
     }
 

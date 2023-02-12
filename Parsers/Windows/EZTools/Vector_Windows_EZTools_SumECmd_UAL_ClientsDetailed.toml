@@ -109,7 +109,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SumECmd_UAL_ClientsDetailed_coerce"]
   source = '''
-    if !exists(.date){
+    if !exists(.date) {
       abort
     }
 
@@ -121,7 +121,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SumECmd_UAL_ClientsDetailed_coerce"]
   source = '''
-    if !exists(.insertdate){
+    if !exists(.insertdate) {
       abort
     }
 
@@ -133,7 +133,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SumECmd_UAL_ClientsDetailed_coerce"]
   source = '''
-    if !exists(.lastaccess){
+    if !exists(.lastaccess) {
       abort
     }
 

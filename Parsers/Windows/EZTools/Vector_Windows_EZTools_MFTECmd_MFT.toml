@@ -177,7 +177,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["MFTECmd_MFT_coerce"]
   source = '''
-    if !exists(.lastmodified0x10){
+    if !exists(.lastmodified0x10) {
       abort
     }
 
@@ -190,7 +190,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["MFTECmd_MFT_coerce"]
   source = '''
-    if !exists(.created0x10){
+    if !exists(.created0x10) {
       abort
     }
 
@@ -203,7 +203,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["MFTECmd_MFT_coerce"]
   source = '''
-    if !exists(.lastrecordchange0x10){
+    if !exists(.lastrecordchange0x10) {
       abort
     }
 
@@ -216,7 +216,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["MFTECmd_MFT_coerce"]
   source = '''
-    if !exists(.lastaccess0x10){
+    if !exists(.lastaccess0x10) {
       abort
     }
 

@@ -301,7 +301,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
-    if !exists(.timestamp){
+    if !exists(.timestamp) {
       abort
     }
 
@@ -313,7 +313,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
-    if !exists(.eventtimestamp){
+    if !exists(.eventtimestamp) {
       abort
     }
 
@@ -326,7 +326,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     type = "remap"
     inputs = ["SrumECmd_Srum_dump_coerce"]
     source = '''
-      if !exists(.exetimestamp) || (.exetimstamp == ""){
+      if !exists(.exetimestamp) || (.exetimstamp == "") {
         abort
       }
 
@@ -339,7 +339,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
-    if !exists(.connectstarttime){
+    if !exists(.connectstarttime) {
       abort
     }
 
@@ -352,7 +352,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
-    if !exists(.starttime){
+    if !exists(.starttime) {
       abort
     }
 
@@ -365,7 +365,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SrumECmd_Srum_dump_coerce"]
   source = '''
-    if !exists(.endtime){
+    if !exists(.endtime) {
       abort
     }
 
