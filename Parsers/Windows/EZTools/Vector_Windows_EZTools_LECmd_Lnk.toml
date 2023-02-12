@@ -33,7 +33,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # SourceFile,SourceCreated,SourceModified,SourceAccessed,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,NetworkPath,CommonPath,Arguments,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,MACVendor,TrackerCreatedOn,ExtraBlocksPresent
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[LNK-Files] Unable to split CSV: " + err, level: "error")
+      log\("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[0] == "SourceFile" {

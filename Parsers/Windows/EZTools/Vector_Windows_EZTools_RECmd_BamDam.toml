@@ -36,7 +36,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # BatchKeyPath,BatchValueName,Program,ExecutionTime
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[Registry_BamDam] Unable to split CSV: " + err, level: "error")
+      log\("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[2] == "Program" {

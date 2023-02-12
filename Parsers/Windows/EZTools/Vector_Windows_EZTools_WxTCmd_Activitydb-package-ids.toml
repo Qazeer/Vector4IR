@@ -34,7 +34,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # Id,Platform,Name,AdditionalInformation,Expires
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[Activitydb-PackageIDs] Unable to split CSV: " + err, level: "error")
+      log\("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[1] == "Platform" {

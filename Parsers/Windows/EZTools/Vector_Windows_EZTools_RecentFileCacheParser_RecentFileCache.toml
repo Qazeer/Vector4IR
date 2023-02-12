@@ -33,7 +33,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # SourceFile,SourceCreated,SourceModified,SourceAccessed,Filename
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[RecentFileCacheParser] Unable to split CSV: " + err, level: "error")
+      log\("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[0] == "SourceFile" {

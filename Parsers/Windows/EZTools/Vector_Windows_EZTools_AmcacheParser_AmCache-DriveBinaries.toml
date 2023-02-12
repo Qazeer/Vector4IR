@@ -33,7 +33,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # KeyName,KeyLastWriteTimestamp,DriverTimeStamp,DriverLastWriteTime,DriverName,DriverInBox,DriverIsKernelMode,DriverSigned,DriverCheckSum,DriverCompany,DriverId,DriverPackageStrongName,DriverType,DriverVersion,ImageSize,Inf,Product,ProductVersion,Service,WdfVersion
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[AmCache-DriveBinaries] Unable to split CSV: " + err, level: "error")
+      log\("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[1] == "KeyLastWriteTimestamp" {

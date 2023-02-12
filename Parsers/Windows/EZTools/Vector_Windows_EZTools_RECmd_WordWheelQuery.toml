@@ -35,7 +35,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # BatchKeyPath,BatchValueName,SearchTerm,MruPosition,KeyName
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[WordWheelQuery] Unable to split CSV: " + err, level: "error")
+      log\("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[0] == "BatchKeyPath" {

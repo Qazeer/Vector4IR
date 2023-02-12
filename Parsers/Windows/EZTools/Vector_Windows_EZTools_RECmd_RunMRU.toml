@@ -35,7 +35,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # BatchKeyPath,BatchValueName,ValueName,MruPosition,Executable,OpenedOn
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[RunMRU] Unable to split CSV: " + err, level: "error")
+      log\("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[0] == "BatchKeyPath" {

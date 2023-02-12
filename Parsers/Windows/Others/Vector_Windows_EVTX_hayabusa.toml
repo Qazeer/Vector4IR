@@ -30,7 +30,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[Hayabausa] Unable to split CSV: " + err, level: "error")
+      log\("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[0] == "Timestamp" {

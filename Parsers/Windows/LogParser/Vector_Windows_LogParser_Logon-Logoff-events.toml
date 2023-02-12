@@ -49,7 +49,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # Date,EventID,Description,Username,Domain,CredentialsUsed,LogonID,SessionName,LogonType,Status,SubStatus,AuthPackage,Workstation,SourceIP
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log("[EVTX Logon-Logoff-events] Unable to split CSV: " + err, level: "error")
+      log\("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[1] == "EventID" {
