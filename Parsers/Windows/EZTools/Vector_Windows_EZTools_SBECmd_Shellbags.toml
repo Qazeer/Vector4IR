@@ -40,7 +40,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     # BagPath,Slot,NodeSlot,MRUPosition,AbsolutePath,ShellType,Value,ChildBags,CreatedOn,ModifiedOn,AccessedOn,LastWriteTime,MFTEntry,MFTSequenceNumber,ExtensionBlockCount,FirstInteracted,LastInteracted,HasExplored,Miscellaneous
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
-      log\("Unable to split CSV: " + err, level: "error")
+      log("Unable to split CSV: " + err, level: "error")
     }
 
     if fields[11] == "LastWriteTime" {
@@ -68,11 +68,9 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .firstinteracted = fields[15]
     .lastinteracted = fields[16]
 
-    # if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_(AppData_Local_Microsoft_Windows_UsrClass\|NTUSER\|ntuser)(.dat\|.DAT)?.csv'); err == null) {
-    if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_(AppData_Local_Microsoft_Windows_UsrClass.dat\|NTUSER.DAT\|ntuser.dat).csv'); err == null) {
-      .user = match_user_en.username
-    } else if (match_user_fr, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Utilisateurs_(?P<username>.*)_(AppData_Local_Microsoft_Windows_UsrClass.dat\|NTUSER.DAT\|ntuser.dat).csv'); err == null) {
-      .user = match_user_fr.username
+    # Shellbag filename is: Administrator_NTUSER.csv or Administrator_UsrClass.csv
+    if (match_user, err = parse_regex(.file, r'.*(\\|/)(?P<username>.*?)_(UsrClass|AppData_Local_Microsoft_Windows_UsrClass|NTUSER|ntuser).*csv'); err == null) {
+      .user = match_user.username
     } else {
       .user = ""
     }
@@ -123,7 +121,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
-    if !exists(.lastwritetime){
+    if is_nullish(.lastwritetime) {
       abort
     }
 
@@ -136,7 +134,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
-    if !exists(.createdon){
+    if is_nullish(.createdon) {
       abort
     }
 
@@ -149,7 +147,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
-    if !exists(.modifiedon){
+    if is_nullish(.modifiedon) {
       abort
     }
 
@@ -162,7 +160,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
-    if !exists(.accessedon){
+    if is_nullish(.accessedon) {
       abort
     }
 
@@ -175,7 +173,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
-    if !exists(.firstinteracted){
+    if is_nullish(.firstinteracted) {
       abort
     }
 
@@ -188,7 +186,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["SBECmd_Shellbags_coerce"]
   source = '''
-    if !exists(.lastinteracted){
+    if is_nullish(.lastinteracted) {
       abort
     }
 

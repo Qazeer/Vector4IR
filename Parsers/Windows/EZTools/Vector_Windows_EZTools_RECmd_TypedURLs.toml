@@ -53,15 +53,21 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .timestamp = fields[2]
     .url = fields[3]
 
-    if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Windows_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
-      .user = match_user_en.username
-    } else if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
-      .user = match_user_en.username
-    } else if (match_user_fr, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_.*_Utilisateurs_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
-      .user = match_user_fr.username
+    if (match_user, err = parse_regex(.file, r'.*(\\|/).*([uU]sers|[uU]tilisateurs|Windows)_(?P<username>.*)_.*'); err == null) {
+      .user = match_user.username
     } else {
       .user = ""
     }
+
+    # if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Windows_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
+    #   .user = match_user_en.username
+    # } else if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
+    #   .user = match_user_en.username
+    # } else if (match_user_fr, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_.*_Utilisateurs_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
+    #   .user = match_user_fr.username
+    # } else {
+    #   .user = ""
+    # }
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"

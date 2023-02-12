@@ -1,6 +1,6 @@
 # Vector_Windows_EZTools_LECmd_Lnk config.
 # Description: Process Windows artefacts parsed with LECmd (CSV output).
-#              Filename should match: "*LECmd_Output.csv"
+#              Filename should match: "*LECmd_Output*.csv"
 #              LECmd command: LECmd.exe -d %sourceDirectory% --csv %destinationDirectory% -q
 #              Example command: LECmd.exe -d "C:\" --csv <YOUR_OUTPUT> -q
 #              source = "windows_lnk-files" & sourcetype = "windows_artefact"
@@ -17,7 +17,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [sources.LECmd_Lnk_csv_input]
   type = "file"
-  include = ["${INPUT_FOLDER:?The input folder containing the LECmd Link files is required.}/**/*LECmd_Output.csv"]
+  include = ["${INPUT_FOLDER:?The input folder containing the LECmd Link files is required.}/**/*LECmd_Output*.csv"]
   data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
   ignore_checkpoints = true
   read_from = "beginning"
@@ -71,12 +71,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
     .timestamp = .sourcemodified
 
-    if (fields[0] != null && fields[0] != "" && fields[0] != "\r") {
-      if (match_user_en, err = parse_regex(fields[0], r'[a-zA-Z]\\Users\\(?P<username>.*)\\AppData'); err == null) {
-        .user = match_user_en.username
-      } else if (match_user_fr, err = parse_regex(fields[0], r'[a-zA-Z]\\Utilisateurs\\(?P<username>.*)\\AppData'); err == null) {
-        .user = match_user_fr.username
-      }
+    if (match_user, err = parse_regex(fields[0], r'.*(\\|/)([uU]sers|[uU]tilisateurs)(\\|/)(?P<username>.*?)(\\|/).*'); err == null) {
+      .user = match_user.username
     } else {
       .user = ""
     }

@@ -51,13 +51,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
     .sourceaccessed = fields[3]
     .filename = fields[4]
 
-    if (.filename != null && .filename != "" && .filename != "\r") {
-      .filename = string!(.filename)
-      if (match_user_en, err = parse_regex(.filename, r'[a-zA-Z]:\\users\\(?P<username>[\w]+)\\*'); err == null) {
-        .user = match_user_en.username
-      } else if (match_user_fr, err = parse_regex(.filename, r'[a-zA-Z]:\\utilisateurs\\(?P<username>[\w]+)\\*'); err == null) {
-        .user = match_user_fr.username
-      }
+    if (match_user, err = parse_regex(.filename, r'.*(\\|/)([uU]sers|[uU]tilisateurs)(\\|/)(?P<username>.*?)(\\|/).*'); err == null) {
+      .user = match_user.username
     } else {
       .user = ""
     }
