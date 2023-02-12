@@ -124,7 +124,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
-    if !exists(.createdon) {
+    if is_nullish(.createdon) {
       abort
     }
 
@@ -137,7 +137,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
-    if !exists(.lastlogintime) {
+    if is_nullish(.lastlogintime) {
       abort
     }
 
@@ -150,7 +150,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
-    if !exists(.lastpasswordchange) {
+    if is_nullish(.lastpasswordchange) {
       abort
     }
 
@@ -163,7 +163,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
-    if !exists(.lastincorrectpassword) {
+    if is_nullish(.lastincorrectpassword) {
       abort
     }
 
@@ -176,7 +176,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["RECmd_LocalAccounts_coerce"]
   source = '''
-    if !exists(.expireson) {
+    if is_nullish(.expireson) {
       abort
     }
 

@@ -117,7 +117,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
-    if !exists(.starttime) {
+    if is_nullish(.starttime) {
       abort
     }
 
@@ -130,7 +130,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
-    if !exists(.endtime) {
+    if is_nullish(.endtime) {
       abort
     }
 
@@ -143,7 +143,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
-    if !exists(.lastmodifiedtime) {
+    if is_nullish(.lastmodifiedtime) {
       abort
     }
 
@@ -156,7 +156,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
-    if !exists(.expirationtime) {
+    if is_nullish(.expirationtime) {
       abort
     }
 
@@ -169,7 +169,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
-    if !exists(.lastmodifiedonclient) {
+    if is_nullish(.lastmodifiedonclient) {
       abort
     }
 
@@ -182,7 +182,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["WxTCmd_Activitydb_coerce"]
   source = '''
-    if !exists(.originallastmodifiedonclient) {
+    if is_nullish(.originallastmodifiedonclient) {
       abort
     }
 

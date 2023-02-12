@@ -120,7 +120,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
-    if !exists(.keylastwritetimestamp) {
+    if is_nullish(.keylastwritetimestamp) {
       abort
     }
 
@@ -132,7 +132,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
-    if !exists(.installdate) {
+    if is_nullish(.installdate) {
       abort
     }
 
@@ -145,7 +145,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
-    if !exists(.installdatearplastmodified) {
+    if is_nullish(.installdatearplastmodified) {
       abort
     }
 
@@ -158,7 +158,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
-    if !exists(.installdatemsi) {
+    if is_nullish(.installdatemsi) {
       abort
     }
 
@@ -171,7 +171,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
   source = '''
-    if !exists(.installdatefromlinkfile) {
+    if is_nullish(.installdatefromlinkfile) {
       abort
     }
 

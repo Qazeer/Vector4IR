@@ -130,7 +130,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
-    if !exists(.sourcecreated) {
+    if is_nullish(.sourcecreated) {
       abort
     }
 
@@ -143,7 +143,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
-    if !exists(.sourcemodified) {
+    if is_nullish(.sourcemodified) {
       abort
     }
 
@@ -156,7 +156,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
-    if !exists(.sourceaccessed) {
+    if is_nullish(.sourceaccessed) {
       abort
     }
 
@@ -169,7 +169,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
-  if !exists(.targetcreated) {
+  if is_nullish(.targetcreated) {
     abort
   }
 
@@ -182,7 +182,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
-  if !exists(.targetmodified) {
+  if is_nullish(.targetmodified) {
     abort
   }
 
@@ -195,7 +195,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
-  if !exists(.targetaccessed) {
+  if is_nullish(.targetaccessed) {
     abort
   }
 
@@ -208,7 +208,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   type = "remap"
   inputs = ["JLECmd_Jumplist-CustomDst_coerce"]
   source = '''
-  if !exists(.trackercreatedon) {
+  if is_nullish(.trackercreatedon) {
     abort
   }
 
