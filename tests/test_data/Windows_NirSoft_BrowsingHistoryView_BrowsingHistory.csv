@@ -1,2 +1,4 @@
 URL,Title,Visit Time,Visit Count,Visited From,Visit Type,Visit Duration,Web Browser,User Profile,Browser Profile,URL Length,Typed Count,History File,Record ID
-https://github.com/,,11/03/2020 12:05:08,2,,,,Internet Explorer 10/11 / Edge,User,,69,,C\Users\User\AppData\Local\Microsoft\Windows\WebCache\WebCacheV01.dat,29
+https://github.com/,,11/03/2020 12:05:08,2,,,,Internet Explorer 10/11 / Edge,User,,69,,C:\Users\User\AppData\Local\Microsoft\Windows\WebCache\WebCacheV01.dat,29
+file:///C:/Users/user/Desktop/file.txt,,9/18/2020 10:47:34 PM,1,,,,Internet Explorer 10/11 / Edge,user,,48,,C:\Users\user\AppData\Local\Microsoft\Windows\WebCache\WebCacheV01.dat,2
+file:///C:/Users/user/Desktop/file2.txt,,9/19/2020 3:47:39 AM,1,,,,Internet Explorer 10/11 / Edge,user,,48,,C:\Users\user\AppData\Local\Microsoft\Windows\WebCache\WebCacheV01.dat,8
