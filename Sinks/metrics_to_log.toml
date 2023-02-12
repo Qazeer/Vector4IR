@@ -1,0 +1,39 @@
+[sources.vector_metrics_source]
+  type = "internal_metrics"
+  namespace = "vector"
+  scrape_interval_secs = 60
+
+[transforms.vector_metrics_to_log]
+type = "metric_to_log"
+inputs = ["vector_metrics_source"]
+
+[transforms.vector_metrics_filter_received]
+  type = "remap"
+  inputs = ["vector_metrics_to_log"]
+  source = '''
+    if .name == "component_received_events_total" && to_string!(.tags.component_id) != "vector_metrics_source" && .counter.value != 0.0 && to_string!(.tags.component_kind) == "source" {
+      . = to_string!(.timestamp) + "  " + "METRICS  Received events so far - " + to_string!(.tags.component_id) + ": " + to_string!(.counter.value) + " from " + to_string!(.tags.file)
+    } else {
+      abort
+    }
+  '''
+
+[transforms.vector_metrics_filter_sent]
+  type = "remap"
+  inputs = ["vector_metrics_to_log"]
+  source = '''
+    if .name == "component_sent_events_total" && .counter.value != 0.0 {
+      . = to_string!(.timestamp) + "  " + "METRICS  Sent events so far - " + to_string!(.tags.component_id) + ": " + to_string!(.counter.value)
+    } else {
+      abort
+    }
+  '''
+
+[sinks.metrics_console]
+  type = "console"
+  inputs = [
+    "vector_metrics_filter_received"
+    #"vector_metrics_filter_sent",
+  ]
+  target = "stdout"
+  encoding.codec = "text"
