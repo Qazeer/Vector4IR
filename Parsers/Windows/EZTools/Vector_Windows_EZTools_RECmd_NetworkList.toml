@@ -34,31 +34,35 @@ timezone = "Etc/UTC"
   inputs = ["RECmd_NetworkList_csv_input"]
   source = '''
     # Expect CSV header:
-    # BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID
+    # Old: BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID
+    # New: FirstNetwork,BatchKeyPath,NetworkName,BatchValueName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "BatchValueName" {
-      expected_header = "BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
+    if fields[1] == "BatchKeyPath" {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+      expected_header = "FirstNetwork,BatchKeyPath,NetworkName,BatchValueName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID"
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
 
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
+    .firstnetwork = fields[0]
+    .batchkeypath = fields[1]
     .networkname = fields[2]
-    .nametype = fields[3]
-    .firstconnectlocal = fields[4]
-    .lastconnectedlocal = fields[5]
-    .managed = fields[6]
-    .dnssuffix = fields[7]
-    .gatewaymacaddress = fields[8]
-    .profileguid = fields[9]
+    .batchvaluename = fields[3]
+    .nametype = fields[4]
+    .firstconnectlocal = fields[5]
+    .lastconnectedlocal = fields[6]
+    .managed = fields[7]
+    .dnssuffix = fields[8]
+    .gatewaymacaddress = fields[9]
+    .profileguid = fields[10]
 
     .timestamp = .lastconnectedlocal
 

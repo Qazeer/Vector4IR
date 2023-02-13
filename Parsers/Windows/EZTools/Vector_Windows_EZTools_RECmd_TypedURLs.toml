@@ -34,42 +34,41 @@ timezone = "Etc/UTC"
   inputs = ["RECmd_TypedURLs_csv_input"]
   source = '''
     # Expect CSV header:
-    # BatchKeyPath,BatchValueName,Timestamp,Url,Slack
+    # Old: BatchKeyPath,BatchValueName,Timestamp,Url,Slack
+    # New: Timestamp,BatchKeyPath,Url,BatchValueName,Slack
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "BatchValueName" {
-      expected_header = "BatchKeyPath,BatchValueName,Timestamp,Url,Slack"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
+    if fields[1] == "BatchKeyPath" {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+      expected_header = "Timestamp,BatchKeyPath,Url,BatchValueName,Slack"
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
 
 
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
-    .timestamp = fields[2]
-    .url = fields[3]
+    .timestamp = fields[0]
+    .batchkeypath = fields[1]
+    .url = fields[2]
+    .batchvaluename = fields[3]
+    .slack = fields[4]
+
+    if is_nullish(.timestamp) {
+      log("Timestamp is null for event, defaulting to current time: " + string!(.message), level: "warn")
+      .timestamp = now()
+    }
 
     if (match_user, err = parse_regex(.file, r'.*(\\|/).*([uU]sers|[uU]tilisateurs|Windows)_(?P<username>.*)_.*'); err == null) {
       .user = match_user.username
     } else {
       .user = ""
     }
-
-    # if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Windows_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
-    #   .user = match_user_en.username
-    # } else if (match_user_en, err = parse_regex(.file, r'[a-zA-Z]_Users_.*_Users_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
-    #   .user = match_user_en.username
-    # } else if (match_user_fr, err = parse_regex(.file, r'[a-zA-Z]_Utilisateurs_.*_Utilisateurs_(?P<username>.*)_NTUSER.DAT.csv'); err == null) {
-    #   .user = match_user_fr.username
-    # } else {
-    #   .user = ""
-    # }
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"

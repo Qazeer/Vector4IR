@@ -41,7 +41,7 @@ timezone = "Etc/UTC"
     }
 
     if fields[1] == "BatchValueName" {
-      # Special usecase as the header line may start with 'M-oM-;M-?'.
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "BatchKeyPath,BatchValueName,ProgramName,RunCounter,FocusCount,FocusTime,LastExecuted"
       current_header = strip_whitespace(to_string!(.message))
       header_find = find(current_header, expected_header)
@@ -60,6 +60,11 @@ timezone = "Etc/UTC"
     .lastexecuted = fields[6]
 
     .timestamp = .lastexecuted
+
+    if is_nullish(.timestamp) {
+      log("Timestamp is null for event, defaulting to current time: " + string!(.message), level: "warn")
+      .timestamp = now()
+    }
 
     if (match_user, err = parse_regex(.file, r'.*(\\|/).*([uU]sers|[uU]tilisateurs)_(?P<username>.*)_.*'); err == null) {
       .user = match_user.username

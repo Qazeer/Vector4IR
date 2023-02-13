@@ -26,17 +26,24 @@ timezone = "Etc/UTC"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
+  offset_key = "__offset"
 
 [transforms.WxTCmd_Activitydb_csv_parser]
   type = "remap"
   inputs = ["WxTCmd_Activitydb_csv_input"]
   source = '''
     # Expect CSV header:
-    # Id,Executable,DisplayText,ContentInfo,StartTime,EndTime,LastModifiedTime,ExpirationTime,CreatedInCloud,LastModifiedOnClient,OriginalLastModifiedOnClient,ActivityType,IsLocalOnly,ETag,PackageIdHash,PlatformDeviceId,Duration
-    # Remove CSV parsing error on DisplayText value which is under following format: "Téléchargez le navigateur Firefox, rapide, sécurisé...".
-    .message, err = replace(.message, s'"', s'\"')
-    if err != null {
-      log("Unable to remove whitespaces: " + err, level: "error")
+    # Old: Id,Executable,DisplayText,ContentInfo,StartTime,EndTime,LastModifiedTime,ExpirationTime,CreatedInCloud,LastModifiedOnClient,OriginalLastModifiedOnClient,ActivityType,IsLocalOnly,ETag,PackageIdHash,PlatformDeviceId,Duration
+    # New: Id,ActivityTypeOrg,ActivityType,Executable,DisplayText,ContentInfo,Payload,ClipboardPayload,StartTime,EndTime,Duration,LastModifiedTime,LastModifiedOnClient,OriginalLastModifiedOnClient,ExpirationTime,CreatedInCloud,IsLocalOnly,ETag,PackageIdHash,PlatformDeviceId,DevicePlatform,TimeZone
+    if .__offset == 0 {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+      expected_header = "Id,ActivityTypeOrg,ActivityType,Executable,DisplayText,ContentInfo,Payload,ClipboardPayload,StartTime,EndTime,Duration,LastModifiedTime,LastModifiedOnClient,OriginalLastModifiedOnClient,ExpirationTime,CreatedInCloud,IsLocalOnly,ETag,PackageIdHash,PlatformDeviceId,DevicePlatform,TimeZone"
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      }
+      abort
     }
 
     fields, err = parse_csv(.message, delimiter: ",")
@@ -44,34 +51,28 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "Executable" {
-      expected_header = "Id,Executable,DisplayText,ContentInfo,StartTime,EndTime,LastModifiedTime,ExpirationTime,CreatedInCloud,LastModifiedOnClient,OriginalLastModifiedOnClient,ActivityType,IsLocalOnly,ETag,PackageIdHash,PlatformDeviceId,Duration"
-      current_header = strip_whitespace(string(.message))
-      if expected_header != current_header {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + .message, level: "error")
-      }
-      abort
-    }
-
     .id = fields[0]
-    .executable = fields[1]
-    .displaytext = fields[2]
-    .contentinfo = fields[3]
-    .starttime = fields[4]
-    .endtime = fields[5]
-    .lastmodifiedtime = fields[6]
-    .expirationtime = fields[7]
-    .createdincloud = fields[8]
-    .lastmodifiedonclient = fields[9]
-    .originallastmodifiedonclient = fields[10]
-    .activitytype = fields[11]
-    .islocalonly = fields[12]
-    .etag = fields[13]
-    .packageidhash = fields[14]
-    .platformdeviceid = fields[15]
-    .duration = fields[16]
-
-    .timestamp = .starttime
+    .activitytypeorg  = fields[1]
+    .activitytype = fields[2]
+    .executable = fields[3]
+    .displaytext = fields[4]
+    .contentinfo = fields[5]
+    .payload = fields[6]
+    .clipboardpayload = fields[7]
+    .starttime = fields[8]
+    .endtime = fields[9]
+    .duration = fields[10]
+    .lastmodifiedtime = fields[11]
+    .lastmodifiedonclient = fields[12]
+    .originallastmodifiedonclient = fields[13]
+    .expirationtime = fields[14]
+    .createdincloud = fields[15]
+    .islocalonly = fields[16]
+    .etag = fields[17]
+    .packageidhash = fields[18]
+    .platformdeviceid = fields[19]
+    .deviceplatform = fields[20]
+    .timezone = fields[21]
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
@@ -83,6 +84,7 @@ timezone = "Etc/UTC"
     del(.source_type)
     del(.file)
     del(.message)
+    del(.__offset)
   '''
 
 [transforms.WxTCmd_Activitydb_coerce]

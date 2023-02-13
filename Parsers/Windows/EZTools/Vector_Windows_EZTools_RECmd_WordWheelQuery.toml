@@ -34,28 +34,36 @@ timezone = "Etc/UTC"
   inputs = ["RECmd_WordWheelQuery_csv_input"]
   source = '''
     # Expect CSV header:
-    # BatchKeyPath,BatchValueName,SearchTerm,MruPosition,KeyName
+    # Old: BatchKeyPath,BatchValueName,SearchTerm,MruPosition,KeyName
+    # New: SearchTerm,BatchKeyPath,MruPosition,BatchValueName,KeyName,LastWriteTimestamp
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "BatchValueName" {
+    if fields[1] == "BatchKeyPath" {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "SearchTerm,BatchKeyPath,MruPosition,BatchValueName,KeyName,LastWriteTimestamp"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
 
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
-    .searchterm = fields[2]
-    .mruposition = fields[3]
-    .lastwritetimestamp = fields[4]
+    .searchterm = fields[0]
+    .batchkeypath = fields[1]
+    .mruposition = fields[2]
+    .batchvaluename = fields[3]
+    .keyname = fields[4]
+    .lastwritetimestamp = fields[5]
 
     .timestamp = .lastwritetimestamp
+    if is_nullish(.timestamp) {
+      log("Timestamp is null for event, defaulting to current time: " + string!(.message), level: "warn")
+      .timestamp = now()
+    }
 
     if (match_user, err = parse_regex(.file, r'.*(\\|/).*([uU]sers|[uU]tilisateurs)_(?P<username>.*)_.*'); err == null) {
       .user = match_user.username

@@ -35,48 +35,54 @@ timezone = "Etc/UTC"
   source = '''
     # Expect CSV header:
     # BatchKeyPath,BatchValueName,UserId,InvalidLoginCount,TotalLoginCount,CreatedOn,LastLoginTime,LastPasswordChange,LastIncorrectPassword,ExpiresOn,UserName,FullName,PasswordHint,Groups,Comment,UserComment,HomeDirectory,AccountDisabled,HomeDirectoryRequired,PasswordNotRequired,TempDuplicateAccount,NormalUserAccount,MnsLogonAccount,InterdomainTrustAccount,WorkstationTrustAccount,ServerTrustAccount,PasswordDoesNotExpire,AutoLocked
+    # ValidUserId,BatchKeyPath,BatchValueName,UserId,InvalidLoginCount,TotalLoginCount,CreatedOn,LastLoginTime,LastPasswordChange,LastIncorrectPassword,ExpiresOn,UserName,FullName,PasswordHint,Groups,Comment,UserComment,HomeDirectory,InternetUserName,ResetData,AccountDisabled,HomeDirectoryRequired,PasswordNotRequired,TempDuplicateAccount,NormalUserAccount,MnsLogonAccount,InterdomainTrustAccount,WorkstationTrustAccount,ServerTrustAccount,PasswordDoesNotExpire,AutoLocked
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "BatchValueName" {
-      expected_header = "BatchKeyPath,BatchValueName,UserId,InvalidLoginCount,TotalLoginCount,CreatedOn,LastLoginTime,LastPasswordChange,LastIncorrectPassword,ExpiresOn,UserName,FullName,PasswordHint,Groups,Comment,UserComment,HomeDirectory,AccountDisabled,HomeDirectoryRequired,PasswordNotRequired,TempDuplicateAccount,NormalUserAccount,MnsLogonAccount,InterdomainTrustAccount,WorkstationTrustAccount,ServerTrustAccount,PasswordDoesNotExpire,AutoLocked"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
+    if fields[1] == "BatchKeyPath" {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+      expected_header = "ValidUserId,BatchKeyPath,BatchValueName,UserId,InvalidLoginCount,TotalLoginCount,CreatedOn,LastLoginTime,LastPasswordChange,LastIncorrectPassword,ExpiresOn,UserName,FullName,PasswordHint,Groups,Comment,UserComment,HomeDirectory,InternetUserName,ResetData,AccountDisabled,HomeDirectoryRequired,PasswordNotRequired,TempDuplicateAccount,NormalUserAccount,MnsLogonAccount,InterdomainTrustAccount,WorkstationTrustAccount,ServerTrustAccount,PasswordDoesNotExpire,AutoLocked"
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
 
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
-    .userid = fields[2]
-    .invalidlogincount = fields[3]
-    .totallogincount = fields[4]
-    .createdon = fields[5]
-    .lastlogintime = fields[6]
-    .lastpasswordchange = fields[7]
-    .lastincorrectpassword = fields[8]
-    .expireson = fields[9]
-    .username = fields[10]
-    .fullname = fields[11]
-    .passwordhint = fields[12]
-    .groups = fields[13]
-    .comment = fields[14]
-    .usercomment = fields[15]
-    .homedirectory = fields[16]
-    .accountdisabled = fields[17]
-    .homedirectoryrequired = fields[18]
-    .passwordnotrequired = fields[19]
-    .tempduplicateaccount = fields[20]
-    .normaluseraccount = fields[21]
-    .mnslogonaccount = fields[22]
-    .interdomaintrustaccount = fields[23]
-    .workstationtrustaccount = fields[24]
-    .servertrustaccount = fields[25]
-    .passworddoesnotexpire = fields[26]
-    .autolocked = fields[27]
+    .validuserid = fields[0]
+    .batchkeypath = fields[1]
+    .batchvaluename = fields[2]
+    .userid = fields[3]
+    .invalidlogincount = fields[4]
+    .totallogincount = fields[5]
+    .createdon = fields[6]
+    .lastlogintime = fields[7]
+    .lastpasswordchange = fields[8]
+    .lastincorrectpassword = fields[9]
+    .expireson = fields[10]
+    .username = fields[11]
+    .fullname = fields[12]
+    .passwordhint = fields[13]
+    .groups = fields[14]
+    .comment = fields[15]
+    .usercomment = fields[16]
+    .homedirectory = fields[17]
+    .internetusername = fields[18]
+    .resetdata = fields[19]
+    .accountdisabled = fields[20]
+    .homedirectoryrequired = fields[21]
+    .passwordnotrequired = fields[22]
+    .tempduplicateaccount = fields[23]
+    .normaluseraccount = fields[24]
+    .mnslogonaccount = fields[25]
+    .interdomaintrustaccount = fields[26]
+    .workstationtrustaccount = fields[27]
+    .servertrustaccount = fields[28]
+    .passworddoesnotexpire = fields[29]
+    .autolocked = fields[30]
 
     .timestamp = .createdon
 

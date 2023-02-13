@@ -34,31 +34,33 @@ timezone = "Etc/UTC"
   inputs = ["RECmd_RecentDocs_csv_input"]
   source = '''
     # Expect CSV header:
-    # BatchKeyPath,BatchValueName,Extension,ValueName,TargetName,LnkName,MruPosition,OpenedOn,ExtensionLastOpened
+    # Old: BatchKeyPath,BatchValueName,Extension,ValueName,TargetName,LnkName,MruPosition,OpenedOn,ExtensionLastOpened
+    # new: Extension,BatchKeyPath,ValueName,BatchValueName,TargetName,LnkName,MruPosition,OpenedOn,ExtensionLastOpened
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "BatchValueName" {
-      expected_header = "BatchKeyPath,BatchValueName,Extension,ValueName,TargetName,LnkName,MruPosition,OpenedOn,ExtensionLastOpened"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
+    if fields[1] == "BatchKeyPath" {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+      expected_header = "Extension,BatchKeyPath,ValueName,BatchValueName,TargetName,LnkName,MruPosition,OpenedOn,ExtensionLastOpened"
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
 
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
-    .extension = fields[2]
+    .extension = fields[0]
+    .batchkeypath = fields[1]
+    .valuename = fields[2]
+    .batchvaluename = fields[3]
     .targetname = fields[4]
     .lnkname = fields[5]
     .mruposition = fields[6]
     .openedon = fields[7]
     .extensionlastopened = fields[8]
-
-    .timestamp = .openedon
 
     if (match_user, err = parse_regex(.file, r'.*(\\|/).*([uU]sers|[uU]tilisateurs)_(?P<username>.*)_.*'); err == null) {
       .user = match_user.username
@@ -78,7 +80,7 @@ timezone = "Etc/UTC"
     del(.message)
   '''
 
-[transforms.RECmd_RecentDocs_coerce_to_sink]
+[transforms.RECmd_RecentDocs_coerce]
   type = "remap"
   inputs = ["RECmd_RecentDocs_csv_parser"]
   source = '''
@@ -106,4 +108,28 @@ timezone = "Etc/UTC"
         value
       }
     }
+  '''
+
+[transforms.RECmd_RecentDocs_dedup_on_openedon_to_sink]
+  type = "remap"
+  inputs = ["RECmd_RecentDocs_coerce"]
+  source = '''
+    if is_nullish(.openedon) {
+      abort
+    }
+
+    .timestamp = .openedon
+    .operation = "openedon"
+  '''
+
+[transforms.RECmd_RecentDocs_dedup_on_extensionlastopened_to_sink]
+  type = "remap"
+  inputs = ["RECmd_RecentDocs_coerce"]
+  source = '''
+    if is_nullish(.extensionlastopened) {
+      abort
+    }
+
+    .timestamp = .extensionlastopened
+    .operation = "extensionlastopened"
   '''

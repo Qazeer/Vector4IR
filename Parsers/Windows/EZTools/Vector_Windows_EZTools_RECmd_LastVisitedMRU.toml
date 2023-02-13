@@ -27,35 +27,45 @@ timezone = "Etc/UTC"
   read_from = "beginning"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
-  multiline.start_pattern = '^(BatchKeyPath|ROOT\\SOFTWARE\\Microsoft)'
-  multiline.mode = "halt_before"
-  multiline.condition_pattern = '^(BatchKeyPath|ROOT\\SOFTWARE\\Microsoft)'
-  multiline.timeout_ms = 1000
   max_line_bytes = 100_000_000
+
+  [sources.RECmd_LastVisitedMRU_csv_input.multiline]
+    mode = "halt_with"
+    start_pattern = "^"
+    condition_pattern = "^\".*$"
+    timeout_ms = 1000
 
 [transforms.RECmd_LastVisitedMRU_csv_parser]
   type = "remap"
   inputs = ["RECmd_LastVisitedMRU_csv_input"]
   source = '''
+    # Validate the CSV header and retrieve the first log entry as the multiline parsing groups the header with the first log line.
     # Expect CSV header:
-    # BatchKeyPath,BatchValueName,ValueName,MruPosition,Executable,AbsolutePath,OpenedOn,Details
+    # Old: BatchKeyPath,BatchValueName,ValueName,MruPosition,Executable,AbsolutePath,OpenedOn,Details
+    # New: ValueName,BatchKeyPath,MruPosition,BatchValueName,Executable,AbsolutePath,OpenedOn,Details
+
+    # If the line is the header.
+    message_as_string = strip_whitespace(string!(.message))
+    if match(message_as_string, r'.{0,3}ValueName') {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+      expected_header = "ValueName,BatchKeyPath,MruPosition,BatchValueName,Executable,AbsolutePath,OpenedOn,Details"
+      header_find = find(message_as_string, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + message_as_string, level: "error")
+      } else {
+        .message = split(message_as_string, "\n", limit: 2)[1]
+      }
+    }
+
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "BatchValueName" {
-      expected_header = "BatchKeyPath,BatchValueName,ValueName,MruPosition,Executable,AbsolutePath,OpenedOn,Details"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
-      }
-      abort
-    }
-
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
-    .mruposition = fields[3]
+    .valuename = fields[0]
+    .batchkeypath = fields[1]
+    .mruposition = fields[2]
+    .batchvaluename = fields[3]
     .executable = fields[4]
     .absolutepath = fields[5]
     .openedon = fields[6]

@@ -35,24 +35,21 @@ timezone = "Etc/UTC"
   type = "remap"
   inputs = ["Windows_EVTX_chainsaw_input"]
   source = '''
-    # Validate the CSV headern and retrieve the first log entry as the multiline parsing groups the header with the first log line.
+    # Validate the CSV header and retrieve the first log entry as the multiline parsing groups the header with the first log line.
     # Expect CSV header:
     # timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data
-    entry = ""
-    message_as_string = strip_whitespace(string!(.message))
     # If the line is the header.
+    message_as_string = strip_whitespace(string!(.message))
     if starts_with(message_as_string, "timestamp") {
       expected_header = "timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data"
       if !starts_with(message_as_string, expected_header) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header (+ first line):      " + message_as_string, level: "error")
       } else {
-        entry = split(message_as_string, "\n", limit: 2)[1]
+        .message = split(message_as_string, "\n", limit: 2)[1]
       }
-    } else {
-      entry = .message
     }
 
-    fields, err = parse_csv(entry, delimiter: ",")
+    fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }

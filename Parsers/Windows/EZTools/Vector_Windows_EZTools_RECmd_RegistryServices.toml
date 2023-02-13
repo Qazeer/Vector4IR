@@ -34,24 +34,28 @@ timezone = "Etc/UTC"
   inputs = ["RECmd_RegistryServices_csv_input"]
   source = '''
     # Expect CSV header:
-    # BatchKeyPath,BatchValueName,Name,Description,DisplayName,StartMode,ServiceType,NameKeyLastWrite,ParametersKeyLastWrite,Group,ImagePath,ServiceDLL,RequiredPrivileges
+    # Old: BatchKeyPath,BatchValueName,Name,Description,DisplayName,StartMode,ServiceType,NameKeyLastWrite,ParametersKeyLastWrite,Group,ImagePath,ServiceDLL,RequiredPrivileges
+    # New: Name,BatchKeyPath,Description,BatchValueName,DisplayName,StartMode,ServiceType,NameKeyLastWrite,ParametersKeyLastWrite,Group,ImagePath,ServiceDLL,RequiredPrivileges
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "BatchValueName" {
-      expected_header = "BatchKeyPath,BatchValueName,Name,Description,DisplayName,StartMode,ServiceType,NameKeyLastWrite,ParametersKeyLastWrite,Group,ImagePath,ServiceDLL,RequiredPrivileges"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
+    if fields[1] == "BatchKeyPath" {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+      expected_header = "Name,BatchKeyPath,Description,BatchValueName,DisplayName,StartMode,ServiceType,NameKeyLastWrite,ParametersKeyLastWrite,Group,ImagePath,ServiceDLL,RequiredPrivileges"
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
 
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
-    .description = fields[3]
+    .name = fields[0]
+    .batchkeypath = fields[1]
+    .description = fields[2]
+    .batchvaluename = fields[3]
     .displayname = fields[4]
     .startmode = fields[5]
     .servicetype = fields[6]
@@ -61,8 +65,6 @@ timezone = "Etc/UTC"
     .imagepath = fields[10]
     .servicedll = fields[11]
     .requiredprivileges = fields[12]
-
-    .timestamp = .namekeylastwrite
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
@@ -76,7 +78,7 @@ timezone = "Etc/UTC"
     del(.message)
   '''
 
-[transforms.RECmd_RegistryServices_coerce_to_sink]
+[transforms.RECmd_RegistryServices_coerce]
   type = "remap"
   inputs = ["RECmd_RegistryServices_csv_parser"]
   source = '''
@@ -104,4 +106,41 @@ timezone = "Etc/UTC"
         value
       }
     }
+  '''
+
+[transforms.RECmd_RegistryServices_dedup_on_unknown_to_sink]
+  type = "remap"
+  inputs = ["RECmd_RegistryServices_coerce"]
+  source = '''
+    if is_nullish(.namekeylastwrite) && is_nullish(.parameterskeylastwrite) {
+      log("Timestamp is null for event, defaulting to current time.", level: "warn")
+      .timestamp = now()
+      .operation = "unknown"
+    } else {
+      abort
+    }
+  '''
+
+[transforms.RECmd_RegistryServices_dedup_on_namekeylastwrite_to_sink]
+  type = "remap"
+  inputs = ["RECmd_RegistryServices_coerce"]
+  source = '''
+    if is_nullish(.namekeylastwrite) {
+      abort
+    }
+
+    .timestamp = .namekeylastwrite
+    .operation = "namekeylastwrite"
+  '''
+
+[transforms.RECmd_RegistryServices_dedup_on_parameterskeylastwrite_to_sink]
+  type = "remap"
+  inputs = ["RECmd_RegistryServices_coerce"]
+  source = '''
+    if is_nullish(.parameterskeylastwrite) {
+      abort
+    }
+
+    .timestamp = .parameterskeylastwrite
+    .operation = "parameterskeylastwrite"
   '''

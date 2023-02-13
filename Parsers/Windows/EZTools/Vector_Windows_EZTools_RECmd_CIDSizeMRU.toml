@@ -42,13 +42,11 @@ timezone = "Etc/UTC"
     }
 
     if fields[1] == "BatchKeyPath" {
-      # Special usecase as the header line may start with 'M-oM-;M-?'.
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "Executable,BatchKeyPath,MRUPosition,BatchValueName,OpenedOn"
       current_header = strip_whitespace(to_string!(.message))
       header_find = find(current_header, expected_header)
       if header_find == -1 || (header_find != 0 && header_find != 3) {
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
