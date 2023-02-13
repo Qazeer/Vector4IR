@@ -20,7 +20,6 @@ timezone = "Etc/UTC"
 [sources.BrowsingHistoryView_csv_input]
   type = "file"
   include = ["${INPUT_FOLDER:?The input folder containing the BrowsingHistoryView CSV output is required.}/**/*BrowsingHistory*.csv"]
-  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
   ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = true

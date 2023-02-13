@@ -17,10 +17,12 @@
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
 [sources.RECmd_LocalAccounts_csv_input]
   type = "file"
   include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry Local Accounts files is required.}/**/*_UserAccounts_*.csv"]
-  data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
   ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = true

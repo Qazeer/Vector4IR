@@ -12,6 +12,9 @@
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
 
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
 [sources.Linux_auth_input__auth_log]
   type = "file"
   include = ["${INPUT_FOLDER:?The input folder containing the Linux auth log files is required.}/**/*auth.log*"]
@@ -23,8 +26,8 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 
 [sources.Linux_auth_input__secure]
   type = "file"
-  ignore_checkpoints = true
   include = ["${INPUT_FOLDER:?The input folder containing the Linux auth log files is required.}/**/secure*"]
+  ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
