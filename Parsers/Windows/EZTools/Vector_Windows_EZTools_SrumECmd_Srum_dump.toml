@@ -50,7 +50,7 @@ timezone = "Etc/UTC"
 
     if (contains!(.file, "AppResourceUseInfo")) {
       if fields[1] == "Timestamp" {
-        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BackgroundBytesRead,BackgroundBytesWritten,BackgroundContextSwitches,BackgroundCycleTime,BackgroundNumberOfFlushes,BackgroundNumReadOperations,BackgroundNumWriteOperations,FaceTime,ForegroundBytesRead,ForegroundBytesWritten,ForegroundContextSwitches,ForegroundCycleTime,ForegroundNumberOfFlushes,ForegroundNumReadOperations,ForegroundNumWriteOperations"
         current_header = strip_whitespace(to_string!(.message))
         header_find = find(current_header, expected_header)
@@ -87,7 +87,7 @@ timezone = "Etc/UTC"
       .source = "windows_srum_appresourceuseinfo"
     } else if (contains!(.file, "EnergyUsage")) {
       if fields[1] == "Timestamp" {
-        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,IsLt,ConfigurationHash,EventTimestamp,StateTransition,ChargeLevel,CycleCount,DesignedCapacity,FullChargedCapacity,ActiveAcTime,ActiveDcTime,ActiveDischargeTime,ActiveEnergy,CsAcTime,CsDcTime,CsDischargeTime,CsEnergy"
         current_header = strip_whitespace(to_string!(.message))
         header_find = find(current_header, expected_header)
@@ -125,7 +125,7 @@ timezone = "Etc/UTC"
       .source = "windows_srum_energyusage"
     } else if (contains!(.file, "NetworkConnections")) {
       if fields[1] == "Timestamp" {
-        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,ConnectedTime,ConnectStartTime,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName"
         current_header = strip_whitespace(to_string!(.message))
         header_find = find(current_header, expected_header)
@@ -154,7 +154,7 @@ timezone = "Etc/UTC"
       .source = "windows_srum_networkconnections"
     } else if (contains!(.file, "NetworkUsages")) {
       if fields[1] == "Timestamp" {
-        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BytesReceived,BytesSent,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName"
         current_header = strip_whitespace(to_string!(.message))
         header_find = find(current_header, expected_header)
@@ -183,7 +183,7 @@ timezone = "Etc/UTC"
       .source = "windows_srum_networkusages"
     } else if (contains!(.file, "PushNotifications")) {
       if fields[1] == "Timestamp" {
-        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,NetworkType,NotificationType,PayloadSize"
         current_header = strip_whitespace(to_string!(.message))
         header_find = find(current_header, expected_header)
@@ -208,7 +208,7 @@ timezone = "Etc/UTC"
       .source = "windows_srum_pushnotifications"
     } else if (contains!(.file, "Unknown312")) {
         if fields[1] == "Timestamp" {
-        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs"
         current_header = strip_whitespace(to_string!(.message))
         header_find = find(current_header, expected_header)
@@ -232,7 +232,7 @@ timezone = "Etc/UTC"
       .source = "windows_srum_unknown312"
     } else if (contains!(.file, "UnknownD8F")) {
       if fields[1] == "Timestamp" {
-        # Special usecase as the header line may start with 'M-oM-;M-?'.
+        # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,UserId,AppId,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,StartTime,EndTime,Flags,Duration"
         current_header = strip_whitespace(to_string!(.message))
         header_find = find(current_header, expected_header)

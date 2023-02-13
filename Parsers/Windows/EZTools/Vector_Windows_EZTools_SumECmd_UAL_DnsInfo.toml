@@ -38,7 +38,7 @@ timezone = "Etc/UTC"
     }
 
     if fields[1] == "Address" {
-      # Special usecase as the header line may start with 'M-oM-;M-?'.
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "HostName,Address,LastSeen,SourceFile"
       current_header = strip_whitespace(string!(.message))
       header_find = find(current_header, expected_header)

@@ -37,7 +37,7 @@ timezone = "Etc/UTC"
     }
 
     if fields[1] == "Extension" {
-      # Special usecase as the header line may start with 'M-oM-;M-?'.
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "Name,Extension,EntryNumber,SequenceNumber,ParentEntryNumber,ParentSequenceNumber,ParentPath,UpdateSequenceNumber,UpdateTimestamp,UpdateReasons,FileAttributes,OffsetToData,SourceFile"
       current_header = strip_whitespace(to_string!(.message))
       header_find = find(current_header, expected_header)

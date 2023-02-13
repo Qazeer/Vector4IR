@@ -46,7 +46,7 @@ timezone = "Etc/UTC"
     }
 
     if fields[11] == "LastWriteTime" {
-      # Special usecase as the header line may start with 'M-oM-;M-?'.
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "BagPath,Slot,NodeSlot,MRUPosition,AbsolutePath,ShellType,Value,ChildBags,CreatedOn,ModifiedOn,AccessedOn,LastWriteTime,MFTEntry,MFTSequenceNumber,ExtensionBlockCount,FirstInteracted,LastInteracted,HasExplored,Miscellaneous"
       current_header = strip_whitespace(to_string!(.message))
       header_find = find(current_header, expected_header)
