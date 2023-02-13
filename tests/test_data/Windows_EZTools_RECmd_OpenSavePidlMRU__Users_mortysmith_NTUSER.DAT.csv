@@ -1,0 +1,39 @@
+﻿Extension,BatchKeyPath,ValueName,BatchValueName,MruPosition,AbsolutePath,OpenedOn,Details
+*,ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSavePidlMRU\*,1,1,0,My Computer\Documents\,2020-09-18 23:07:44.0378299,"Type: Root folder: GUID, Value: My Computer
+
+
+Type: Root folder: GUID, Value: Documents
+
+
+Short name: test_image.png
+
+Type: File, Value: 
+
+Extension blocks found: 1
+---------------------- Block 0 (Beef0004)----------------------
+Long name: 
+Created: 
+Last access: 
+
+--------------------------------------------------
+
+"
+*,ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSavePidlMRU\*,0,0,1,My Computer\Pictures\,,"Type: Root folder: GUID, Value: My Computer
+
+
+Type: Root folder: GUID, Value: Pictures
+
+
+Short name: test_image2.jpg
+
+Type: File, Value:
+
+Extension blocks found: 1
+---------------------- Block 0 (Beef0004)----------------------
+Long name:
+Created:
+Last access:
+
+--------------------------------------------------
+
+"

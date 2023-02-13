@@ -1,0 +1,3 @@
+﻿Name,BatchKeyPath,Description,BatchValueName,DisplayName,StartMode,ServiceType,NameKeyLastWrite,ParametersKeyLastWrite,Group,ImagePath,ServiceDLL,RequiredPrivileges
+.NET CLR Data,ROOT\ControlSet001\Services,,None,,Disabled,Adapter,2020-09-18 05:54:24.3996253,,,,,
+BrokerInfrastructure,ROOT\ControlSet001\Services,"@%windir%\system32\bisrv.dll,-101",None,"@%windir%\system32\bisrv.dll,-100",Automatic,Win32ShareProcess,2019-12-07 09:15:07.8307671,2019-12-07 09:15:07.8307671,COM Infrastructure,%SystemRoot%\system32\svchost.exe -k DcomLaunch -p,%SystemRoot%\System32\psmsrv.dll,SeChangeNotifyPrivilege SeCreateGlobalPrivilege SeCreatePermanentPrivilege SeDebugPrivilege SeImpersonatePrivilege SeShutdownPrivilege SeTcbPrivilege SeProfileSingleProcessPrivilege
