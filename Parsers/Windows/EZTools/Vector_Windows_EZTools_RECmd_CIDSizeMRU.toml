@@ -34,14 +34,19 @@ timezone = "Etc/UTC"
   inputs = ["RECmd_CIDSizeMRU_csv_input"]
   source = '''
     # Expect CSV header:
-    # BatchKeyPath,BatchValueName,Executable,MRUPosition,OpenedOn
+    # Old: BatchKeyPath,BatchValueName,Executable,MRUPosition,OpenedOn
+    # New: Executable,BatchKeyPath,MRUPosition,BatchValueName,OpenedOn
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "BatchValueName" {
-      expected_header = "BatchKeyPath,BatchValueName,Executable,MRUPosition,OpenedOn"
+    if fields[1] == "BatchKeyPath" {
+      # Special usecase as the header line may start with 'M-oM-;M-?'.
+      expected_header = "Executable,BatchKeyPath,MRUPosition,BatchValueName,OpenedOn"
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
@@ -49,10 +54,10 @@ timezone = "Etc/UTC"
       abort
     }
 
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
-    .executable = fields[2]
-    .mruposition = fields[3]
+    .executable = fields[0]
+    .batchkeypath = fields[1]
+    .mruposition = fields[2]
+    .batchvaluename = fields[3]
     .openedon = fields[4]
 
     .timestamp = .openedon
