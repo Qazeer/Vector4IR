@@ -38,7 +38,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "ProgramId" {
+    if fields[1] == "KeyLastWriteTimestamp" {
       expected_header = "ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDateArpLastModified,InstallDate,InstallDateMsi,OSVersionAtInstallTime,InstallDateFromLinkFile,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,Manufacturer"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {

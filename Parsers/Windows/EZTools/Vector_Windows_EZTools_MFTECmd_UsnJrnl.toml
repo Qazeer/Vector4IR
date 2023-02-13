@@ -36,7 +36,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[2] == "EntryNumber" {
+    if fields[1] == "Extension" {
       # Special usecase as the header line may start with 'M-oM-;M-?'.
       expected_header = "Name,Extension,EntryNumber,SequenceNumber,ParentEntryNumber,ParentSequenceNumber,ParentPath,UpdateSequenceNumber,UpdateTimestamp,UpdateReasons,FileAttributes,OffsetToData,SourceFile"
       current_header = strip_whitespace(to_string!(.message))

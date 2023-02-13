@@ -37,7 +37,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "URL" {
+    if fields[1] == "Title" {
       expected_header = "URL,Title,Visit Time,Visit Count,Visited From,Visit Type,Visit Duration,Web Browser,User Profile,Browser Profile,URL Length,Typed Count,History File,Record ID"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {

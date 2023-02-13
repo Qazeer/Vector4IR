@@ -38,7 +38,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "ControlSet" {
+    if fields[1] == "CacheEntryPosition" {
       expected_header = "ControlSet,CacheEntryPosition,Path,LastModifiedTimeUTC,Executed,Duplicate,SourceFile"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {

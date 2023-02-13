@@ -36,7 +36,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "Timestamp" {
+    if fields[1] == "Computer" {
       expected_header = "Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {

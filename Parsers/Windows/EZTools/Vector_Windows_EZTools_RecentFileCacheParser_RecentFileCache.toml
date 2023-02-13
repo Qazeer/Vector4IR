@@ -38,7 +38,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "SourceFile" {
+    if fields[1] == "SourceCreated" {
       expected_header = "SourceFile,SourceCreated,SourceModified,SourceAccessed,Filename"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {

@@ -40,7 +40,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "BatchKeyPath" {
+    if fields[1] == "BatchValueName" {
       # Special usecase as the header line may start with 'M-oM-;M-?'.
       expected_header = "BatchKeyPath,BatchValueName,ProgramName,RunCounter,FocusCount,FocusTime,LastExecuted"
       current_header = strip_whitespace(to_string!(.message))

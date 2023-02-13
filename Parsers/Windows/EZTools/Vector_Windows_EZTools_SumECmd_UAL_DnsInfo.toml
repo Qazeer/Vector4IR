@@ -37,7 +37,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "HostName" {
+    if fields[1] == "Address" {
       # Special usecase as the header line may start with 'M-oM-;M-?'.
       expected_header = "HostName,Address,LastSeen,SourceFile"
       current_header = strip_whitespace(string!(.message))

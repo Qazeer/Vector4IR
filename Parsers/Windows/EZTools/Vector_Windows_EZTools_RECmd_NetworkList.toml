@@ -40,7 +40,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[0] == "BatchKeyPath" {
+    if fields[1] == "BatchValueName" {
       expected_header = "BatchKeyPath,BatchValueName,NetworkName,NameType,FirstConnectLOCAL,LastConnectedLOCAL,Managed,DNSSuffix,GatewayMacAddress,ProfileGUID"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {

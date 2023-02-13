@@ -41,7 +41,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[2] == "Program" {
+    if fields[1] == "BatchValueName" {
       expected_header = "BatchKeyPath,BatchValueName,Program,ExecutionTime"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {
