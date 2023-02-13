@@ -1,0 +1,15 @@
+# Validate that all .timestamp fields to be sent are indeed timestamps.
+
+[transforms.assert_timestamps]
+  type = "remap"
+  inputs = ["*to_sink"]
+  source = '''
+    if !is_timestamp(.timestamp) {
+      log("Event is not correctly formated: ", level: "error")
+      log(., level: "error")
+    }
+  '''
+
+[sinks.assert_timestamps_blackhole_sink]
+  type = "blackhole"
+  inputs = ["assert_timestamps"]
