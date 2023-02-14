@@ -26,6 +26,7 @@ timezone = "Etc/UTC"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
+  offset_key = "__offset"
 
 [transforms.AmcacheParser_AmCache-Program-Entries_csv_parser]
   type = "remap"
@@ -39,7 +40,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "KeyLastWriteTimestamp" {
+    if .__offset == 0 {
       expected_header = "ProgramId,KeyLastWriteTimestamp,Name,Version,Publisher,InstallDateArpLastModified,InstallDate,InstallDateMsi,OSVersionAtInstallTime,InstallDateFromLinkFile,BundleManifestPath,HiddenArp,InboxModernApp,Language,ManifestPath,MsiPackageCode,MsiProductCode,PackageFullName,ProgramInstanceId,RegistryKeyPath,RootDirPath,Type,Source,StoreAppType,UninstallString,Manufacturer"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {
@@ -53,29 +54,27 @@ timezone = "Etc/UTC"
     .name = fields[2]
     .version = fields[3]
     .publisher = fields[4]
-    .installdate = fields[5]
-    .osversionatinstalltime = fields[6]
-    .bundlemanifestpath = fields[7]
-    .hiddenarp = fields[8]
-    .inboxmodernapp = fields[9]
-    .language = fields[10]
-    .manifestpath = fields[11]
-    .msipackagecode = fields[12]
-    .msiproductcode = fields[13]
-    .packagefullname = fields[14]
-    .programinstanceid = fields[15]
-    .registrykeypath = fields[16]
-    .rootdirpath = fields[17]
-    .type = fields[18]
-    .source = fields[19]
-    .storeapptype = fields[20]
-    .uninstallstring = fields[21]
-    .installdatearplastmodified = fields[22]
-    .installdatemsi = fields[23]
-    .installdatefromlinkfile = fields[24]
+    .installdatearplastmodified = fields[5]
+    .installdate = fields[6]
+    .installdatemsi = fields[7]
+    .osversionatinstalltime = fields[8]
+    .installdatefromlinkfile = fields[9]
+    .bundlemanifestpath = fields[10]
+    .hiddenarp = fields[11]
+    .inboxmodernapp = fields[12]
+    .language = fields[13]
+    .manifestpath = fields[14]
+    .msipackagecode = fields[15]
+    .msiproductcode = fields[16]
+    .packagefullname = fields[17]
+    .programinstanceid = fields[18]
+    .registrykeypath = fields[19]
+    .rootdirpath = fields[20]
+    .type = fields[21]
+    .source = fields[22]
+    .storeapptype = fields[23]
+    .uninstallstring = fields[24]
     .manufacturer = fields[25]
-
-    .timestamp = .keylastwritetimestamp
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
@@ -87,6 +86,7 @@ timezone = "Etc/UTC"
     del(.source_type)
     del(.file)
     del(.message)
+    del(.__offset)
   '''
 
 [transforms.AmcacheParser_AmCache-Program-Entries_coerce]
@@ -116,6 +116,19 @@ timezone = "Etc/UTC"
       } else {
         value
       }
+    }
+  '''
+
+[transforms.AmcacheParser_AmCache-Program-Entries_dedup_unknown_to_sink]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-Program-Entries_coerce"]
+  source = '''
+    if is_nullish(.keylastwritetimestamp) && is_nullish(.installdate) && is_nullish(.installdatearplastmodified) && is_nullish(.installdatemsi) && is_nullish(.installdatefromlinkfile) {
+      log("Timestamp is null for event, defaulting to current time.", level: "warn")
+      .timestamp = now()
+      .operation = "program_unknown"
+    } else {
+      abort
     }
   '''
 

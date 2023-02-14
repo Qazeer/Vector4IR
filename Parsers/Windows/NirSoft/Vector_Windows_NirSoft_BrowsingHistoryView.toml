@@ -25,6 +25,7 @@ timezone = "Etc/UTC"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
+  offset_key = "__offset"
 
 [transforms.BrowsingHistoryView_csv_parser]
   type = "remap"
@@ -37,7 +38,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "Title" {
+    if .__offset == 0 {
       expected_header = "URL,Title,Visit Time,Visit Count,Visited From,Visit Type,Visit Duration,Web Browser,User Profile,Browser Profile,URL Length,Typed Count,History File,Record ID"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {
@@ -78,6 +79,7 @@ timezone = "Etc/UTC"
     del(.source_type)
     del(.file)
     del(.message)
+    del(.__offset)
   '''
 
 [transforms.BrowsingHistoryView_coerce_to_sink]

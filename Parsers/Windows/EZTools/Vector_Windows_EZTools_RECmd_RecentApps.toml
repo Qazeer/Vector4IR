@@ -28,6 +28,7 @@ timezone = "Etc/UTC"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
+  offset_key = "__offset"
 
 [transforms.RECmd_RecentApps_csv_parser]
   type = "remap"
@@ -40,7 +41,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "BatchValueName" {
+    if .__offset == 0 {
       expected_header = "BatchKeyPath,BatchValueName,KeyName,AppId,AppPath,LastAccessed,LaunchCount,RecentDocs"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {
@@ -76,6 +77,7 @@ timezone = "Etc/UTC"
     del(.source_type)
     del(.file)
     del(.message)
+    del(.__offset)
   '''
 
 [transforms.RECmd_RecentApps_coerce_to_sink]

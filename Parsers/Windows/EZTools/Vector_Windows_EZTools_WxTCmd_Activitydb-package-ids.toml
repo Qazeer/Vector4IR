@@ -26,6 +26,7 @@ timezone = "Etc/UTC"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
+  offset_key = "__offset"
   encoding.charset = "utf-16le"
 
 [transforms.WxTCmd_Activitydb-package-ids_csv_parser]
@@ -39,7 +40,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "Platform" {
+    if .__offset == 0 {
       expected_header = "Id,Platform,Name,AdditionalInformation,Expires"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {
@@ -66,6 +67,7 @@ timezone = "Etc/UTC"
     del(.source_type)
     del(.file)
     del(.message)
+    del(.__offset)
   '''
 
 [transforms.WxTCmd_Activitydb-package-ids_coerce_to_sink]

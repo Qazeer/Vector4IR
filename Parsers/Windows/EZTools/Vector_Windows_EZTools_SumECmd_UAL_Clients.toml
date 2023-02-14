@@ -25,6 +25,7 @@ timezone = "Etc/UTC"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
+  offset_key = "__offset"
 
 [transforms.SumECmd_UAL_Clients_csv_parser]
   type = "remap"
@@ -37,7 +38,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "RoleDescription" {
+    if .__offset == 0 {
       # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "RoleGuid,RoleDescription,AuthenticatedUserName,TotalAccesses,InsertDate,LastAccess,IpAddress,ClientName,TenantId,SourceFile"
       current_header = strip_whitespace(string!(.message))
@@ -69,6 +70,7 @@ timezone = "Etc/UTC"
     del(.source_type)
     del(.file)
     del(.message)
+    del(.__offset)
   '''
 
 [transforms.SumECmd_UAL_Clients_coerce]

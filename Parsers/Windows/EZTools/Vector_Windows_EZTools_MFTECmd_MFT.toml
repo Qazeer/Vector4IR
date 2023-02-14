@@ -25,6 +25,7 @@ timezone = "Etc/UTC"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
+  offset_key = "__offset"
 
 [sources.MFTECmd_MFT_json_input]
   type = "file"
@@ -76,6 +77,7 @@ timezone = "Etc/UTC"
     # Delete irrelevant default fields.
     del(.file)
     del(.message)
+    del(.__offset)
   '''
 
 [transforms.MFTECmd_MFT_csv_parser]
@@ -89,7 +91,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[1] == "SequenceNumber" {
+    if .__offset == 0 {
       # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "EntryNumber,SequenceNumber,InUse,ParentEntryNumber,ParentSequenceNumber,ParentPath,FileName,Extension,FileSize,ReferenceCount,ReparseTarget,IsDirectory,HasAds,IsAds,SI<FN,uSecZeros,Copied,SiFlags,NameType,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30,UpdateSequenceNumber,LogfileSequenceNumber,SecurityId,ObjectIdFileDroid,LoggedUtilStream,ZoneIdContents"
       current_header = strip_whitespace(to_string!(.message))
@@ -139,6 +141,7 @@ timezone = "Etc/UTC"
     del(.source_type)
     del(.file)
     del(.message)
+    del(.__offset)
   '''
 
 [transforms.MFTECmd_MFT_coerce]

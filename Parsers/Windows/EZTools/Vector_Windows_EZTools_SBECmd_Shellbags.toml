@@ -1,6 +1,6 @@
 # Vector_Windows_EZTools_SBECmd_Shellbags config.
-# Description: Process Windows artefacts parsed with SBECmd (CSV output).
-#              Filename should match: "*NTUSER.DAT.csv" and/or "*ntuser.dat.csv" and/or "*UsrClass.dat.csv"
+# Description: Process Windows artefacts parsed with SBECmd (CSV output) !through KAPE!.
+#              Filename should match: "*/FileFolderAccess/*NTUSER.DAT.csv" and/or "*/FileFolderAccess/*ntuser.dat.csv" and/or "*/FileFolderAccess/*UsrClass.dat.csv"
 #              SBECmd command: SBECmd.exe -d %sourceDirectory% --csv %destinationDirectory% -q
 #              Example command: SBECmd.exe -d "C:\ --csv <YOUR_OUTPUT> -q
 #              source = "windows_shellbags" & sourcetype = "windows_artefact"
@@ -21,18 +21,19 @@ timezone = "Etc/UTC"
 [sources.SBECmd_Shellbags_csv_input]
   type = "file"
   include = [
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags NTUSER (uppercase) files is required.}/**/*NTUSER.DAT.csv",
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags ntuser (lowercase) files is required.}/**/*ntuser.dat.csv",
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags NTUSER (uppercase) files is required.}/**/*NTUSER.DAT.csv",
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags ntuser (lowercase) files is required.}/**/*ntuser.dat.csv",
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags UsrClass files is required.}/**/*UsrClass.dat.csv",
-    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags UsrClass files is required.}/**/*UsrClass.csv"
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags NTUSER (uppercase) files is required.}/**/FileFolderAccess/*NTUSER.DAT.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags ntuser (lowercase) files is required.}/**/FileFolderAccess/*ntuser.dat.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags NTUSER (uppercase) files is required.}/**/FileFolderAccess/*NTUSER.DAT.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags ntuser (lowercase) files is required.}/**/FileFolderAccess/*ntuser.dat.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags UsrClass files is required.}/**/FileFolderAccess/*UsrClass.dat.csv",
+    "${INPUT_FOLDER:?The input folder containing the SBECmd Shellbags UsrClass files is required.}/**/FileFolderAccess/*UsrClass.csv"
   ]
   ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = true
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
+  offset_key = "__offset"
 
 [transforms.SBECmd_Shellbags_csv_parser]
   type = "remap"
@@ -45,7 +46,7 @@ timezone = "Etc/UTC"
       log("Unable to split CSV: " + err, level: "error")
     }
 
-    if fields[11] == "LastWriteTime" {
+    if .__offset == 0 {
       # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "BagPath,Slot,NodeSlot,MRUPosition,AbsolutePath,ShellType,Value,ChildBags,CreatedOn,ModifiedOn,AccessedOn,LastWriteTime,MFTEntry,MFTSequenceNumber,ExtensionBlockCount,FirstInteracted,LastInteracted,HasExplored,Miscellaneous"
       current_header = strip_whitespace(to_string!(.message))
@@ -87,6 +88,7 @@ timezone = "Etc/UTC"
     del(.source_type)
     del(.file)
     del(.message)
+    del(.__offset)
   '''
 
 [transforms.SBECmd_Shellbags_coerce]
