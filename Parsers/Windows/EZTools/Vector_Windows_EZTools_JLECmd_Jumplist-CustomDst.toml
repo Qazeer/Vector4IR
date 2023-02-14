@@ -40,9 +40,11 @@ timezone = "Etc/UTC"
     }
 
     if .__offset == 0 {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
       expected_header = "SourceFile,SourceCreated,SourceModified,SourceAccessed,AppId,AppIdDescription,EntryName,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
@@ -70,9 +72,11 @@ timezone = "Etc/UTC"
     .commonpath = fields[19]
     .targetidabsolutepath = fields[20]
     .targetmftentrynumber = fields[21]
+    .targetmftsequencenumber = fields[22]
     .machineid = fields[23]
     .machinemacaddress = fields[24]
     .trackercreatedon = fields[25]
+    .extrablockspresent = fields[26]
     .arguments = fields[27]
 
     .timestamp = .sourcemodified
