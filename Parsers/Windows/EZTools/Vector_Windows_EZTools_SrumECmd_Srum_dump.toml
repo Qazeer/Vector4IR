@@ -50,8 +50,9 @@ timezone = "Etc/UTC"
     .timestamp = fields[1]
 
     if (contains!(.file, "AppResourceUseInfo")) {
-        if .__offset == 0 {
-      # if fields[1] == "Timestamp" {
+      .source = "windows_srum_appresourceuseinfo"
+
+      if .__offset == 0 {
         # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BackgroundBytesRead,BackgroundBytesWritten,BackgroundContextSwitches,BackgroundCycleTime,BackgroundNumberOfFlushes,BackgroundNumReadOperations,BackgroundNumWriteOperations,FaceTime,ForegroundBytesRead,ForegroundBytesWritten,ForegroundContextSwitches,ForegroundCycleTime,ForegroundNumberOfFlushes,ForegroundNumReadOperations,ForegroundNumWriteOperations"
         current_header = strip_whitespace(to_string!(.message))
@@ -86,10 +87,10 @@ timezone = "Etc/UTC"
       .foregroundnumreadoperations = fields[23]
       .foregroundnumwriteoperations = fields[24]
 
-      .source = "windows_srum_appresourceuseinfo"
     } else if (contains!(.file, "EnergyUsage")) {
-        if .__offset == 0 {
-      # if fields[1] == "Timestamp" {
+      .source = "windows_srum_energyusage"
+
+      if .__offset == 0 {
         # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,IsLt,ConfigurationHash,EventTimestamp,StateTransition,ChargeLevel,CycleCount,DesignedCapacity,FullChargedCapacity,ActiveAcTime,ActiveDcTime,ActiveDischargeTime,ActiveEnergy,CsAcTime,CsDcTime,CsDischargeTime,CsEnergy"
         current_header = strip_whitespace(to_string!(.message))
@@ -125,10 +126,10 @@ timezone = "Etc/UTC"
       .csdischargetime = fields[24]
       .csenergy = fields[25]
 
-      .source = "windows_srum_energyusage"
     } else if (contains!(.file, "NetworkConnections")) {
+      .source = "windows_srum_networkconnections"
+
       if .__offset == 0 {
-      # if fields[1] == "Timestamp" {
         # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,ConnectedTime,ConnectStartTime,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName"
         current_header = strip_whitespace(to_string!(.message))
@@ -155,10 +156,10 @@ timezone = "Etc/UTC"
       .l2profileid = fields[15]
       .profilename = fields[16]
 
-      .source = "windows_srum_networkconnections"
     } else if (contains!(.file, "NetworkUsages")) {
+      .source = "windows_srum_networkusages"
+
       if .__offset == 0 {
-      # if fields[1] == "Timestamp" {
         # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BytesReceived,BytesSent,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName"
         current_header = strip_whitespace(to_string!(.message))
@@ -185,10 +186,10 @@ timezone = "Etc/UTC"
       .l2profileid = fields[15]
       .profilename = fields[16]
 
-      .source = "windows_srum_networkusages"
     } else if (contains!(.file, "PushNotifications")) {
+      .source = "windows_srum_pushnotifications"
+
       if .__offset == 0 {
-      # if fields[1] == "Timestamp" {
         # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,NetworkType,NotificationType,PayloadSize"
         current_header = strip_whitespace(to_string!(.message))
@@ -211,10 +212,10 @@ timezone = "Etc/UTC"
       .notificationtype = fields[11]
       .payloadsize = fields[12]
 
-      .source = "windows_srum_pushnotifications"
     } else if (contains!(.file, "Unknown312")) {
-        if .__offset == 0 {
-        # if fields[1] == "Timestamp" {
+      .source = "windows_srum_unknown312"
+
+      if .__offset == 0 {
         # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs"
         current_header = strip_whitespace(to_string!(.message))
@@ -236,10 +237,10 @@ timezone = "Etc/UTC"
       .endtime = fields[10]
       .durationms = fields[11]
 
-      .source = "windows_srum_unknown312"
     } else if (contains!(.file, "UnknownD8F")) {
+      .source = "windows_srum_unknownd8f"
+
       if .__offset == 0 {
-      # if fields[1] == "Timestamp" {
         # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
         expected_header = "Id,Timestamp,UserId,AppId,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,StartTime,EndTime,Flags,Duration"
         current_header = strip_whitespace(to_string!(.message))
@@ -263,7 +264,9 @@ timezone = "Etc/UTC"
       .flags = fields[12]
       .duration = fields[13]
 
-      .source = "windows_srum_unknownd8f"
+    } else {
+      log("Unsupported SrumECmd (SRUM) output file: " + string!(.file), level: "warn")
+      abort
     }
 
     # Add the metadata fields following the parsing.
@@ -317,7 +320,7 @@ timezone = "Etc/UTC"
     }
 
     .operation = "modification"
-   .suboperation = "modification_timestamp"
+    .suboperation = "modification_timestamp"
   '''
 
 [transforms.SrumECmd_Srum_dump_dedup_EventTimestamp_to_sink]
