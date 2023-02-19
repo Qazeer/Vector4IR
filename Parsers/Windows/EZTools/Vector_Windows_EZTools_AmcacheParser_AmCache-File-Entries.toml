@@ -35,51 +35,99 @@ timezone = "Etc/UTC"
   type = "remap"
   inputs = ["AmcacheParser_AmCache-File-Entries_csv_input"]
   source = '''
-    # Expect CSV header:
+    # Expect CSV headers:
     # ApplicationName,ProgramId,FileKeyLastWriteTimestamp,SHA1,IsOsComponent,FullPath,Name,FileExtension,LinkDate,ProductName,Size,Version,ProductVersion,LongPathHash,BinaryType,IsPeFile,BinFileVersion,BinProductVersion,Usn,Language,Description
+    # ProgramName,ProgramID,VolumeID,VolumeIDLastWriteTimestamp,FileID,FileIDLastWriteTimestamp,SHA1,FullPath,FileExtension,MFTEntryNumber,MFTSequenceNumber,FileSize,FileVersionString,FileVersionNumber,FileDescription,SizeOfImage,PEHeaderHash,PEHeaderChecksum,BinProductVersion,BinFileVersion,LinkerVersion,BinaryType,IsLocal,GuessProgramID,Created,LastModified,LastModifiedStore,LinkDate,LanguageID,ProductName,CompanyName,SwitchBackContext
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
     if .__offset == 0 {
-      expected_header = "ApplicationName,ProgramId,FileKeyLastWriteTimestamp,SHA1,IsOsComponent,FullPath,Name,FileExtension,LinkDate,ProductName,Size,Version,ProductVersion,LongPathHash,BinaryType,IsPeFile,BinFileVersion,BinProductVersion,Usn,Language,Description"
+      expected_header_older_amcache = "ApplicationName,ProgramId,FileKeyLastWriteTimestamp,SHA1,IsOsComponent,FullPath,Name,FileExtension,LinkDate,ProductName,Size,Version,ProductVersion,LongPathHash,BinaryType,IsPeFile,BinFileVersion,BinProductVersion,Usn,Language,Description"
+      expected_header_recent_amcache = "ProgramName,ProgramID,VolumeID,VolumeIDLastWriteTimestamp,FileID,FileIDLastWriteTimestamp,SHA1,FullPath,FileExtension,MFTEntryNumber,MFTSequenceNumber,FileSize,FileVersionString,FileVersionNumber,FileDescription,SizeOfImage,PEHeaderHash,PEHeaderChecksum,BinProductVersion,BinFileVersion,LinkerVersion,BinaryType,IsLocal,GuessProgramID,Created,LastModified,LastModifiedStore,LinkDate,LanguageID,ProductName,CompanyName,SwitchBackContext"
       current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      if current_header != expected_header_older_amcache && current_header != expected_header_recent_amcache {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV headers: " + expected_header_older_amcache + "\n or " + expected_header_recent_amcache + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
 
-    .applicationname = fields[0]
-    .programid = fields[1]
-    .filekeylastwritetimestamp = fields[2]
-    .sha1 = fields[3]
-    .isoscomponent = fields[4]
-    .fullpath = fields[5]
-    .name = fields[6]
-    .fileextension = fields[7]
-    .linkdate = fields[8]
-    .productname = fields[9]
-    .size = fields[10]
-    .version = fields[11]
-    .productversion = fields[12]
-    .longpathhash = fields[13]
-    .binarytype = fields[14]
-    .ispefile = fields[15]
-    .binfileversion = fields[16]
-    .binproductversion = fields[17]
-    .usn = fields[18]
-    .language = fields[19]
-    .description = fields[20]
+    if length(fields) == 21 {
+      .applicationname = fields[0]
+      .programid = fields[1]
+      .filekeylastwritetimestamp = fields[2]
+      .sha1 = fields[3]
+      .isoscomponent = fields[4]
+      .fullpath = fields[5]
+      .name = fields[6]
+      .fileextension = fields[7]
+      .linkdate = fields[8]
+      .productname = fields[9]
+      .size = fields[10]
+      .version = fields[11]
+      .productversion = fields[12]
+      .longpathhash = fields[13]
+      .binarytype = fields[14]
+      .ispefile = fields[15]
+      .binfileversion = fields[16]
+      .binproductversion = fields[17]
+      .usn = fields[18]
+      .language = fields[19]
+      .description = fields[20]
+
+      .timestamp = .filekeylastwritetimestamp
+
+    } else if length(fields) == 32 {
+      .programname = fields[0]
+      .programid = fields[1]
+      .volumeid = fields[2]
+      .volumeidlastwritetimestamp = fields[3]
+      .fileid = fields[4]
+      .fileidlastwritetimestamp = fields[5]
+      .sha1 = fields[6]
+      .fullpath = fields[7]
+      .fileextension = fields[8]
+      .mftentrynumber = fields[9]
+      .mftsequencenumber = fields[10]
+      .filesize = fields[11]
+      .fileversionstring = fields[12]
+      .fileversionnumber = fields[13]
+      .filedescription = fields[14]
+      .sizeofimage = fields[15]
+      .peheaderhash = fields[16]
+      .peheaderchecksum = fields[17]
+      .binproductversion = fields[18]
+      .binfileversion = fields[19]
+      .linkerversion = fields[20]
+      .binarytype = fields[21]
+      .islocal = fields[22]
+      .guessprogramid = fields[23]
+      .created = fields[24]
+      .lastmodified = fields[25]
+      .lastmodifiedstore = fields[26]
+      .linkdate = fields[27]
+      .languageid = fields[28]
+      .productname = fields[29]
+      .companyname = fields[30]
+      .switchbackcontext = fields[31]
+
+      .timestamp = .fileidlastwritetimestamp
+
+    } else {
+      log("Unexpected number of parsed fields", level: "error")
+    }
+
+    if is_nullish(.timestamp) {
+      log("Timestamp is null for event, defaulting to current time.", level: "warn")
+      .timestamp = now()
+    }
 
     if (contains!(.file, "Amcache_AssociatedFileEntries.csv")) {
         .source = "windows_amcache-associatedfileentries"
     } else if (contains!(.file, "Amcache_UnassociatedFileEntries.csv")) {
         .source = "windows_amcache-unassociatedfileentries"
     }
-
-    .timestamp = .filekeylastwritetimestamp
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
@@ -93,7 +141,7 @@ timezone = "Etc/UTC"
     del(.__offset)
   '''
 
-[transforms.AmcacheParser_AmCache-File-Entries_coerce_to_sink]
+[transforms.AmcacheParser_AmCache-File-Entries_coerce]
   type = "remap"
   inputs = ["AmcacheParser_AmCache-File-Entries_csv_parser"]
   source = '''
@@ -121,4 +169,56 @@ timezone = "Etc/UTC"
         value
       }
     }
+  '''
+
+[transforms.AmcacheParser_AmCache-File-Entries_filekeylastwritetimestamp_to_sink]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-File-Entries_coerce"]
+  source = '''
+    if is_nullish(.filekeylastwritetimestamp) {
+      abort
+    }
+
+    .timestamp = .filekeylastwritetimestamp
+    .operation = "filekeylastwritetimestamp"
+    .suboperation = "filekeylastwritetimestamp"
+  '''
+
+[transforms.AmcacheParser_AmCache-File-Entries_volumeidlastwritetimestamp_to_sink]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-File-Entries_coerce"]
+  source = '''
+    if is_nullish(.volumeidlastwritetimestamp) {
+      abort
+    }
+
+    .timestamp = .volumeidlastwritetimestamp
+    .operation = "volumeidlastwritetimestamp"
+    .suboperation = "volumeidlastwritetimestamp"
+  '''
+
+[transforms.AmcacheParser_AmCache-File-Entries_fileidlastwritetimestamp_to_sink]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-File-Entries_coerce"]
+  source = '''
+    if is_nullish(.fileidlastwritetimestamp) {
+      abort
+    }
+
+    .timestamp = .fileidlastwritetimestamp
+    .operation = "fileidlastwritetimestamp"
+    .suboperation = "fileidlastwritetimestamp"
+  '''
+
+[transforms.AmcacheParser_AmCache-File-Entries_lastmodifiedstore_to_sink]
+  type = "remap"
+  inputs = ["AmcacheParser_AmCache-File-Entries_coerce"]
+  source = '''
+    if is_nullish(.lastmodifiedstore) {
+      abort
+    }
+
+    .timestamp = .lastmodifiedstore
+    .operation = "lastmodifiedstore"
+    .suboperation = "lastmodifiedstore"
   '''
