@@ -52,6 +52,7 @@ timezone = "Etc/UTC"
 
     .batchkeypath = fields[0]
     .batchvaluename = fields[1]
+    .valuename = fields[2]
     .mruposition = fields[3]
     .executable = fields[4]
     .openedon = fields[5]
