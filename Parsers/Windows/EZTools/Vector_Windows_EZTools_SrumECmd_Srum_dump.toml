@@ -3,7 +3,7 @@
 #              Filename should match: "*SrumECmd*.csv"
 #              SrumECmd command: SrumECmd.exe -d %sourceDirectory% -k --csv %destinationDirectory%
 #              Example command: SrumECmd.exe -d "C:\" -k --csv <YOUR_OUTPUT>
-#              source = "windows_srum_appresourceuseinfo|windows_srum_energyusage|windows_srum_networkconnections|windows_srum_networkusages|windows_srum_pushnotifications|windows_srum_unknown312|windows_srum_unknownd8f" & sourcetype = "windows_artefact"
+#              source = "windows_srum_appresourceuseinfo|windows_srum_apptimelineprovider|windows_srum_energyusage|windows_srum_networkconnections|windows_srum_networkusages|windows_srum_pushnotifications|windows_srum_unknownd8f" & sourcetype = "windows_artefact"
 # Author(s): Jérôme BREBION, Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-28
@@ -34,11 +34,12 @@ timezone = "Etc/UTC"
   source = '''
     # Expect CSV headers:
     # AppResourceUseInfo: Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BackgroundBytesRead,BackgroundBytesWritten,BackgroundContextSwitches,BackgroundCycleTime,BackgroundNumberOfFlushes,BackgroundNumReadOperations,BackgroundNumWriteOperations,FaceTime,ForegroundBytesRead,ForegroundBytesWritten,ForegroundContextSwitches,ForegroundCycleTime,ForegroundNumberOfFlushes,ForegroundNumReadOperations,ForegroundNumWriteOperations
+    # AppTimelineProvider: Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs
     # EnergyUsage: Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,IsLt,ConfigurationHash,EventTimestamp,StateTransition,ChargeLevel,CycleCount,DesignedCapacity,FullChargedCapacity,ActiveAcTime,ActiveDcTime,ActiveDischargeTime,ActiveEnergy,CsAcTime,CsDcTime,CsDischargeTime,CsEnergy
     # NetworkConnections: Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,ConnectedTime,ConnectStartTime,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName
     # NetworkUsages: Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,BytesReceived,BytesSent,InterfaceLuid,InterfaceType,L2ProfileFlags,L2ProfileId,ProfileName
     # PushNotifications: Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,NetworkType,NotificationType,PayloadSize
-    # Unknown312: Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs
+    # Unknown312 (AppTimelineProvider): Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs
     # UnknownD8F: Id,Timestamp,UserId,AppId,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,StartTime,EndTime,Flags,Duration
 
     fields, err = parse_csv(.message, delimiter: ",")
@@ -86,6 +87,31 @@ timezone = "Etc/UTC"
       .foregroundnumberofflushes = fields[22]
       .foregroundnumreadoperations = fields[23]
       .foregroundnumwriteoperations = fields[24]
+
+    } else if (contains!(.file, "AppTimelineProvider") || contains!(.file, "Unknown312")) {
+      .source = "windows_srum_apptimelineprovider"
+
+      if .__offset == 0 {
+        # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+        expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs"
+        current_header = strip_whitespace(to_string!(.message))
+        header_find = find(current_header, expected_header)
+        if header_find == -1 || (header_find != 0 && header_find != 3) {
+          log("Unexpected CSV header for Unknown312, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+        abort
+      }
+
+      .exeinfo = fields[2]
+      .exeinfodescription = fields[3]
+      .exetimestamp = fields[4]
+      .sidtype = fields[5]
+      .sid = fields[6]
+      .username = fields[7]
+      .userid = fields[8]
+      .appid = fields[9]
+      .endtime = fields[10]
+      .durationms = fields[11]
 
     } else if (contains!(.file, "EnergyUsage")) {
       .source = "windows_srum_energyusage"
@@ -212,31 +238,6 @@ timezone = "Etc/UTC"
       .notificationtype = fields[11]
       .payloadsize = fields[12]
 
-    } else if (contains!(.file, "Unknown312")) {
-      .source = "windows_srum_unknown312"
-
-      if .__offset == 0 {
-        # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
-        expected_header = "Id,Timestamp,ExeInfo,ExeInfoDescription,ExeTimestamp,SidType,Sid,UserName,UserId,AppId,EndTime,DurationMs"
-        current_header = strip_whitespace(to_string!(.message))
-        header_find = find(current_header, expected_header)
-        if header_find == -1 || (header_find != 0 && header_find != 3) {
-          log("Unexpected CSV header for Unknown312, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
-        }
-        abort
-      }
-
-      .exeinfo = fields[2]
-      .exeinfodescription = fields[3]
-      .exetimestamp = fields[4]
-      .sidtype = fields[5]
-      .sid = fields[6]
-      .username = fields[7]
-      .userid = fields[8]
-      .appid = fields[9]
-      .endtime = fields[10]
-      .durationms = fields[11]
-
     } else if (contains!(.file, "UnknownD8F")) {
       .source = "windows_srum_unknownd8f"
 
@@ -340,7 +341,8 @@ timezone = "Etc/UTC"
     type = "remap"
     inputs = ["SrumECmd_Srum_dump_coerce"]
     source = '''
-      if is_nullish(.exetimestamp) || (.exetimstamp == "") {
+      # exetimestamp is sometimes malformated.
+      if is_nullish(.exetimestamp) || !is_timestamp(.exetimestamp) {
         abort
       }
 
