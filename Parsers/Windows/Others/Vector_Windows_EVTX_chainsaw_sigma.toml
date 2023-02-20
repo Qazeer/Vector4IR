@@ -1,8 +1,8 @@
-# Description: Process Windows EVTX parsed with Chainsaw (csv output).
+# Description: Process Windows EVTX parsed with Chainsaw (sigma CSV output).
 #              Filename should match: "*sigma*.csv"
 #              Chainsaw: https://github.com/WithSecureLabs/chainsaw
 #              Chainsaw command: Chainsaw.exe hunt %sourceDirectory% --rule "rules" --sigma "sigma" --mapping "mappings\sigma-event-logs-all.yml" --csv --output %destinationDirectory% --full --skip-errors
-#              source = "windows_evtx_chainsaw" & sourcetype = "windows_artefact"
+#              source = "windows_evtx_chainsaw_sigma" & sourcetype = "windows_artefact"
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-01
@@ -16,7 +16,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
 # Set the default timezone to UTC+0 for timestamps that do not include a timezone.
 timezone = "Etc/UTC"
 
-[sources.Windows_EVTX_chainsaw_input]
+[sources.Windows_EVTX_chainsaw_sigma_input]
   type = "file"
   include = ["${INPUT_FOLDER:?The input folder containing the chainsaw CSV output files is required.}/**/*sigma*.csv"]
   ignore_checkpoints = true
@@ -26,15 +26,15 @@ timezone = "Etc/UTC"
   max_line_bytes = 100_000_000
   offset_key = "__offset"
 
-  [sources.Windows_EVTX_chainsaw_input.multiline]
+  [sources.Windows_EVTX_chainsaw_sigma_input.multiline]
     mode = "halt_with"
     start_pattern = "^"
     condition_pattern = "^\"$"
     timeout_ms = 1000
 
-[transforms.Windows_EVTX_chainsaw_parser]
+[transforms.Windows_EVTX_chainsaw_sigma_parser]
   type = "remap"
-  inputs = ["Windows_EVTX_chainsaw_input"]
+  inputs = ["Windows_EVTX_chainsaw_sigma_input"]
   source = '''
     # Validate the CSV header and retrieve the first log entry as the multiline parsing groups the header with the first log line.
     # Expect CSV header:
@@ -66,7 +66,7 @@ timezone = "Etc/UTC"
 
     # Add the metadata fields following the parsing.
     .host = .computer
-    .source = "windows_evtx_chainsaw"
+    .source = "windows_evtx_chainsaw_sigma"
     .sourcetype = "windows_artefact"
 
     # Delete irrelevant default fields.
@@ -76,9 +76,9 @@ timezone = "Etc/UTC"
     del(.__offset)
   '''
 
-[transforms.Windows_EVTX_chainsaw_coerce_to_sink]
+[transforms.Windows_EVTX_chainsaw_sigma_coerce_to_sink]
   type = "remap"
-  inputs = ["Windows_EVTX_chainsaw_parser"]
+  inputs = ["Windows_EVTX_chainsaw_sigma_parser"]
   source = '''
     . = map_values(.) -> |value| {
       value_string, convert_err = string(value)
@@ -108,9 +108,9 @@ timezone = "Etc/UTC"
 
 
 [[tests]]
-  name = "Vector_Windows_EVTX_chainsaw - Test 1 - header"
+  name = "Vector_Windows_EVTX_chainsaw_sigma - Test 1 - header"
   [[tests.inputs]]
-    insert_at = "Windows_EVTX_chainsaw_parser"
+    insert_at = "Windows_EVTX_chainsaw_sigma_parser"
     type = "log"
     log_fields.message = '''
 timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data
@@ -120,7 +120,7 @@ UserContext: ""Domain\\AccountName""
 "
 '''
   [[tests.outputs]]
-    extract_from = "Windows_EVTX_chainsaw_coerce_to_sink"
+    extract_from = "Windows_EVTX_chainsaw_sigma_coerce_to_sink"
     [[tests.outputs.conditions]]
       type = "vrl"
       source = '''
@@ -135,9 +135,9 @@ UserContext: ""Domain\\AccountName""
       '''
 
 [[tests]]
-  name = "Vector_Windows_EVTX_chainsaw - Test 2 - data"
+  name = "Vector_Windows_EVTX_chainsaw_sigma - Test 2 - data"
   [[tests.inputs]]
-    insert_at = "Windows_EVTX_chainsaw_parser"
+    insert_at = "Windows_EVTX_chainsaw_sigma_parser"
     type = "log"
     log_fields.message = '''
 2022-10-14T10:20:46.642350+00:00,Rare Scheduled Task Creations,4,Microsoft-Windows-TaskScheduler,106,701,hostname.domain.tld,"---
@@ -146,7 +146,7 @@ UserContext: ""Domain\\AccountName""
 "
 '''
   [[tests.outputs]]
-    extract_from = "Windows_EVTX_chainsaw_coerce_to_sink"
+    extract_from = "Windows_EVTX_chainsaw_sigma_coerce_to_sink"
     [[tests.outputs.conditions]]
       type = "vrl"
       source = '''

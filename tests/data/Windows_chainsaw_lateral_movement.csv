@@ -1,0 +1,3 @@
+timestamp,detections,Event ID,Record ID,Computer,User,Logon Type,IP Address
+2020-09-19T03:36:22.980909+00:00,Network Logon,4624,2112,HOSTNAME.DOMAIN.local,Administrator,3,10.2.3.4
+2020-09-19T03:36:24.432948+00:00,RDP Logon,4624,2125,HOSTNAME.DOMAIN.local,Administrator,10,10.2.3.4
