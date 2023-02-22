@@ -1,0 +1,116 @@
+# Vector_Windows_EZTools_RECmd_SystemASEPs config.
+# Description: Process Windows artefacts parsed with RECmd (CSV output).
+#              Filename should match: "*SystemASEPs*.csv"
+#              RECmd command: RECmd\RECmd.exe -d %sourceDirectory% --bn RECmd\RECmd_Batch_MC.reb --nl --csv %destinationDirectory% -q
+#              Example command: RECmd\RECmd.exe -d "C:\" --bn RECmd\RECmd_Batch_MC.reb --nl --csv <YOUR_OUTPUT> -q
+#              source = "windows_registry_systemaseps" & sourcetype = "windows_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.RECmd_SystemASEPs_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the RECmd Registry SystemASEPs files is required.}/**/*SystemASEPs*.csv"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  offset_key = "__offset"
+
+[transforms.RECmd_SystemASEPs_csv_parser]
+  type = "remap"
+  inputs = ["RECmd_SystemASEPs_csv_input"]
+  source = '''
+    # Expect CSV header:
+    # HivePath,HiveType,Description,Category,KeyPath,ValueName,ValueType,ValueData,ValueData2,ValueData3,Comment,Recursive,Deleted,LastWriteTimestamp,PluginDetailFile
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("Unable to split CSV: " + err, level: "error")
+    }
+
+    if .__offset == 0 {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+      expected_header = "HivePath,HiveType,Description,Category,KeyPath,ValueName,ValueType,ValueData,ValueData2,ValueData3,Comment,Recursive,Deleted,LastWriteTimestamp,PluginDetailFile"
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      }
+      abort
+    }
+
+    .hivepath = fields[0]
+    .hivetype = fields[1]
+    .description = fields[2]
+    .category = fields[3]
+    .keypath = fields[4]
+    .valuename = fields[5]
+    .valuetype = fields[6]
+    .valuedata = fields[7]
+    .valuedata2 = fields[8]
+    .valuedata3 = fields[9]
+    .comment = fields[10]
+    .recursive = fields[11]
+    .deleted = fields[12]
+    .lastwritetimestamp = fields[13]
+    .plugindetailfile = fields[14]
+
+    .timestamp = .lastwritetimestamp
+    if is_nullish(.timestamp) {
+      log("Timestamp is null for event, defaulting to current time: " + string!(.message), level: "warn")
+      .timestamp = now()
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "windows_registry_systemaseps"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+    del(.__offset)
+  '''
+
+[transforms.RECmd_SystemASEPs_coerce_to_sink]
+  type = "remap"
+  inputs = ["RECmd_SystemASEPs_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''

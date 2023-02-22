@@ -1,0 +1,8 @@
+﻿HivePath,HiveType,Description,Category,KeyPath,ValueName,ValueType,ValueData,ValueData2,ValueData3,Comment,Recursive,Deleted,LastWriteTimestamp,PluginDetailFile
+C:\Windows\System32\config\SYSTEM,System,LSA Authentication Packages,ASEP,ROOT\ControlSet001\Control\Lsa,Authentication Packages,RegMultiSz,msv1_0,,,,False,False,2020-09-19 01:24:08.2234055,
+C:\Windows\System32\config\SYSTEM,System,LSA Notification Packages,ASEP,ROOT\ControlSet001\Control\Lsa,Notification Packages,RegMultiSz,scecli,,,,False,False,2020-09-19 01:24:08.2234055,
+C:\Windows\System32\config\SYSTEM,System,LSA Security Packages,ASEP,ROOT\ControlSet001\Control\Lsa,Security Packages,RegMultiSz,"""""",,,,False,False,2020-09-19 01:24:08.2234055,
+C:\Windows\System32\config\SYSTEM,System,NetworkProvider Order,ASEP,ROOT\ControlSet001\Control\NetworkProvider\Order,ProviderOrder,RegSz,"vmhgfs,RDPNP,LanmanWorkstation,webclient",,,,False,False,2020-09-18 05:53:26.6195501,
+C:\Windows\System32\config\SYSTEM,System,Print Driver,ASEP,ROOT\ControlSet001\Control\Print\Monitors\Appmon,Driver,RegSz,AppMon.dll,,,,True,False,2020-09-18 05:43:46.2889703,
+C:\Windows\System32\config\SYSTEM,System,Terminal Server WinStations RDP-Tcp,ASEP,ROOT\ControlSet001\Control\Terminal Server\WinStations\RDP-Tcp\VideoRemotingWindowNames,MicrosoftSilverlight,RegSz,*,,,,True,False,2019-12-07 09:15:08.0339573,
+C:\Windows\System32\config\SYSTEM,System,Services,ASEP,ROOT\ControlSet001\Services,None,(plugin),"Name: .NET CLR Data Desc: ","Name last write: 2020-09-18 05:54:24.3996253, Parameters last write: ","Image path:  ServiceDLL: ",,True,False,2020-09-19 05:10:38.9588035,C:\Users\User\Desktop\DESKTOP-SDN1RPT-KAPED-20230211T173604\Registry\20230211175207\20230211175207_Services__Windows_System32_config_SYSTEM.csv
