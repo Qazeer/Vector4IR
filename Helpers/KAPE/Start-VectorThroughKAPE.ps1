@@ -35,23 +35,28 @@ function Start-VectorThroughKAPE {
   # Define the Vector_for_IR root folder (.\KAPE\Modules\bin\Vector_for_IR).
 
   $RootFolder = [IO.Path]::Combine($PSScriptRoot, '..', '..')
+  $ParsersFolder = [IO.Path]::Combine($RootFolder, "Parsers")
+  $SinksFolder = [IO.Path]::Combine($RootFolder, "Sinks")
 
   # Set the INPUT_FOLDER containing the files to process with Vector.
   [Environment]::SetEnvironmentVariable("INPUT_FOLDER", $TargetPath.Replace("\", "\\"))
   [Environment]::SetEnvironmentVariable("VECTOR_TEMP_FOLDER", $OutputPath.Replace("\", "\\"))
 
   # Set the configs under Windows.
-  $ConfigCmd = "$([IO.Path]::Combine($RootFolder, 'Windows', 'EZTools', 'Vector_*.toml')),"
-  $ConfigCmd += "$([IO.Path]::Combine($RootFolder, 'Windows', 'LogParser', 'Vector_*.toml')),"
-  $ConfigCmd += "$([IO.Path]::Combine($RootFolder, 'Windows', 'Winlogbeat', 'Vector_*.toml')),"
+  $ConfigCmd = "$([IO.Path]::Combine($ParsersFolder, 'Windows', 'EZTools', 'Vector_*.toml')),"
+  $ConfigCmd += "$([IO.Path]::Combine($ParsersFolder, 'Windows', 'LogParser', 'Vector_*.toml')),"
+  $ConfigCmd += "$([IO.Path]::Combine($ParsersFolder, 'Windows', 'NirSoft', 'Vector_*.toml')),"
+  $ConfigCmd += "$([IO.Path]::Combine($ParsersFolder, 'Windows', 'Others', 'Vector_*.toml')),"
+  $ConfigCmd += "$([IO.Path]::Combine($ParsersFolder, 'Windows', 'Winlogbeat', 'Vector_*.toml')),"
+
   # Set the config(s) for the specified sink(s).
   $SinkArray = $Sinks -Split ','
   Foreach ($Sink in $SinkArray) {
-    $ConfigCmd += "$([IO.Path]::Combine($RootFolder, '_Sinks', $($Sink.ToLower() + '.toml'))),"
+    $ConfigCmd += "$([IO.Path]::Combine($SinksFolder, $($Sink.ToLower() + '.toml'))),"
   }
 
   # Set the enable API config.
-  $ConfigCmd += "$([IO.Path]::Combine($RootFolder, '_Sinks', 'enable_api.toml'))"
+  $ConfigCmd += "$([IO.Path]::Combine($SinksFolder, 'enable_api.toml'))"
 
   # Sets the environnement variables from the specified comma sepated list $EnvVariables of EnvVarName=EnvVarValue.
   $EnvVariablesArray = $EnvVariables -Split ','
