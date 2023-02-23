@@ -57,6 +57,7 @@ timezone = "Etc/UTC"
 
     # Add the metadata fields following the parsing.
     .host = .computer
+    .category = "systeminfo"
     .source = "windows_evtx_chainsaw_account_tampering"
     .sourcetype = "windows_artefact"
 

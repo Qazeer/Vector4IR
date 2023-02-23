@@ -64,6 +64,7 @@ timezone = "Etc/UTC"
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
+    .category = "filedeletion"
     .source = "windows_recyclebin"
     .sourcetype = "windows_artefact"
 

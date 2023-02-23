@@ -66,6 +66,7 @@ timezone = "Etc/UTC"
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
+    .category = "execution"
     .source = "windows_shimcache"
     .sourcetype = "windows_artefact"
 

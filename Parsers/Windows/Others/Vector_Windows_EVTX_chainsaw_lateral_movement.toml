@@ -57,6 +57,7 @@ timezone = "Etc/UTC"
 
     # Add the metadata fields following the parsing.
     .host = .computer
+    .category = "lateralmvt"
     .source = "windows_evtx_chainsaw_lateral_movement"
     .sourcetype = "windows_artefact"
 

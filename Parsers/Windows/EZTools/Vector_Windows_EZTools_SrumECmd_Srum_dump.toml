@@ -273,6 +273,7 @@ timezone = "Etc/UTC"
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
+    .category = "execution"
     .sourcetype = "windows_artefact"
 
     # Delete irrelevant default fields.
@@ -347,7 +348,7 @@ timezone = "Etc/UTC"
       }
 
       .timestamp = .exetimestamp
-      .operation = "execution"
+      .category = "execution"
       .suboperation = "execution_exetimestamp"
   '''
 
@@ -373,7 +374,7 @@ timezone = "Etc/UTC"
     }
 
     .timestamp = .starttime
-    .operation = "execution"
+    .category = "execution"
     .suboperation = "execution_starttime"
   '''
 
@@ -386,6 +387,6 @@ timezone = "Etc/UTC"
     }
 
     .timestamp = .endtime
-    .operation = "execution"
+    .category = "execution"
     .suboperation = "execution_endtime"
   '''

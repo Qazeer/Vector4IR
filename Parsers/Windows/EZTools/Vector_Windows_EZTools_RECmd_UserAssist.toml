@@ -76,6 +76,7 @@ timezone = "Etc/UTC"
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
+    .category = "execution"
     .source = "windows_registry_explorer_userassist"
     .sourcetype = "windows_artefact"
 

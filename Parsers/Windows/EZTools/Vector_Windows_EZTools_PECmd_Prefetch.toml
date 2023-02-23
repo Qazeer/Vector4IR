@@ -75,6 +75,7 @@ timezone = "Etc/UTC"
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
+    .category = "execution"
     .source = "windows_prefetch"
     .sourcetype = "windows_artefact"
 
@@ -124,7 +125,6 @@ timezone = "Etc/UTC"
     }
 
     .timestamp = .lastrun
-    .operation = "execution"
     .suboperation = "execution_lastrun"
   '''
 

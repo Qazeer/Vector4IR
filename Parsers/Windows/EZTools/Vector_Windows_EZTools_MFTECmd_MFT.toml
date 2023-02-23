@@ -71,6 +71,7 @@ timezone = "Etc/UTC"
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
+    .category = "filesystem"
     .source = "windows_mft"
     .sourcetype = "windows_artefact"
 
@@ -134,6 +135,7 @@ timezone = "Etc/UTC"
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
+    .category = "filesystem"
     .source = "windows_mft"
     .sourcetype = "windows_artefact"
 

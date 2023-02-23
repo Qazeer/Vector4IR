@@ -90,6 +90,7 @@ timezone = "Etc/UTC"
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost
+    .category = "systeminfo"
     .source = "windows_registry_localaccounts"
     .sourcetype = "windows_artefact"
 

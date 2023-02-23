@@ -54,6 +54,7 @@ timezone = "Etc/UTC"
 
     # Add the metadata fields following the parsing.
     .host = "${SOURCE_HOST:?The source host is required}"
+    .category = "evtx_alerts"
     .source = "windows_evtx_chainsaw_login_attacks"
     .sourcetype = "windows_artefact"
 

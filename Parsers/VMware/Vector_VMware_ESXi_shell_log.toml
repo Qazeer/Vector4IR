@@ -39,7 +39,7 @@ timezone = "Etc/UTC"
       # Match command execution log entries from suffix.
       #  "[root]: ping X.X.X.X"
       if (match_suffix_command, err = parse_regex(match_main.suffix, r'\[(?P<user>.*?)\]:\s(?P<command>.*)'); err == null) {
-        .operation = "execution"
+        .category = "execution"
         .suboperation = "esxi_execution"
         .user = match_suffix_command.user
         .command = match_suffix_command.command

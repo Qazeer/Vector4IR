@@ -66,6 +66,7 @@ timezone = "Etc/UTC"
 
     # Add the metadata fields following the parsing.
     .host = .computer
+    .category = "evtx_alerts"
     .source = "windows_evtx_chainsaw_sigma"
     .sourcetype = "windows_artefact"
 
