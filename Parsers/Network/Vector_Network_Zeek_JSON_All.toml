@@ -1,0 +1,71 @@
+# Description: Process Zeek JSON formated outputs.
+#              Filename should match: "*.log"
+#              Zeek command: zeek -C -r <PCAP_FILE> LogAscii::use_json=T
+#              source = "zeek_<FILENAME>" & sourcetype = "network_event"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-12-14
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.Zeek_JSON_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the Zeek JSON logs is required}/**/*.log"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.Zeek_JSON_parser]
+  type = "remap"
+  inputs = ["Zeek_JSON_input"]
+  source = '''
+    splitted, err = split(.message, "\n")
+    if err != null {
+      log("Unable to split message on newlines: " + err, level: "error")
+    }
+
+    . = map_values(splitted) -> |value| {
+      parsed_value, err = parse_json(value, max_depth: 8)
+      if err != null {
+        value_str = string(value)
+        log("Unable to parse JSON '" + value_str + "', error: " + err, level: "error")
+        null
+      } else {
+        parsed_value.file = .file
+        parsed_value
+      }
+    }
+  '''
+
+[transforms.Zeek_JSON_enrich_to_sink]
+  type = "remap"
+  inputs = ["Zeek_JSON_parser"]
+  source = '''
+    .timestamp, err = parse_timestamp(to_string!(.ts), "%s%.f")
+    if err != null {
+      ts_str = string(.ts) ?? ""
+      log("Unable to convert '" + ts_str + "' to timestamp: " + err, level: "error")
+    }
+
+    if (match_filename, err = parse_regex(.file, r'^.*(\\|/)(?P<filename>.*).log$'); err == null) {
+      .source = "zeek_" + string!(match_filename.filename)
+    } else {
+      .source = "zeek_unknown"
+    }
+
+    del(.file)
+
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .sourcetype = "network_event"
+  '''
