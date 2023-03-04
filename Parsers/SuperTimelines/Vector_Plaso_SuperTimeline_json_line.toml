@@ -73,7 +73,8 @@ timezone = "Etc/UTC"
     # Flatten JSON event.
     . = flatten(.)
 
-    .host = "${SOURCE_HOST:?The source host is required}"
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
     .source = "plaso_" + string!(.data_type)
     .sourcetype = "plaso_timeline"
   '''

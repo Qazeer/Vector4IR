@@ -9,6 +9,7 @@
 # Required environment variables:
 #   INPUT_FOLDER = "<INPUT_FOLDER>"
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
 
 # Temporary folder used by Vector.
 data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
@@ -56,6 +57,7 @@ timezone = "Etc/UTC"
     .membersid = fields[7]
 
     # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .computer
     .category = "systeminfo"
     .source = "windows_evtx_chainsaw_account_tampering"

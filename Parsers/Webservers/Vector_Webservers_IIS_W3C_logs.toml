@@ -71,7 +71,8 @@ timezone = "Etc/UTC"
     .http_useragent = fields[10]
 
     # Add the source host following the parsing.
-    .host = "${SOURCE_HOST:?The source host is required}"
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .s_ip
     .source = "IIS_W3C_logs"
     .sourcetype = "http_event"
 

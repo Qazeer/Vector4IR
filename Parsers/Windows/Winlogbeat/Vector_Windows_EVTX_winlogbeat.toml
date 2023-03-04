@@ -55,8 +55,8 @@ timezone = "Etc/UTC"
       log("The log entry does not contain a computer name", level: "warn")
     }
 
-    .sourcehost = .computer_name
-    .host = .sourcehost
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .computer_name
     .category = "evtx_events"
     .source = "windows_evtx"
     .sourcetype = "windows_artefact"
