@@ -1,0 +1,7 @@
+#Software: Microsoft Internet Information Services 10.0
+#Version: 1.0
+#Date: 2023-01-11 00:00:00
+#Fields: date time s-ip cs-method cs-uri-stem cs-uri-query s-port cs-username c-ip cs(User-Agent) cs(Referer) sc-status sc-substatus sc-win32-status time-taken
+2023-01-11 00:01:54 10.10.20.30 RPC_IN_DATA /rpc/rpcproxy.dll 123456789-9876543211-123456798-4343@domain.test:6001&CorrelationID=<empty>;&RequestId=a53222b6-ef46-4ba9-98e2-5c9cd027411c&cafeReqId=a53222b6-ef46-4ba9-98e2-5c9cd027411c; 443 - 10.10.20.30 MSRPC - 401 1 2148074254 2
+2023-01-11 00:40:41 10.10.20.30 GET / - 80 - 33.44.55.67 python-requests/2.28.1 - 403 4 5 7
+2023-01-11 14:26:22 10.10.20.30 POST /autodiscover/autodiscover.xml &CorrelationID=<empty>;&cafeReqId=7ba810b2-b81a-429e-9e93-06df5096e478; 443 DOMAIN\username 50.10.20.30 AppleExchangeWebServices/818.120.2+accountsd/113 - 200 0 0 43

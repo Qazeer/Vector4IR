@@ -1,0 +1,6 @@
+#Software: Microsoft Internet Information Services 10.0
+#Version: 1.0
+#Date: 2023-01-11 00:00:00
+#Fields: date time s-ip cs-method cs-uri-stem cs-uri-query s-port cs-username c-ip cs(User-Agent) cs(Referer) sc-status sc-substatus sc-win32-status time-taken
+2023-01-11 00:00:00 ::1 POST /mapi/emsmdb/ useMailboxOfAuthenticatedUser=true 444 - ::1 MapiHttpClient - 401 1 2148074254 2
+2023-01-11 00:01:18 ::1 POST /powershell clientApplication=ActiveMonitor 444 domain\healthmailboxXXX ::1 Exchange+BackEnd+Probes - 200 0 0 9

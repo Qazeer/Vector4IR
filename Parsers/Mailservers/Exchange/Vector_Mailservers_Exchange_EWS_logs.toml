@@ -1,0 +1,190 @@
+# Vector_Mailservers_Exchange_EWS_logs config.
+# Description: Process Exchange EWS logs.
+#                EWS logs contain client interactions with the Exchange Web Services (EWS) API, which provides access to mailbox items (such as email messages, meetings, and contacts).
+#                https://learn.microsoft.com/en-us/exchange/client-developer/exchange-web-services/ews-applications-and-the-exchange-architecture
+#              Filename should match: "Ews\*Ews_*.log"
+#              Path %SystemDrive%/Program Files/Microsoft/Exchange Server/V15/Logging/Ews/
+#              source = "exchange_ews" & sourcetype = "exchange_artefacts"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.Exchange_EWS_logs_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder matching the Exchange root install path is required.}/**/EWS/*Ews_*.log"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  offset_key = "__offset"
+
+[transforms.Exchange_EWS_logs_parser]
+  type = "remap"
+  inputs = ["Exchange_EWS_logs_input"]
+  source = '''
+    # Expect CSV header:
+    # DateTime,RequestId,MajorVersion,MinorVersion,BuildVersion,RevisionVersion,Ring,ClientRequestId,AuthenticationType,IsAuthenticated,AuthenticatedUser,Organization,UserAgent,VersionInfo,ClientIpAddress,ServerHostName,FrontEndServer,SoapAction,HttpStatus,RequestSize,ResponseSize,ErrorCode,ImpersonatedUser,ProxyAsUser,ActAsUser,Cookie,CorrelationGuid,PrimaryOrProxyServer,TaskType,RemoteBackendCount,LocalMailboxCount,RemoteMailboxCount,LocalIdCount,RemoteIdCount,BeginBudgetConnections,EndBudgetConnections,BeginBudgetHangingConnections,EndBudgetHangingConnections,BeginBudgetAD,EndBudgetAD,BeginBudgetCAS,EndBudgetCAS,BeginBudgetRPC,EndBudgetRPC,BeginBudgetFindCount,EndBudgetFindCount,BeginBudgetSubscriptions,EndBudgetSubscriptions,MDBResource,MDBHealth,MDBHistoricalLoad,ThrottlingPolicy,ThrottlingDelay,ThrottlingRequestType,TotalDCRequestCount,TotalDCRequestLatency,TotalMBXRequestCount,TotalMBXRequestLatency,RecipientLookupLatency,ExchangePrincipalLatency,HttpPipelineLatency,CheckAccessCoreLatency,AuthModuleLatency,CallContextInitLatency,PreExecutionLatency,CoreExecutionLatency,TotalRequestTime,DetailedExchangePrincipalLatency,ClientStatistics,GenericInfo,AuthenticationErrors,GenericErrors,Puid,StartTime,ProcessId,TimeInGC,StartTotalMemory,EndTotalMemory,StartGCCounts,EndGCCounts,TokenBasedThrottlingPolicy,BudgetKey,CoinsCharged,CoinsChargedMethod,SidBudgetInfo,AppBudgetInfo,TenantBudgetInfo,ResourceAccessed,ResourceHealthBasedThreshold,ThrottledBy,BackoffHint,WorkClassification
+    if .__offset == 0 || starts_with(string!(.message), "#") {
+      if starts_with(string!(.message), "#Fields:") {
+        expected_header = "#Fields: DateTime,RequestId,MajorVersion,MinorVersion,BuildVersion,RevisionVersion,Ring,ClientRequestId,AuthenticationType,IsAuthenticated,AuthenticatedUser,Organization,UserAgent,VersionInfo,ClientIpAddress,ServerHostName,FrontEndServer,SoapAction,HttpStatus,RequestSize,ResponseSize,ErrorCode,ImpersonatedUser,ProxyAsUser,ActAsUser,Cookie,CorrelationGuid,PrimaryOrProxyServer,TaskType,RemoteBackendCount,LocalMailboxCount,RemoteMailboxCount,LocalIdCount,RemoteIdCount,BeginBudgetConnections,EndBudgetConnections,BeginBudgetHangingConnections,EndBudgetHangingConnections,BeginBudgetAD,EndBudgetAD,BeginBudgetCAS,EndBudgetCAS,BeginBudgetRPC,EndBudgetRPC,BeginBudgetFindCount,EndBudgetFindCount,BeginBudgetSubscriptions,EndBudgetSubscriptions,MDBResource,MDBHealth,MDBHistoricalLoad,ThrottlingPolicy,ThrottlingDelay,ThrottlingRequestType,TotalDCRequestCount,TotalDCRequestLatency,TotalMBXRequestCount,TotalMBXRequestLatency,RecipientLookupLatency,ExchangePrincipalLatency,HttpPipelineLatency,CheckAccessCoreLatency,AuthModuleLatency,CallContextInitLatency,PreExecutionLatency,CoreExecutionLatency,TotalRequestTime,DetailedExchangePrincipalLatency,ClientStatistics,GenericInfo,AuthenticationErrors,GenericErrors,Puid,StartTime,ProcessId,TimeInGC,StartTotalMemory,EndTotalMemory,StartGCCounts,EndGCCounts,TokenBasedThrottlingPolicy,BudgetKey,CoinsCharged,CoinsChargedMethod,SidBudgetInfo,AppBudgetInfo,TenantBudgetInfo,ResourceAccessed,ResourceHealthBasedThreshold,ThrottledBy,BackoffHint,WorkClassification"
+        current_header = strip_whitespace(string!(.message))
+        if expected_header != current_header {
+          log("Unexpected CSV header!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+      }
+      abort
+    }
+
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("Unable to split CSV: " + err, level: "error")
+    }
+
+    .datetime = fields[0]
+    .requestid = fields[1]
+    .majorversion = fields[2]
+    .minorversion = fields[3]
+    .buildversion = fields[4]
+    .revisionversion = fields[5]
+    .ring = fields[6]
+    .clientrequestid = fields[7]
+    .authenticationtype = fields[8]
+    .isauthenticated = fields[9]
+    .authenticateduser = fields[10]
+    .organization = fields[11]
+    .useragent = fields[12]
+    .versioninfo = fields[13]
+    .clientipaddress = fields[14]
+    .serverhostname = fields[15]
+    .frontendserver = fields[16]
+    .soapaction = fields[17]
+    .httpstatus = fields[18]
+    .requestsize = fields[19]
+    .responsesize = fields[20]
+    .errorcode = fields[21]
+    .impersonateduser = fields[22]
+    .proxyasuser = fields[23]
+    .actasuser = fields[24]
+    .cookie = fields[25]
+    .correlationguid = fields[26]
+    .primaryorproxyserver = fields[27]
+    .tasktype = fields[28]
+    .remotebackendcount = fields[29]
+    .localmailboxcount = fields[30]
+    .remotemailboxcount = fields[31]
+    .localidcount = fields[32]
+    .remoteidcount = fields[33]
+    .beginbudgetconnections = fields[34]
+    .endbudgetconnections = fields[35]
+    .beginbudgethangingconnections = fields[36]
+    .endbudgethangingconnections = fields[37]
+    .beginbudgetad = fields[38]
+    .endbudgetad = fields[39]
+    .beginbudgetcas = fields[40]
+    .endbudgetcas = fields[41]
+    .beginbudgetrpc = fields[42]
+    .endbudgetrpc = fields[43]
+    .beginbudgetfindcount = fields[44]
+    .endbudgetfindcount = fields[45]
+    .beginbudgetsubscriptions = fields[46]
+    .endbudgetsubscriptions = fields[47]
+    .mdbresource = fields[48]
+    .mdbhealth = fields[49]
+    .mdbhistoricalload = fields[50]
+    .throttlingpolicy = fields[51]
+    .throttlingdelay = fields[52]
+    .throttlingrequesttype = fields[53]
+    .totaldcrequestcount = fields[54]
+    .totaldcrequestlatency = fields[55]
+    .totalmbxrequestcount = fields[56]
+    .totalmbxrequestlatency = fields[57]
+    .recipientlookuplatency = fields[58]
+    .exchangeprincipallatency = fields[59]
+    .httppipelinelatency = fields[60]
+    .checkaccesscorelatency = fields[61]
+    .authmodulelatency = fields[62]
+    .callcontextinitlatency = fields[63]
+    .preexecutionlatency = fields[64]
+    .coreexecutionlatency = fields[65]
+    .totalrequesttime = fields[66]
+    .detailedexchangeprincipallatency = fields[67]
+    .clientstatistics = fields[68]
+    .genericinfo = fields[69]
+    .authenticationerrors = fields[70]
+    .genericerrors = fields[71]
+    .puid = fields[72]
+    .starttime = fields[73]
+    .processid = fields[74]
+    .timeingc = fields[75]
+    .starttotalmemory = fields[76]
+    .endtotalmemory = fields[77]
+    .startgccounts = fields[78]
+    .endgccounts = fields[79]
+    .tokenbasedthrottlingpolicy = fields[80]
+    .budgetkey = fields[81]
+    .coinscharged = fields[82]
+    .coinschargedmethod = fields[83]
+    .sidbudgetinfo = fields[84]
+    .appbudgetinfo = fields[85]
+    .tenantbudgetinfo = fields[86]
+    .resourceaccessed = fields[87]
+    .resourcehealthbasedthreshold = fields[88]
+    .throttledby = fields[89]
+    .backoffhint = fields[90]
+    .workclassification = fields[91]
+
+    .timestamp = .datetime
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .serverhostname
+    .source = "exchange_ews"
+    .sourcetype = "exchange_artefacts"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+    del(.__offset)
+  '''
+
+[transforms.Exchange_EWS_logs_coerce_to_sink]
+  type = "remap"
+  inputs = ["Exchange_EWS_logs_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9])|Z)?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? to_timestamp(value_string) ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
