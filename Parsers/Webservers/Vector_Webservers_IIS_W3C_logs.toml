@@ -3,7 +3,7 @@
 #              Format: https://learn.microsoft.com/en-us/windows/win32/http/w3c-logging
 #              Expected fields format: date time c-ip cs-username s-ip s-port cs-method cs-uri-stem cs-uri-query sc-status cs(User-Agent)
 #              Filename should match: "*ex*.log"
-#              source = "iis_w3c" & sourcetype = "http_event"
+#              source = "iis_logs" & sourcetype = "http_event"
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0
 # Last modified: 2022-09-01
@@ -39,7 +39,7 @@ timezone = "Etc/UTC"
         expected_header = "#Fields: date time c-ip cs-username s-ip s-port cs-method cs-uri-stem cs-uri-query sc-status cs(User-Agent)"
         current_header = strip_whitespace(string!(.message))
         if expected_header != current_header {
-          log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+          log("Unexpected CSV header, fields logged may be configured differently!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
         }
       }
       abort
@@ -72,8 +72,8 @@ timezone = "Etc/UTC"
 
     # Add the source host following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
-    .host = .s_ip
-    .source = "IIS_W3C_logs"
+    .host = .c_ip
+    .source = "iis_logs"
     .sourcetype = "http_event"
 
     # Delete irrelevant default fields.
