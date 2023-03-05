@@ -35,25 +35,28 @@ timezone = "Etc/UTC"
   inputs = ["RECmd_RecentApps_csv_input"]
   source = '''
     # Expect CSV header:
-    # BatchKeyPath,BatchValueName,KeyName,AppId,AppPath,LastAccessed,LaunchCount,RecentDocs
+    # Old: BatchKeyPath,BatchValueName,KeyName,AppId,AppPath,LastAccessed,LaunchCount,RecentDocs
+    # New: KeyName,BatchKeyPath,AppId,BatchValueName,AppPath,LastAccessed,LaunchCount,RecentDocs
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
     if .__offset == 0 {
-      expected_header = "BatchKeyPath,BatchValueName,KeyName,AppId,AppPath,LastAccessed,LaunchCount,RecentDocs"
-      current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
+      # Special usecase as the header line may (or may not) start with 'M-oM-;M-?' (UTF-8 with BOM).
+      expected_header = "KeyName,BatchKeyPath,AppId,BatchValueName,AppPath,LastAccessed,LaunchCount,RecentDocs"
+      current_header = strip_whitespace(to_string!(.message))
+      header_find = find(current_header, expected_header)
+      if header_find == -1 || (header_find != 0 && header_find != 3) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
 
-    .batchkeypath = fields[0]
-    .batchvaluename = fields[1]
-    .keyname = fields[2]
-    .appid = fields[3]
+    .keyname = fields[0]
+    .batchkeypath = fields[1]
+    .appid = fields[2]
+    .batchvaluename = fields[3]
     .apppath = fields[4]
     .lastaccessed = fields[5]
     .launchcount = fields[6]
