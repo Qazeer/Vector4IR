@@ -1,0 +1,11 @@
+#Software: Microsoft Exchange Server
+#Version: 15.0.0.0
+#Log-type: SMTP Send Protocol Log
+#Date: 2022-11-28T17:25:52.576Z
+#Fields: date-time,connector-id,session-id,sequence-number,local-endpoint,remote-endpoint,event,data,context
+2022-11-28T17:25:42.412Z,Connecteur d'envoi de proxy client,123456333ADEDDBE,0,,10.10.10.20:465,*,,attempting to connect. Client proxy session for . Proxied session id 08DAC6333ADEDDBD
+2022-11-28T17:25:42.428Z,Connecteur d'envoi de proxy client,123456333ADEDDBE,1,10.10.10.20:27866,10.10.10.20:465,+,,
+2022-11-28T17:25:42.435Z,Connecteur d'envoi de proxy client,123456333ADEDDBE,2,10.10.10.20:27866,10.10.10.20:465,<,"220 SERVER-HOSTNAME.DOMAIN.TEST Microsoft ESMTP MAIL Service ready at Mon, 28 Nov 2022 18:25:41 +0100",
+2022-11-28T17:25:42.443Z,Connecteur d'envoi de proxy client,123456333ADEDDBE,3,10.10.10.20:27866,10.10.10.20:465,>,EHLO SERVER-HOSTNAME.DOMAIN.TEST,
+2022-11-28T17:25:42.444Z,Connecteur d'envoi de proxy client,123456333ADEDDBE,4,10.10.10.20:27866,10.10.10.20:465,<,250  SERVER-HOSTNAME.DOMAIN.TEST Hello [10.10.10.20] SIZE 37748736 PIPELINING DSN ENHANCEDSTATUSCODES STARTTLS X-ANONYMOUSTLS AUTH GSSAPI NTLM X-EXPS GSSAPI NTLM 8BITMIME BINARYMIME CHUNKING XEXCH50 XRDST XSHADOWREQUEST,
+2022-11-28T17:25:42.461Z,Connecteur d'envoi de proxy client,123456333ADEDDBE,5,10.10.10.20:27866,10.10.10.20:465,>,X-ANONYMOUSTLS,
