@@ -1,0 +1,141 @@
+# Vector_Mailservers_Exchange_MessageTracking_logs config.
+# Description: Process Exchange Message Tracking logs, which contains detailed information about the history of each email message as it travels through an Exchange server.
+#                https://learn.microsoft.com/en-us/Exchange/mail-flow/transport-logs/message-tracking
+#                https://learn.microsoft.com/en-us/powershell/module/exchange/get-messagetrackinglog
+#              Filename should match: "MessageTracking/MSG*.LOG"
+#              Path %SystemDrive%/Program Files/Microsoft/Exchange Server/V15/TransportRoles/Logs/MessageTracking
+#              source = "exchange_messagetracking" & sourcetype = "exchange_artefacts"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.Exchange_MessageTracking_logs_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder matching the Exchange root install path is required.}/**/MessageTracking/MSG*.LOG"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  offset_key = "__offset"
+
+[transforms.Exchange_MessageTracking_logs_parser]
+  type = "remap"
+  inputs = ["Exchange_MessageTracking_logs_input"]
+  source = '''
+    # Expect CSV header:
+    # date-time,client-ip,client-hostname,server-ip,server-hostname,source-context,connector-id,source,event-id,internal-message-id,message-id,network-message-id,recipient-address,recipient-status,total-bytes,recipient-count,related-recipient-address,reference,message-subject,sender-address,return-path,message-info,directionality,tenant-id,original-client-ip,original-server-ip,custom-data,transport-traffic-type,log-id,schema-version
+    if .__offset == 0 || starts_with(string!(.message), "#") {
+      if starts_with(string!(.message), "#Fields:") {
+        expected_header = "#Fields: date-time,client-ip,client-hostname,server-ip,server-hostname,source-context,connector-id,source,event-id,internal-message-id,message-id,network-message-id,recipient-address,recipient-status,total-bytes,recipient-count,related-recipient-address,reference,message-subject,sender-address,return-path,message-info,directionality,tenant-id,original-client-ip,original-server-ip,custom-data,transport-traffic-type,log-id,schema-version"
+        current_header = strip_whitespace(string!(.message))
+        if expected_header != current_header {
+          log("Unexpected CSV header!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+        }
+      }
+      abort
+    }
+
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("Unable to split CSV: " + err, level: "error")
+    }
+
+    .datetime = fields[0]
+    .clientip = fields[1]
+    .clienthostname = fields[2]
+    .serverip = fields[3]
+    .serverhostname = fields[4]
+    .sourcecontext = fields[5]
+    .connectorid = fields[6]
+    .source = fields[7]
+    .eventid = fields[8]
+    .internalmessageid = fields[9]
+    .messageid = fields[10]
+    .networkmessageid = fields[11]
+    .recipientaddress = fields[12]
+    .recipientstatus = fields[13]
+    .totalbytes = fields[14]
+    .recipientcount = fields[15]
+    .relatedrecipientaddress = fields[16]
+    .reference = fields[17]
+    .messagesubject = fields[18]
+    .senderaddress = fields[19]
+    .returnpath = fields[20]
+    .messageinfo = fields[21]
+    .directionality = fields[22]
+    .tenantid = fields[23]
+    .originalclientip = fields[24]
+    .originalserverip = fields[25]
+    .customdata = fields[26]
+    .transporttraffictype = fields[27]
+    .logid = fields[28]
+    .schemaversion = fields[29]
+
+    .timestamp = .datetime
+
+    file_string = string!(.file)
+    if match(file_string, r'.*MSGTRK\d*-\d*.LOG$') {
+      .source_description = "MSGTRK - Transport service"
+    } else if match(file_string, r'.*MSGTRKMA\d*-\d*.LOG$') {
+      .source_description = "MSGTRKMA - Approvals and rejections"
+    } else if match(file_string, r'.*MSGTRKMD\d*-\d*.LOG$') {
+      .source_description = "MSGTRKMD - Mailbox Transport Delivery service"
+    } else if match(file_string, r'.*MSGTRKMS\d*-\d*.LOG$') {
+      .source_description = "MSGTRKMS - Mailbox Transport Submission service"
+    } else {
+      .source_description = "unknown"
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .serverhostname
+    .source = "exchange_messagetracking"
+    .sourcetype = "exchange_artefacts"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+    del(.__offset)
+  '''
+
+[transforms.Exchange_MessageTracking_logs_coerce_to_sink]
+  type = "remap"
+  inputs = ["Exchange_MessageTracking_logs_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9])|Z)?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? to_timestamp(value_string) ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''

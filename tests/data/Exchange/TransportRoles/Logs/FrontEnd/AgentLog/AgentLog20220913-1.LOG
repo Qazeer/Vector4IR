@@ -1,0 +1,7 @@
+#Software: Microsoft Exchange Server
+#Version: 15.0.0.0
+#Log-type: Agent Log
+#Date: 2022-09-13T14:38:59.177Z
+#Fields: Timestamp,SessionId,LocalEndpoint,RemoteEndpoint,EnteredOrgFromIP,MessageId,P1FromAddress,P2FromAddresses,Recipient,NumRecipients,Agent,Event,Action,SmtpResponse,Reason,ReasonData,Diagnostics,NetworkMsgID,TenantID,Directionality
+2022-09-13T14:38:59.177Z,1234DADADA795F2,10.10.10.10,95.11.22.33:46904,95.11.22.33,,user.name@domain.com,user.name@domain.com;,user.name2@domain2.com,1,Inbound Trust Agent,OnEndOfHeaders,ModifyHeaders,,,,Cross premises headers filtered,12345678-3232-2323-1111-12345679987,,Incoming
+2022-09-13T14:51:57.936Z,1234DADADA79623,10.10.10.10,95.11.22.33:56804,95.11.22.33,,user.name@domain.com,user.name@domain.com;,user.name2@domain2.com,1,Inbound Trust Agent,OnEndOfHeaders,ModifyHeaders,,,,Cross premises headers filtered,12345678-3232-2323-1111-98765465465,,Incoming
