@@ -1,0 +1,97 @@
+# Description: Process Stormshield l_connection exported log files.
+#              source = "stormshield_connection" & sourcetype = "network_event"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.stormshield_connection_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the Stormshield l_connection log files is required.}/**/*l_connection_all*"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = true
+  max_line_bytes = 100_000_000
+
+[transforms.stormshield_connection_parser]
+  inputs = ["stormshield_connection_input"]
+  type = "remap"
+  source = '''
+    ., err = parse_key_value(.message, key_value_delimiter: "=", field_delimiter: " ")
+    if (err != null) {
+      log("Unable to convert to parse log line: " + err, level: "error")
+    }
+
+    # If a timezone ("tz" field) is not specified, the environnement variable UTC_OFFSET is used.
+    timezone = ""
+    if (exists(.tz)) {
+      match_tz, err = parse_regex(.tz, r'^(?P<sign>[\-+])(?P<hours>\d{2})(?P<minutes>\d{2})$')
+      if (err == null && match_tz.sign != null && match_tz.hours != null && match_tz.minutes != null) {
+        timezone = to_string(match_tz.sign) + to_string(match_tz.hours) + ":" + to_string(match_tz.minutes)
+      } else {
+        log("Parsing of the timezone failed, using the specified UTC_OFFSET instead: " + err, level: "error")
+      }
+    }
+    if (timezone == "") {
+      timezone = "${UTC_OFFSET:?"The offset to UTC of the Stormshield timezone is required and will be used (only) if events do not specify a valid "tz" field. Expected format [+ | -]HH:MM."}"
+    }
+
+    new_timestamp, err = parse_timestamp(to_string!(.time) + timezone, format: "%Y-%m-%d %H:%M:%S %z")
+    if (err == null) {
+      .timestamp = new_timestamp
+    } else {
+      log("Parsing of the timestamp failed: " + err, level: "error")
+      abort
+    }
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    if (exists(.srcname) && .srcname != "") {
+      .host = .srcname
+    } else if (exists(.src) && .src != "") {
+      .host = .src
+    } else {
+      .host = .sourcehost
+    }
+    .source = "stormshield_connection"
+    .sourcetype = "network_event"
+  '''
+
+[transforms.stormshield_connection_coerce_to_sink]
+  type = "remap"
+  inputs = ["stormshield_connection_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
