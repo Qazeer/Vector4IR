@@ -1,0 +1,92 @@
+# Description: Process VMware vCenter VI events logs as collected by DFIR4Sphere's Start-VC_Investigation cmdlet (which uses EventManager.CreateCollectorForEvents).
+#              VI events contains vSphere API calls registered on the vCenter. The list of available event ids can be found at https://github.com/lamw/vCenter-event-mapping.
+#              Filename should match: "*VIEvents*.json*"
+#              source = "vmware_vcenter_vievents" & sourcetype = "vmware_vcenter_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.vCenter_VIEvents_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the vCenter VI events files is required.}/**/*VIEvents*.json*"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+# Double remap as events are stored as JSON objects in a single-line JSON array.
+# The first remap "explode" the JSON array in multiple events.
+[transforms.vCenter_VIEvents_parser]
+  inputs = ["vCenter_VIEvents_input"]
+  type = "remap"
+  source = '''
+    # File is likely encoded in UTF-8 with BOM, so first parsing try skip the the BOM header.
+    # If that fails, another parsing attempt is done on the raw message.
+    if (parsed, err = parse_json(slice!(.message, start: 3), max_depth: 8); err == null) {
+      . = parsed
+    } else if (parsed, err = parse_json(.message, max_depth: 8); err == null) {
+      . = parsed
+    } else {
+      log("Unable to parse JSON for message: " + string!(.message), level: "error")
+      abort
+    }
+  '''
+
+[transforms.vCenter_VIEvents_enrich_to_sink]
+  type = "remap"
+  inputs = ["vCenter_VIEvents_parser"]
+  source = '''
+    . = flatten(.)
+
+    # Parse timestamps that are formated as "/Date(<LINUX_EPOCH>)/".
+    # Convert timestamps from Epoch (seconds or milliseconds precision).
+    timestamp_fields = [
+      "CreatedTime",
+      "LoginTime",
+      "Info.QueueTime"
+    ]
+
+    # Dynamicly get the timestamps from the timestamp_fields array and cast them.
+    map_values(timestamp_fields) -> |value| {
+      if (to_parse_timestamp, err = parse_regex(get!(., [value]), r'/Date\((?P<timestamp>.*?)\)/').timestamp; to_parse_timestamp != null && err == null) {
+
+        if (to_parse_timestamp_string = to_string(to_parse_timestamp); to_parse_timestamp_int, err_int = to_int(to_parse_timestamp); err_int == null && to_parse_timestamp_int > 0) {
+          # If milliseconds precision.
+          if length(to_parse_timestamp_string) == 13 {
+            to_parse_timestamp_string = to_string(to_int(to_parse_timestamp_int / 1000))
+          # If not milliseconds nor seconds precision.
+          } else if length(to_parse_timestamp_string) != 10 {
+            log("Timestamp is not in seconds or milliseconds" + to_parse_timestamp_string, level: "error")
+          }
+
+          if (parsed_timestamp, err = parse_timestamp(to_parse_timestamp_string, format: "%s"); err == null) {
+            . = set!(., [value], parsed_timestamp)
+          }
+        }
+      }
+    }
+
+    # if (match, err_parse_regex = parse_regex(.CreatedTime, r'/Date\((?P<timestamp>.*?)\)/'); event_timestamp, err_parse_timestamp = parse_timestamp(match.timestamp, format: "%s"); err_parse_regex == null && err_parse_timestamp == null) {
+    #   .CreatedTime = event_timestamp
+    # } else {
+    #   log("The following event is not in a valid format: " + to_string!(.message), level: "error")
+    # }
+
+    .timestamp = .CreatedTime
+
+    # Add the source host following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .source = "vmware_vcenter_vievents"
+    .sourcetype = "vmware_vcenter_artefact"
+  '''

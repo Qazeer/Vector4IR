@@ -1,0 +1,99 @@
+# Description: Process VMware ESXi hostd logs.
+#              hostd logs "contains information about the agent that manages and configures the ESXi host and its virtual machines".
+#              Filename should match: "*hostd.*"
+#              Default path on disk: /var/run/log/hostd.log*
+#              source = "vmware_esxi_hostd" & sourcetype = "vmware_esxi_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.VMware_ESXi_hostd_input]
+  type = "file"
+  ignore_checkpoints = true
+  include = ["${INPUT_FOLDER:?The input folder containing the ESXi hostd log files is required.}/**/*hostd.*"]
+  read_from = "beginning"
+  oldest_first = false
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+  [sources.VMware_ESXi_hostd_input.multiline]
+    mode = "continue_through"
+    start_pattern = "^"
+    condition_pattern = "-->"
+    timeout_ms = 1000
+
+[transforms.VMware_ESXi_hostd_parser]
+  type = "remap"
+  inputs = ["VMware_ESXi_hostd_input"]
+  source = '''
+    # Match main log entries
+    # "2020-01-10T16:14:47.600Z info hostd[10085132] [Originator@6876 sub=Vimsvc.TaskManager opID=esxui-1234-5678 user=root] Task Completed : XXX"
+    if (match_main, err = parse_regex(.message, r'(?P<timestamp>.*?)\s(?P<level>.*?)\s(?P<provider>.*?)\[(?P<pid>.*?)\]\s\[Originator@(?P<originator>.*?)\s(?P<metadata>.*?)\]\s(?P<message>(.|\n)*)'); err == null) {
+      .timestamp = parse_timestamp!(match_main.timestamp, format: "%Y-%m-%dT%H:%M:%S%.3fZ")
+      .level = match_main.level
+      .provider = match_main.provider
+      .pid = match_main.pid
+      .originator = match_main.originator
+      .message = match_main.message
+      . |= parse_key_value!(match_main.metadata, accept_standalone_key: true)
+    # if message starts with a timestamp, keep the raw message.
+    } else if (match_other, err_parse_regex = parse_regex(.message, r'(?P<timestamp>.*?)\s(?P<message>(.|\n)*)'); event_timestamp, err_parse_timestamp = parse_timestamp(match_other.timestamp, format: "%Y-%m-%dT%H:%M:%S%.3fZ"); err_parse_regex == null && err_parse_timestamp == null) {
+      .timestamp = event_timestamp
+      .message = match_other.message
+    } else {
+      # Exclude common malformated events.
+      if !match_any(string!(.message), [r'time the service was last started', r'------ Early init logs.*', r'^\d*$', r'\[LikewiseGetDomainJoinInfo:\d*\]\sQueryInformation\(\):.*', r'^e operations involving foundry$']) {
+        log("The following event is not in a valid format: " + to_string!(.message), level: "error")
+      }
+      abort
+    }
+
+    # Delete irrelevant default fields
+    del(.file)
+    del(.source_type)
+
+    # Add the metadata fields following the parsing.
+    .host = .sourcehost
+    .source = "vmware_esxi_hostd"
+    .sourcetype = "vmware_esxi_artefact"
+  '''
+
+[transforms.VMware_ESXi_hostd_coerce_to_sink]
+  type = "remap"
+  inputs = ["VMware_ESXi_hostd_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''

@@ -1,0 +1,3 @@
+::ffff:10.1.2.3 vcenter.domain.fqdn:5480 - [01/Apr/2020:17:27:28 +0200] "GET /rest/appliance/health/storage HTTP/1.1" 200 17 "https://vcenter.domain.fqdn:5480/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) [...]"
+::ffff:10.1.2.3 vcenter.domain.fqdn:5480 - [01/Apr/2020:17:27:28 +0200] "GET /rest/appliance/health/load HTTP/1.1" 200 17 "https://vcenter.domain.fqdn:5480/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) [...]"
+::ffff:127.0.0.1 vcenter.domain.fqdn:5480 - [01/Apr/2020:21:20:48 +0200] "POST /api HTTP/1.1" 200 143 "-" "vAPI/2.xxx.y Java/x.y.z (Linux; z.xx.yyy; amd64)"

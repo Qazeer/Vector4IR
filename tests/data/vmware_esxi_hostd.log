@@ -1,0 +1,7 @@
+2023-04-10T16:00:30.969Z info hostd[10094916] [Originator@6876 sub=Vimsvc.ha-eventmgr opID=esxui-287-c48f] Event 3307 : User root@1.2.3.4 logged in as Mozilla/5.0 (...)
+2023-04-10T19:50:19.256Z info hostd[11200116] [Originator@6876 sub=ViewManager opID=esxui-3611-3891 user=root] Duplicate container view for Object : ha-folder-root [
+--> user - root
+--> session - 520733cb-1234-4321-1234-123456789abc
+--> IP - 1.2.3.4
+--> Number of duplicates - 2]
+2023-04-10T19:50:19.577Z warning hostd[11199947] [Originator@6876 sub=VigorStatsProvider(000000393b39d330).GuestStats(287)] SetVigorNotificationTime: Not connected

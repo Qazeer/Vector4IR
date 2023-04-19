@@ -1,0 +1,45 @@
+# Description: Process VMware vCenter lighttpd access logs.
+#              lighttpd access logs notably contains access to the "vCenter Server Appliance" web interface (port TCP 5480).
+#              Filename should match: "*lighttpd/*access.log*"
+#              Default path on disk: /opt/vmware/var/log/access_log*
+#              source = "vmware_vcenter_lighttpd" & sourcetype = "vmware_vcenter_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.vCenter_lighttpd_access_log_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the vCenter lighttpd access log files is required.}/**/lighttpd/*access.log*"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.vCenter_lighttpd_access_log_parser_to_sink]
+  type = "remap"
+  inputs = ["vCenter_lighttpd_access_log_input"]
+  source = '''
+    ., err = parse_apache_log(.message, format: "combined")
+
+    if (err != null) {
+      log("Unable to convert to parse vCenter lighttpd access log line: " + err, level: "error")
+    }
+
+    .server = .identity
+
+    # Add the source host following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .source = "vmware_vcenter_lighttpd"
+    .sourcetype = "vmware_vcenter_artefact"
+  '''

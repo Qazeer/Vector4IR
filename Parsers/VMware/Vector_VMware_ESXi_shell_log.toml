@@ -1,4 +1,5 @@
 # Description: Process VMware ESXi shell logs.
+#              shell logs "contain a record of all commands typed into the ESXi Shell and shell events (for example, when the shell was enabled)."
 #              Filename should match: "*shell.log*"
 #              Default path on disk: /var/run/log/shell.log*
 #              source = "vmware_esxi_shell" & sourcetype = "vmware_esxi_artefact"
@@ -19,9 +20,9 @@ timezone = "Etc/UTC"
 [sources.VMware_ESXi_shell_input]
   type = "file"
   ignore_checkpoints = true
-  include = ["${INPUT_FOLDER:?The input folder containing the Linux auth log files is required.}/**/*shell.log*"]
+  include = ["${INPUT_FOLDER:?The input folder containing the ESXi shell log files is required.}/**/*shell.log*"]
   read_from = "beginning"
-  oldest_first = true
+  oldest_first = false
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
