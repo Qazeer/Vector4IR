@@ -19,7 +19,7 @@ timezone = "Etc/UTC"
   include = ["${INPUT_FILE:?The Plaso supertimeline source file is required}"]
   ignore_checkpoints = true
   read_from = "beginning"
-  oldest_first = true
+  oldest_first = false
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 

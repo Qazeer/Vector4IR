@@ -19,7 +19,7 @@ timezone = "Etc/UTC"
   include = ["${INPUT_FOLDER:?The input folder containing the FortiGate traffic log files is required.}/**/*traffic*.log*"]
   ignore_checkpoints = true
   read_from = "beginning"
-  oldest_first = true
+  oldest_first = false
   max_line_bytes = 100_000_000
 
 [transforms.FortiGate_traffic_parser]

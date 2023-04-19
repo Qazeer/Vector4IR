@@ -21,7 +21,7 @@ timezone = "Etc/UTC"
   include = ["${INPUT_FOLDER:?The source folder containing the DFIR-O365RC JSON outputs is required}\\**\\*AADAuditLog*.json"]
   ignore_checkpoints = true
   read_from = "beginning"
-  oldest_first = true
+  oldest_first = false
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 

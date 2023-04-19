@@ -21,7 +21,7 @@ timezone = "Etc/UTC"
   include = ["${INPUT_FOLDER:?The source folder containing the Zeek JSON logs is required}/**/*.log"]
   ignore_checkpoints = true
   read_from = "beginning"
-  oldest_first = true
+  oldest_first = false
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 
