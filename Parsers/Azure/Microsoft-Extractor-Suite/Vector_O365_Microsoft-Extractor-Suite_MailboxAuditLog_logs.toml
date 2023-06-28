@@ -1,0 +1,145 @@
+# Description: Process Azure O365 Mailbox Audit logs, as retrieved by Microsoft-Extractor-Suite in CSV format.
+#              Filename should match: "**/*mailboxAuditLog_*.json"
+#              source = "o365_mailboxaudit" & sourcetype = "azure_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_TENANT = "<SOURCE_TENANT>"
+
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.Azure_O365_MailboxAuditLog_Microsoft-Extractor-Suite_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the Microsoft-Extractor-Suite Mailbox Audit logs outputs is required}/**/*mailboxAuditLog_*.csv"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  offset_key = "__offset"
+
+[transforms.Azure_O365_MailboxAuditLog_Microsoft-Extractor-Suite_csv_parser]
+  type = "remap"
+  inputs = ["Azure_O365_MailboxAuditLog_Microsoft-Extractor-Suite_input"]
+  source = '''
+    # Expect CSV header:
+    # "Operation","OperationResult","LogonType","ExternalAccess","DestFolderId","DestFolderPathName","FolderId","FolderPathName","FolderName","MemberRights","MemberSid","MemberUpn","ClientInfoString","ClientIPAddress","ClientIP","ClientMachineName","ClientProcessName","ClientVersion","InternalLogonType","MailboxOwnerUPN","MailboxOwnerSid","DestMailboxOwnerUPN","DestMailboxOwnerSid","DestMailboxGuid","CrossMailboxOperation","LogonUserDisplayName","LogonUserSid","SourceItems","SourceFolders","SourceItemIdsList","SourceItemSubjectsList","SourceItemAttachmentsList","SourceItemFolderPathNamesList","SourceFolderPathNamesList","SourceItemInternetMessageIdsList","ItemId","ItemSubject","ItemAttachments","ItemInternetMessageId","DirtyProperties","OriginatingServer","SessionId","OperationProperties","AuditOperationsCountInAggregatedRecord","AggregatedRecordFoldersData","AppId","ClientAppId","ItemIsRecord","ItemComplianceLabel","MailboxGuid","MailboxResolvedOwnerName","LastAccessed","Identity","IsValid","ObjectState"
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("Unable to split CSV: " + err, level: "error")
+    }
+
+    if .__offset == 0 {
+      expected_header = "\"Operation\",\"OperationResult\",\"LogonType\",\"ExternalAccess\",\"DestFolderId\",\"DestFolderPathName\",\"FolderId\",\"FolderPathName\",\"FolderName\",\"MemberRights\",\"MemberSid\",\"MemberUpn\",\"ClientInfoString\",\"ClientIPAddress\",\"ClientIP\",\"ClientMachineName\",\"ClientProcessName\",\"ClientVersion\",\"InternalLogonType\",\"MailboxOwnerUPN\",\"MailboxOwnerSid\",\"DestMailboxOwnerUPN\",\"DestMailboxOwnerSid\",\"DestMailboxGuid\",\"CrossMailboxOperation\",\"LogonUserDisplayName\",\"LogonUserSid\",\"SourceItems\",\"SourceFolders\",\"SourceItemIdsList\",\"SourceItemSubjectsList\",\"SourceItemAttachmentsList\",\"SourceItemFolderPathNamesList\",\"SourceFolderPathNamesList\",\"SourceItemInternetMessageIdsList\",\"ItemId\",\"ItemSubject\",\"ItemAttachments\",\"ItemInternetMessageId\",\"DirtyProperties\",\"OriginatingServer\",\"SessionId\",\"OperationProperties\",\"AuditOperationsCountInAggregatedRecord\",\"AggregatedRecordFoldersData\",\"AppId\",\"ClientAppId\",\"ItemIsRecord\",\"ItemComplianceLabel\",\"MailboxGuid\",\"MailboxResolvedOwnerName\",\"LastAccessed\",\"Identity\",\"IsValid\",\"ObjectState\""
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      }
+      abort
+    }
+
+    .operation = fields[0]
+    .operationresult = fields[1]
+    .logontype = fields[2]
+    .externalaccess = fields[3]
+    .destfolderid = fields[4]
+    .destfolderpathname = fields[5]
+    .folderid = fields[6]
+    .folderpathname = fields[7]
+    .foldername = fields[8]
+    .memberrights = fields[9]
+    .membersid = fields[10]
+    .memberupn = fields[11]
+    .clientinfostring = fields[12]
+    .clientipaddress = fields[13]
+    .clientip = fields[14]
+    .clientmachinename = fields[15]
+    .clientprocessname = fields[16]
+    .clientversion = fields[17]
+    .internallogontype = fields[18]
+    .mailboxownerupn = fields[19]
+    .mailboxownersid = fields[20]
+    .destmailboxownerupn = fields[21]
+    .destmailboxownersid = fields[22]
+    .destmailboxguid = fields[23]
+    .crossmailboxoperation = fields[24]
+    .logonuserdisplayname = fields[25]
+    .logonusersid = fields[26]
+    .sourceitems = fields[27]
+    .sourcefolders = fields[28]
+    .sourceitemidslist = fields[29]
+    .sourceitemsubjectslist = fields[30]
+    .sourceitemattachmentslist = fields[31]
+    .sourceitemfolderpathnameslist = fields[32]
+    .sourcefolderpathnameslist = fields[33]
+    .sourceiteminternetmessageidslist = fields[34]
+    .itemid = fields[35]
+    .itemsubject = fields[36]
+    .itemattachments = fields[37]
+    .iteminternetmessageid = fields[38]
+    .dirtyproperties = fields[39]
+    .originatingserver = fields[40]
+    .sessionid = fields[41]
+    .operationproperties = fields[42]
+    .auditoperationscountinaggregatedrecord = fields[43]
+    .aggregatedrecordfoldersdata = fields[44]
+    .appid = fields[45]
+    .clientappid = fields[46]
+    .itemisrecord = fields[47]
+    .itemcompliancelabel = fields[48]
+    .mailboxguid = fields[49]
+    .mailboxresolvedownername = fields[50]
+    .lastaccessed = fields[51]
+    .identity = fields[52]
+    .isvalid = fields[53]
+    .objectstate = fields[54]
+
+    .lastaccessed, err = parse_timestamp(.lastaccessed, format: "%-m/%-d/%Y %-I:%-M:%-S %p")
+    if err != null {
+      log("Failed to convert timestamp: " + err, level: "warn")
+    }
+
+    .timestamp = .lastaccessed
+
+    # Fields added to have the same nomenclature between the different log sources (audit, signins, unified logs...)
+    .accountname = .mailboxownerupn
+    .username = .logonuserdisplayname
+
+    # Add the metadata fields following the parsing.
+    .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
+    .source = "o365_mailboxaudit"
+    .sourcetype = "azure_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+    del(.__offset)
+  '''
+
+[transforms.Azure_O365_MailboxAuditLog_Microsoft-Extractor-Suite_coerce_to_sink]
+  type = "remap"
+  inputs = ["Azure_O365_MailboxAuditLog_Microsoft-Extractor-Suite_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''

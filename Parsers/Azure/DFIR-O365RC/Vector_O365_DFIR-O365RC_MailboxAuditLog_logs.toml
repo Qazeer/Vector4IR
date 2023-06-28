@@ -67,6 +67,8 @@ timezone = "Etc/UTC"
     }
 
     .timestamp = .LastAccessedParsed
+
+    # Fields added to have the same nomenclature between the different log sources (audit, signins, unified logs...)
     .AccountName = .MailboxOwnerUPN
     .Username = .LogonUserDisplayName
 
