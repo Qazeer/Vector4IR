@@ -63,7 +63,7 @@ timezone = "Etc/UTC"
 
     # Parse BatchKeyPath field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
     if (match_user_sid, err = parse_regex(.batchkeypath, r'.*UserSettings\\(?P<sid>.*)'); err == null) {
-      .user_sid = match_user_sid.sid
+      .usersid = match_user_sid.sid
     }
 
     # Add the metadata fields following the parsing.
