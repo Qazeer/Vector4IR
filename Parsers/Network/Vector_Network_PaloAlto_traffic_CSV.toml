@@ -1,0 +1,169 @@
+# Description: Process Palo Alto traffic exported in CSV formated-files.
+#              Filename should match "*paloalto_traffic*.csv"
+#              source = "paloalto_traffic" & sourcetype = "network_event"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+# timezone = "Etc/UTC"
+timezone = "Etc/GMT-2"
+
+[sources.PaloAlto_traffic_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the Palo Alto traffic CSV files is required.}/**/*paloalto_traffic*.csv"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  offset_key = "__offset"
+
+[transforms.PaloAlto_traffic_parser]
+  type = "remap"
+  inputs = ["PaloAlto_traffic_input"]
+  source = '''
+    # Expect CSV header:
+    # Domain,Receive Time,Serial #,Type,Threat/Content Type,Config Version,Generate Time,Source address,Destination address,NAT Source IP,NAT Destination IP,Rule,Source User,Destination User,Application,Virtual System,Source Zone,Destination Zone,Inbound Interface,Outbound Interface,Log Action,Time Logged,Session ID,Repeat Count,Source Port,Destination Port,NAT Source Port,NAT Destination Port,Flags,IP Protocol,Action,Bytes,Bytes Sent,Bytes Received,Packets,Start Time,Elapsed Time (sec),Category,tpadding,Sequence Number,Action Flags,Source Country,Destination Country,cpadding,Packets Sent,Packets Received,Session End Reason,DG Hierarchy Level 1,DG Hierarchy Level 2,DG Hierarchy Level 3,DG Hierarchy Level 4,Virtual System Name,Device Name,Action Source,Source VM UUID,Destination VM UUID,Tunnel ID/IMSI,Monitor Tag/IMEI,Parent Session ID,Parent Session Start Time,Tunnel,SCTP Association ID,SCTP Chunks,SCTP Chunks Sent,SCTP Chunks Received,UUID for rule,HTTP/2 Connection,link_change_count,policy_id,link_switches,sdwan_cluster,sdwan_device_type,sdwan_cluster_type,sdwan_site,dynusergroup_name
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("Unable to split CSV: " + err, level: "error")
+    }
+
+    if .__offset == 0 {
+      expected_header = "Domain,Receive Time,Serial #,Type,Threat/Content Type,Config Version,Generate Time,Source address,Destination address,NAT Source IP,NAT Destination IP,Rule,Source User,Destination User,Application,Virtual System,Source Zone,Destination Zone,Inbound Interface,Outbound Interface,Log Action,Time Logged,Session ID,Repeat Count,Source Port,Destination Port,NAT Source Port,NAT Destination Port,Flags,IP Protocol,Action,Bytes,Bytes Sent,Bytes Received,Packets,Start Time,Elapsed Time (sec),Category,tpadding,Sequence Number,Action Flags,Source Country,Destination Country,cpadding,Packets Sent,Packets Received,Session End Reason,DG Hierarchy Level 1,DG Hierarchy Level 2,DG Hierarchy Level 3,DG Hierarchy Level 4,Virtual System Name,Device Name,Action Source,Source VM UUID,Destination VM UUID,Tunnel ID/IMSI,Monitor Tag/IMEI,Parent Session ID,Parent Session Start Time,Tunnel,SCTP Association ID,SCTP Chunks,SCTP Chunks Sent,SCTP Chunks Received,UUID for rule,HTTP/2 Connection,link_change_count,policy_id,link_switches,sdwan_cluster,sdwan_device_type,sdwan_cluster_type,sdwan_site,dynusergroup_name"
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      }
+      abort
+    }
+
+    .domain = fields[0]
+    .receivetime = fields[1]
+    .serial = fields[2]
+    .type = fields[3]
+    .threat_contenttype = fields[4]
+    .configversion = fields[5]
+    .generatetime = fields[6]
+    .sourceaddress = fields[7]
+    .destinationaddress = fields[8]
+    .natsourceip = fields[9]
+    .natdestinationip = fields[10]
+    .rule = fields[11]
+    .sourceuser = fields[12]
+    .destinationuser = fields[13]
+    .application = fields[14]
+    .virtualsystem = fields[15]
+    .sourcezone = fields[16]
+    .destinationzone = fields[17]
+    .inboundinterface = fields[18]
+    .outboundinterface = fields[19]
+    .logaction = fields[20]
+    .timelogged = fields[21]
+    .sessionid = fields[22]
+    .repeatcount = fields[23]
+    .sourceport = fields[24]
+    .destinationport = fields[25]
+    .natsourceport = fields[26]
+    .natdestinationport = fields[27]
+    .flags = fields[28]
+    .ipprotocol = fields[29]
+    .action = fields[30]
+    .bytes = fields[31]
+    .bytessent = fields[32]
+    .bytesreceived = fields[33]
+    .packets = fields[34]
+    .starttime = fields[35]
+    .elapsedtime_sec = fields[36]
+    .category = fields[37]
+    .tpadding = fields[38]
+    .sequencenumber = fields[39]
+    .actionflags = fields[40]
+    .sourcecountry = fields[41]
+    .destinationcountry = fields[42]
+    .cpadding = fields[43]
+    .packetssent = fields[44]
+    .packetsreceived = fields[45]
+    .sessionendreason = fields[46]
+    .dghierarchylevel1 = fields[47]
+    .dghierarchylevel2 = fields[48]
+    .dghierarchylevel3 = fields[49]
+    .dghierarchylevel4 = fields[50]
+    .virtualsystemname = fields[51]
+    .devicename = fields[52]
+    .actionsource = fields[53]
+    .sourcevmuuid = fields[54]
+    .destinationvmuuid = fields[55]
+    .tunnelid_imsi = fields[56]
+    .monitortag_imei = fields[57]
+    .parentsessionid = fields[58]
+    .parentsessionstarttime = fields[59]
+    .tunnel = fields[60]
+    .sctpassociationid = fields[61]
+    .sctpchunks = fields[62]
+    .sctpchunkssent = fields[63]
+    .sctpchunksreceived = fields[64]
+    .uuidforrule = fields[65]
+    .http2connection = fields[66]
+    .link_change_count = fields[67]
+    .policy_id = fields[68]
+    .link_switches = fields[69]
+    .sdwan_cluster = fields[70]
+    .sdwan_device_type = fields[71]
+    .sdwan_cluster_type = fields[72]
+    .sdwan_site = fields[73]
+    .dynusergroup_name = fields[74]
+
+    .timestamp = .starttime
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "paloalto_traffic"
+    .sourcetype = "network_event"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+    del(.__offset)
+  '''
+
+[transforms.PaloAlto_traffic_coerce_to_sink]
+  type = "remap"
+  inputs = ["PaloAlto_traffic_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}[-|/](0[1-9]|1[0-2])[-|/](0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y/%m/%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
