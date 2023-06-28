@@ -33,16 +33,18 @@ timezone = "Etc/UTC"
   source = '''
     # Expect CSV header:
     # Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details
+    # "Timestamp","Computer","Channel","EventID","Level","RecordID","RuleTitle","Details"
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
     if .__offset == 0 {
-      expected_header = "Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details"
+      expected_header_old = "Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details"
+      expected_header_new = "\"Timestamp\",\"Computer\",\"Channel\",\"EventID\",\"Level\",\"RecordID\",\"RuleTitle\",\"Details\""
       current_header = strip_whitespace(string!(.message))
-      if expected_header != current_header {
-        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      if expected_header_old != current_header && expected_header_new != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header_new + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
