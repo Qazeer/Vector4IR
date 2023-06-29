@@ -74,38 +74,38 @@ timezone = "Etc/UTC"
     #     },
     #     [...]
     DevicePropertiesArray = .DeviceProperties
-    if is_null(.DeviceProperties) == false {
+    if is_null(.DeviceProperties) == false && is_array(.DeviceProperties) {
       DevicePropertiesMapped = {}
       for_each(array!(.DeviceProperties)) -> |_, item| {
-        DevicePropertiesMapped = set!(DevicePropertiesMapped, [item.Name], item.Value)
+        if exists(item.Name) && exists(item.Name) { DevicePropertiesMapped = set!(DevicePropertiesMapped, [item.Name], item.Value) }
       }
       .DeviceProperties = DevicePropertiesMapped
     }
 
     ExtendedPropertiesArray = .ExtendedProperties
-    if is_null(.ExtendedProperties) == false {
+    if is_null(.ExtendedProperties) == false && is_array(.ExtendedProperties) {
       ExtendedPropertiesMapped = {}
       for_each(array!(.ExtendedProperties)) -> |_, item| {
-        ExtendedPropertiesMapped = set!(ExtendedPropertiesMapped, [item.Name], item.Value)
+        if exists(item.Name) && exists(item.Name) { ExtendedPropertiesMapped = set!(ExtendedPropertiesMapped, [item.Name], item.Value) }
       }
       .ExtendedProperties = ExtendedPropertiesMapped
     }
 
     ParametersArray = .Parameters
-    if is_null(.Parameters) == false {
+    if is_null(.Parameters) == false && is_array(.Parameters) {
       ParametersMapped = {}
       for_each(array!(.Parameters)) -> |_, item| {
-        ParametersMapped = set!(ParametersMapped, [item.Name], item.Value)
+        if exists(item.Name) && exists(item.Name) { ParametersMapped = set!(ParametersMapped, [item.Name], item.Name) }
       }
       .Parameters = ParametersMapped
     }
 
     ModifiedPropertiesArray = .ModifiedProperties
-    if is_null(.ModifiedProperties) == false {
+    if is_null(.ModifiedProperties) == false && is_array(.ModifiedProperties) {
       ModifiedPropertiesMapped = {}
       for_each(array!(.ModifiedProperties)) -> |_, item| {
-        ModifiedPropertiesMapped = set!(ModifiedPropertiesMapped, [item.Name, "OldValue"], item.OldValue)
-        ModifiedPropertiesMapped = set!(ModifiedPropertiesMapped, [item.Name, "NewValue"], item.NewValue)
+        if exists(item.Name) && exists(item.OldValue) { ModifiedPropertiesMapped = set!(ModifiedPropertiesMapped, [item.Name, "OldValue"], item.OldValue) }
+        if exists(item.Name) && exists(item.NewValue) { ModifiedPropertiesMapped = set!(ModifiedPropertiesMapped, [item.Name, "NewValue"], item.NewValue) }
       }
       .ModifiedProperties = ModifiedPropertiesMapped
     }
