@@ -1,0 +1,69 @@
+# Description: Process AzureAD Sign Logs, as retrieved by Microsoft-Extractor-Suite.
+#              Filename should match: "**\SigninLog*.json"
+#              Logs should be converted from pretty-printed JSON to compacted JSON using the Onelifying_JSON.sh script (requiring jq).
+#              source = "azure_aad_signins" & sourcetype = "azure_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_TENANT = "<SOURCE_TENANT>"
+
+# Temporary folder used by Vector
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.AzureAD_Microsoft-Extractor-Suite_signin_logs_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the Microsoft-Extractor-Suite JSON outputs is required}\\**\\*SignInLogs*.json"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  encoding.charset = "utf-16le"
+
+# Double remap as events are stored as JSON objects in a single-line JSON array.
+# The first remap "explode" the JSON array in multiple events.
+[transforms.AzureAD_Microsoft-Extractor-Suite_signin_logs_parser]
+  inputs = ["AzureAD_Microsoft-Extractor-Suite_signin_logs_input"]
+  type = "remap"
+  source = '''
+    ., err = parse_json(.message)
+    if err != null {
+      log("Unable to parse JSON: " + err, level: "error")
+    }
+  '''
+
+[transforms.AzureAD_Microsoft-Extractor-Suite_signin_logs_enrich_to_sink]
+  inputs = ["AzureAD_Microsoft-Extractor-Suite_signin_logs_parser"]
+  type = "remap"
+  source = '''
+    if is_null(.CreatedDateTime) == false {
+      .CreatedDateTime, err1 = to_timestamp(.CreatedDateTime)
+      if err1 != null {
+        log("Unable to convert to timestamp: " + err1, level: "error")
+      }
+    }
+
+    if (.status.errorCode == 0 && .status.failureReason == "Other.") {
+      .authenticationResult = "Success"
+    } else {
+      .authenticationResult = "Failure"
+    }
+
+    # Add new fields copied from existing ones to have the same nomenclature between the different log sources (audit, signins, unified logs...)
+    .timestamp = .CreatedDateTime
+    .ClientIP = .IpAddress
+    .Username = .UserDisplayName
+    .AccountName = .UserPrincipalName
+
+    .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
+    .source = "azure_aad_signins"
+    .sourcetype = "azure_artefact"
+
+    . = flatten(.)
+  '''

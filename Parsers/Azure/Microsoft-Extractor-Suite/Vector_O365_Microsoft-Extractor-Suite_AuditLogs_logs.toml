@@ -1,0 +1,81 @@
+# Description: Process AzureAD Audit Logs, as retrieved by Microsoft-Extractor-Suite.
+#              Filename should match: "**\*AADAuditLog*.json"
+#              Logs should be converted from pretty-printed JSON to compacted JSON using the Onelifying_JSON.sh script (requiring jq).
+#              source = "azure_aad_audit" & sourcetype = "azure_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_TENANT = "<SOURCE_TENANT>"
+
+# Temporary folder used by Vector
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.AzureAD_Microsoft-Extractor-Suite_audit_logs_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The source folder containing the Microsoft-Extractor-Suite JSON outputs is required}\\**\\*AADAuditLog*.json"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  encoding.charset = "utf-16le"
+
+# Double remap as events are stored as JSON objects in a single-line JSON array.
+# The first remap "explode" the JSON array in multiple events.
+[transforms.AzureAD_Microsoft-Extractor-Suite_audit_logs_parser]
+  inputs = ["AzureAD_Microsoft-Extractor-Suite_audit_logs_input"]
+  type = "remap"
+  source = '''
+    ., err = parse_json(.message, max_depth: 8)
+    if err != null {
+      log("Unable to parse JSON: " + err, level: "error")
+    }
+  '''
+
+[transforms.AzureAD_Microsoft-Extractor-Suite_audit_logs_enrich]
+  inputs = ["AzureAD_Microsoft-Extractor-Suite_audit_logs_parser"]
+  type = "remap"
+  source = '''
+    if is_null(.ActivityDateTime) == false {
+      .ActivityDateTime, err = to_timestamp(.ActivityDateTime)
+      if err != null {
+        log("Unable to convert to timestamp: " + err, level: "error")
+      }
+    }
+
+    .timestamp = .ActivityDateTime
+
+    # Child fields are added to InitiatedBy field to have the same nomenclature between the different log sources (audit, signins, unified logs...)
+    if is_null(.InitiatedBy.user) == false {
+      .InitiatedBy.User.AccountName = .InitiatedBy.User.UserPrincipalName
+      .InitiatedBy.User.ClientIP = .InitiatedBy.User.IpAddress
+    }
+    if is_null(.InitiatedBy.app) == false {
+      .InitiatedBy.App.AppName = .InitiatedBy.App.DisplayName
+      .InitiatedBy.App.ServiceName = .InitiatedBy.App.ServicePrincipalName
+      .InitiatedBy.App.ServiceId = .InitiatedBy.App.ServicePrincipalId
+    }
+
+    .host = "${SOURCE_TENANT:?The source AzureAD tenant is required}"
+    .source = "azure_aad_audit"
+    .sourcetype = "azure_artefact"
+
+    # "Explode" 1 event with multiple (X) targetResources into multiple (X) events.
+    if is_null(.TargetResources) == false {
+      . = unnest!(.TargetResources)
+    }
+  '''
+
+# Extra remap required as the unnest from the enrich remap component explode the event in multiple events.
+[transforms.AzureAD_Microsoft-Extractor-Suite_audit_logs_flatten_to_sink]
+  inputs = ["AzureAD_Microsoft-Extractor-Suite_audit_logs_enrich"]
+  type = "remap"
+  source = '''
+  . = flatten(.)
+  '''
