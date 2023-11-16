@@ -1,7 +1,7 @@
 Description: Compound module linked to the Vector4IR project.
 Category: Modules
 Author: Qazeer (Thomas DIOT)
-Version: 1.0
+Version: 1.2
 Id: f1ada04f-d562-4340-8f68-e258d2820946
 BinaryUrl:
 ExportFormat: csv
@@ -40,11 +40,6 @@ Processors:
         Executable: PowerShell_SumECmd_SUM-RepairAndParse.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires CCM_RUA_Finder (https://github.com/esecrpm/WMI_Forensics/raw/master/CCM_RUA_Finder.exe) to be in "KAPE\Modules\bin\CCM_RUA_Finder.exe".
-    -
-        Executable: CCMRUAFinder_RecentlyUsedApps.mkape
-        CommandLine: ""
-        ExportFormat: ""
     -
         Executable: EvtxECmd_RDP.mkape
         CommandLine: ""
@@ -58,6 +53,12 @@ Processors:
     # Requires hayabusa.exe (https://github.com/Yamato-Security/hayabusa/releases/) to be in "KAPE\Modules\bin\hayabusa.exe".
     -
         Executable: hayabusa_OfflineEventLogs.mkape
+        CommandLine: ""
+        ExportFormat: ""
+    # Requires Execute-Winlogbeat.ps1 (https://gist.github.com/Qazeer/4936ec6c9fa511500f9496d0ceacab22) to be in "KAPE\Modules\bin\"
+    # And Winlogbeat (https://www.elastic.co/fr/downloads/beats/winlogbeat) full folder to be under "%kapeDirectory%\Modules\bin\Winlogbeat"
+    -
+        Executable: PowerShell_Execute-Winlogbeat.mkape
         CommandLine: ""
         ExportFormat: ""
     # Requires RECmd.exe binary
@@ -78,25 +79,34 @@ Processors:
         Executable: RECmd_AllBatchFiles.mkape
         CommandLine: ""
         ExportFormat: ""
+    # Requires ConvertPSHistoryTo-CSV.ps1 (https://gist.github.com/Qazeer/a0c1c14bb1eae233c1147d1d9dfb3e93) to be in "KAPE\Modules\bin\"
+    -
+        Executable: PowerShell_ConvertPSHistoryTo-CSV.mkape
+        CommandLine: ""
+        ExportFormat: ""
+    # Requires ConvertUsageLogsTo-CSV.ps1 (https://gist.github.com/Qazeer/6c655627962f034aa2b6e92594770ee2) to be in "KAPE\Modules\bin\"
+    -
+        Executable: PowerShell_ConvertUsageLogsTo-CSV.mkape
+        CommandLine: ""
+        ExportFormat: ""
+    # Requires Execute-ThumbcacheViewer.ps1 (https://gist.github.com/Qazeer/cb3a0cf306bc1f75a2d5a8cef5b9ffa9) and thumbcache_viewer_cmd.exe (https://github.com/thumbcacheviewer/thumbcacheviewer/releases/download/v1.0.1.8/thumbcache_viewer_cmd.zip) to be in "KAPE\Modules\bin\"
+    -
+        Executable: PowerShell_Execute-ThumbcacheViewer.mkape
+        CommandLine: ""
+        ExportFormat: ""
     # Requires Nirsoft's BrowsingHistoryView (https://www.nirsoft.net/utils/browsinghistoryview-x64.zip) to be in "KAPE\Modules\bin\browsinghistoryview.exe".
     -
         Executable: NirSoft_BrowsingHistoryView.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires Hindsight (https://github.com/obsidianforensics/hindsight/releases) to be in "KAPE\Modules\bin\hindsight.exe".
-    -
-        Executable: ObsidianForensics_Hindsight.mkape
-        CommandLine: ""
-        ExportFormat: ""
-    # Requires woanware's wmi-parser (https://github.com/woanware/wmi-parser/releases/download/v0.0.2/wmi-parser.v0.0.2.zip) to be in "KAPE\Modules\bin\wmi-parser\wmi-parser.exe
-    # TODO: Fix error "Unhandled Exception: System.IO.FileNotFoundException: Could not load file or assembly".
-    #-
-    #    Executable: WMI-Parser.mkape
-    #    CommandLine: ""
-    #    ExportFormat: ""
     # Requires OneDriveExplorer (https://github.com/Beercow/OneDriveExplorer/releases/) to be in "KAPE\Modules\bin\OneDriveExplorer.exe".
     -
         Executable: OneDriveExplorer.mkape
+        CommandLine: ""
+        ExportFormat: ""
+    # Requires CCM_RUA_Finder (https://github.com/esecrpm/WMI_Forensics/raw/master/CCM_RUA_Finder.exe) to be in "KAPE\Modules\bin\CCM_RUA_Finder.exe".
+    -
+        Executable: CCMRUAFinder_RecentlyUsedApps.mkape
         CommandLine: ""
         ExportFormat: ""
     # Requires DetectionHistory Parser (https://github.com/jklepsercyber/defender-detectionhistory-parser/raw/main/dhparser.exe) to be in "KAPE\Modules\bin\dhparser.exe".
@@ -115,7 +125,9 @@ Processors:
     #    Executable: BMC-Tools_RDPBitmapCacheParser.mkape
     #    CommandLine: ""
     #    ExportFormat: ""
-    -
-        Executable: Winlogbeat_ALL.mkape
-        CommandLine: ""
-        ExportFormat: ""
+    # Requires woanware's wmi-parser (https://github.com/woanware/wmi-parser/releases/download/v0.0.2/wmi-parser.v0.0.2.zip) to be in "KAPE\Modules\bin\wmi-parser\wmi-parser.exe
+    # TODO: Fix error "Unhandled Exception: System.IO.FileNotFoundException: Could not load file or assembly".
+    #-
+    #    Executable: WMI-Parser.mkape
+    #    CommandLine: ""
+    #    ExportFormat: ""
