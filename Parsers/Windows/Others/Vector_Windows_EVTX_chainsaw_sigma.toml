@@ -39,11 +39,12 @@ timezone = "Etc/UTC"
   source = '''
     # Validate the CSV header and retrieve the first log entry as the multiline parsing groups the header with the first log line.
     # Expect CSV header:
-    # timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data
+    # Old: timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data
+    # New: timestamp,detections,path,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data
     # If the line is the header.
     message_as_string = strip_whitespace(string!(.message))
     if starts_with(message_as_string, "timestamp") {
-      expected_header = "timestamp,detections,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data"
+      expected_header = "timestamp,detections,path,count,Event.System.Provider,Event ID,Record ID,Computer,Event Data"
       if !starts_with(message_as_string, expected_header) {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header (+ first line):      " + message_as_string, level: "error")
       } else {
@@ -58,12 +59,13 @@ timezone = "Etc/UTC"
 
     .timestamp = fields[0]
     .detections = fields[1]
-    .count = fields[2]
-    .eventprovider = fields[3]
-    .eventid = fields[4]
-    .recordid = fields[5]
-    .computer = fields[6]
-    .eventdata = fields[7]
+    .path = fields[2]
+    .count = fields[3]
+    .eventprovider = fields[4]
+    .eventid = fields[5]
+    .recordid = fields[6]
+    .computer = fields[7]
+    .eventdata = fields[8]
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
