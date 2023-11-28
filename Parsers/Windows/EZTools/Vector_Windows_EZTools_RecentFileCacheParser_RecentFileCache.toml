@@ -54,6 +54,8 @@ timezone = "Etc/UTC"
     .sourceaccessed = fields[3]
     .filename = fields[4]
 
+    .exe = .filename
+
     if (match_user, err = parse_regex(.filename, r'.*(\\|/)([uU]sers|[uU]tilisateurs)(\\|/)(?P<username>.*?)(\\|/).*'); err == null) {
       .user = match_user.username
     } else {

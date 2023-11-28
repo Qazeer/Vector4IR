@@ -62,6 +62,7 @@ timezone = "Etc/UTC"
     .launchcount = fields[6]
     .recentdocs = fields[7]
 
+    .exe = .apppath
     .timestamp = .lastaccessed
 
     if (match_user, err = parse_regex(.file, r'.*(\\|/).*([uU]sers|[uU]tilisateurs)_(?P<username>.*)_.*'); err == null) {

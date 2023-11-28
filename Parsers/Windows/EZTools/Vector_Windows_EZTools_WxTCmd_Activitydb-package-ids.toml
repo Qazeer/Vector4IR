@@ -55,6 +55,7 @@ timezone = "Etc/UTC"
     .additionalinformation = fields[3]
     .expires = fields[4]
 
+    .exe = .name
     .timestamp = .expires
 
     # Add the metadata fields following the parsing.

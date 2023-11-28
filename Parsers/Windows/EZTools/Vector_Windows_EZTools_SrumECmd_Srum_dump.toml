@@ -88,6 +88,8 @@ timezone = "Etc/UTC"
       .foregroundnumreadoperations = fields[23]
       .foregroundnumwriteoperations = fields[24]
 
+      .exe = .exeinfo
+
     } else if (contains!(.file, "AppTimelineProvider") || contains!(.file, "Unknown312")) {
       .source = "windows_srum_apptimelineprovider"
 
@@ -112,6 +114,8 @@ timezone = "Etc/UTC"
       .appid = fields[9]
       .endtime = fields[10]
       .durationms = fields[11]
+
+      .exe = .exeinfo
 
     } else if (contains!(.file, "EnergyUsage")) {
       .source = "windows_srum_energyusage"
@@ -152,6 +156,8 @@ timezone = "Etc/UTC"
       .csdischargetime = fields[24]
       .csenergy = fields[25]
 
+      .exe = .exeinfo
+
     } else if (contains!(.file, "NetworkConnections")) {
       .source = "windows_srum_networkconnections"
 
@@ -181,6 +187,8 @@ timezone = "Etc/UTC"
       .l2profileflags = fields[14]
       .l2profileid = fields[15]
       .profilename = fields[16]
+
+      .exe = .exeinfo
 
     } else if (contains!(.file, "NetworkUsages")) {
       .source = "windows_srum_networkusages"
@@ -212,6 +220,8 @@ timezone = "Etc/UTC"
       .l2profileid = fields[15]
       .profilename = fields[16]
 
+      .exe = .exeinfo
+
     } else if (contains!(.file, "PushNotifications")) {
       .source = "windows_srum_pushnotifications"
 
@@ -237,6 +247,8 @@ timezone = "Etc/UTC"
       .networktype = fields[10]
       .notificationtype = fields[11]
       .payloadsize = fields[12]
+
+      .exe = .exeinfo
 
     } else if (contains!(.file, "UnknownD8F")) {
       .source = "windows_srum_unknownd8f"

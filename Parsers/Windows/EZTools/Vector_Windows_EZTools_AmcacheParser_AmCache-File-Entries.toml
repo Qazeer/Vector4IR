@@ -76,6 +76,7 @@ timezone = "Etc/UTC"
       .language = fields[19]
       .description = fields[20]
 
+      .exe = .fullpath
       .timestamp = .filekeylastwritetimestamp
 
     } else if length(fields) == 32 {
@@ -112,6 +113,7 @@ timezone = "Etc/UTC"
       .companyname = fields[30]
       .switchbackcontext = fields[31]
 
+      .exe = .fullpath
       .timestamp = .fileidlastwritetimestamp
 
     } else {

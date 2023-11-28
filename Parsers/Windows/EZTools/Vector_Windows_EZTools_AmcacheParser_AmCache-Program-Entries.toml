@@ -76,6 +76,8 @@ timezone = "Etc/UTC"
     .uninstallstring = fields[24]
     .manufacturer = fields[25]
 
+    .exe = .name
+
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost

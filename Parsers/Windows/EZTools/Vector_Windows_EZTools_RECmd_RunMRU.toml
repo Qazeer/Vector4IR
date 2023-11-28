@@ -60,6 +60,7 @@ timezone = "Etc/UTC"
     .executable = fields[4]
     .openedon = fields[5]
 
+    .exe = .executable
     .timestamp = .openedon
 
     if is_nullish(.timestamp) {

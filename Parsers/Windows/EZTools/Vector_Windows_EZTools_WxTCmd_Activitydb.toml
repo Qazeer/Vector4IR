@@ -74,6 +74,8 @@ timezone = "Etc/UTC"
     .deviceplatform = fields[20]
     .timezone = fields[21]
 
+    .exe = .executable
+
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost

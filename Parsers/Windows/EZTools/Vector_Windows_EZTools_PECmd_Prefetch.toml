@@ -72,6 +72,8 @@ timezone = "Etc/UTC"
     .filesloaded = fields[25]
     .parsingerror = fields[26]
 
+    .exe = .executablename
+
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
     .host = .sourcehost

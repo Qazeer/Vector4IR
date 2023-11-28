@@ -56,6 +56,7 @@ timezone = "Etc/UTC"
     .duplicate = fields[5]
     .sourcefile = fields[6]
 
+    .exe = .path
     .timestamp = .lastmodifiedtimeutc
 
     if is_nullish(.timestamp) {

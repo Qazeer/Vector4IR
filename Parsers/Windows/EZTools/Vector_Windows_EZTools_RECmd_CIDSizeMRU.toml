@@ -59,6 +59,7 @@ timezone = "Etc/UTC"
     .batchvaluename = fields[3]
     .openedon = fields[4]
 
+    .exe = .executable
     .timestamp = .openedon
 
     if is_nullish(.timestamp) {

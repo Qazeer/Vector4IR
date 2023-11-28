@@ -60,6 +60,7 @@ timezone = "Etc/UTC"
     .focustime = fields[5]
     .lastexecuted = fields[6]
 
+    .exe = .programname
     .timestamp = .lastexecuted
 
     if is_nullish(.timestamp) {

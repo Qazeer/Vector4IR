@@ -59,6 +59,8 @@ timezone = "Etc/UTC"
     .executiontime = fields[2]
     .batchvaluename = fields[3]
 
+    .exe = .program
+
     .timestamp = .executiontime
 
     # Parse BatchKeyPath field to extract user SID. Expected format: S-1-5-1234567890-123456789-1234567890-512.
