@@ -1,0 +1,5 @@
+t=2022-11-17T14:18:41+0000 lvl=info msg="HTTP Server Listen" logger=http.server address=[::]:3000 protocol=http subUrl= socket=
+t=2022-11-17T14:19:10+0000 lvl=info msg="Request Completed" logger=context userId=0 orgId=0 uname= method=GET path=/ status=302 remote_addr=1.2.3.4 time_ms=0 size=29 referer=
+t=2022-11-17T14:20:02+0000 lvl=info msg="Successful Login" logger=http.server User=admin@localhost
+t=2022-11-17T14:20:08+0000 lvl=info msg="Request Completed" logger=context userId=0 orgId=0 uname= method=GET path=/ status=302 remote_addr=1.2.3.4 time_ms=0 size=29 referer=
+t=2022-11-17T14:20:13+0000 lvl=info msg="Request Completed" logger=context userId=1 orgId=1 uname=admin method=POST path=/api/user/password/reset status=400 remote_addr=1.2.3.4 time_ms=13 size=52 referer=http://url:3000/login
