@@ -1,0 +1,132 @@
+# Description: Process SysmonForLinux XML events.
+#              Filename should match: "*SysmonForLinux*.log*"
+#              Default path on disk: syslog events.
+#              source = "linux_sysmon" & sourcetype = "linux_artefact"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2022-09-01
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.Linux_sysmon_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the Linux sysmon event files is required.}/**/*SysmonForLinux*.log*"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+
+[transforms.Linux_sysmon_parser]
+  type = "remap"
+  inputs = ["Linux_sysmon_input"]
+  source = '''
+
+  message_parsed, err = parse_xml(.message, text_key: "value", attr_prefix: "")
+
+  if (err != null) {
+    log("Unable to parse event: '" + string!(.message) + "'. Error: " + err, level: "error")
+    abort
+  } else {
+    . = object!(message_parsed.Event)
+  }
+
+  # Example System:
+  # <System>
+  #   <Provider Name="Linux-Sysmon" Guid="{ff032593-a8d3-4f13-b0d6-01fc615a0f97}"/>
+  #   <EventID>3</EventID>
+  #   <Version>5</Version>
+  #   <Level>4</Level>
+  #   <Task>3</Task>
+  #   <Opcode>0</Opcode>
+  #   <Keywords>0x8000000000000000</Keywords>
+  #   <TimeCreated SystemTime="2022-11-24T12:09:29.595670000Z"/>
+  #   <EventRecordID>78803</EventRecordID>
+  #   <Correlation/>
+  #   <Channel>Linux-Sysmon/Operational</Channel>
+  #   ...
+  # </System>
+  . |= object!(.System)
+  del(.System)
+
+  # Example EventData:
+  # <EventData>
+  #       <Data Name="RuleName">-</Data>
+  #       <Data Name="UtcTime">2022-11-24 12:09:29.600</Data>
+  #       <Data Name="ProcessGuid">{c9eb4a87-4095-637f-a067-c30000000000}</Data>
+  #       <Data Name="ProcessId">4090</Data>
+  #       <Data Name="Image">XXX</Data>
+  #       <Data Name="User">root</Data>
+  #       ...
+  # </EventData>
+  # First level parsing:
+  # { "EventData":
+  #   { "Data": [
+  #     { "Name": "RuleName", "value": "-" },
+  #     { "Name": "UtcTime", "value": "2022-11-24 12:09:29.600" },
+  #     { "Name": "ProcessGuid", "value": "{c9eb4a87-4095-637f-a067-c30000000000}" },
+  #     { "Name": "ProcessId", "value": 4090 },
+  #     { "Name": "Image", "value": "XXX" },
+  #     { "Name": "User", "value": "root" },
+  #     ...
+  EventData = .EventData.Data
+  if is_null(EventData) == false && is_array(EventData) {
+    # log("here", level: "error")
+    EventDataMapped = {}
+    for_each(array!(EventData)) -> |_, item| {
+      if exists(item.Name) && exists(item.value) {
+        EventDataMapped = set!(EventDataMapped, [item.Name], item.value)
+      }
+    }
+    del(.EventData)
+    .EventData = EventDataMapped
+  }
+
+  .timestamp = del(.TimeCreated.SystemTime)
+
+  # Add the metadata fields following the parsing.
+  .sourcehost = "${SOURCE_HOST:?The source host is required}"
+  .host = .sourcehost
+  .source = "linux_sysmon"
+  .sourcetype = "linux_artefact"
+
+  . = flatten(.)
+  '''
+
+[transforms.Linux_sysmon_coerce_to_sink]
+  type = "remap"
+  inputs = ["Linux_sysmon_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?((\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))|Z)?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%+") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
