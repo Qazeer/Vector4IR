@@ -1,6 +1,6 @@
 # Description: Process Grafana logs.
 #              Filename should match: "*grafana*.log*"
-#              Path on disk: <GRAFANA_INSTALL_FOLDER>/data/log/grafana.log*
+#              Path on disk: <GRANAFA_INSTALL_FOLDER>/data/log/grafana.log*
 #              source = "grafana" & sourcetype = "applications"
 # Author(s): Thomas DIOT (_Qazeer)
 # Version: 1.0
@@ -34,7 +34,7 @@ timezone = "Etc/UTC"
   ., err = parse_key_value(.message, key_value_delimiter: "=", field_delimiter: " ", whitespace: "strict", accept_standalone_key: true)
 
   if (err != null) {
-    log("Unable to parse key-values for log log line: " + err, level: "error")
+    log("Unable to parse key-values for log line: " + err, level: "error")
     abort
   }
 
