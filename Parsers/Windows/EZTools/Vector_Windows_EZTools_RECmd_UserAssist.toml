@@ -65,7 +65,10 @@ timezone = "Etc/UTC"
 
     if is_nullish(.timestamp) {
       log("Timestamp is null for event, defaulting to current time: " + string!(.message), level: "warn")
+      .timestampisnull = true
       .timestamp = now()
+    } else {
+        .timestampisnull = false
     }
 
     if (match_user, err = parse_regex(.file, r'.*(\\|/).*([uU]sers|[uU]tilisateurs)_(?P<username>.*)_.*'); err == null) {
