@@ -61,6 +61,7 @@ timezone = "Etc/UTC"
     .visit_duration = fields[6]
     .webbrowser = fields[7]
     .user_profile = fields[8]
+    .user = .user_profile
     .browser_profile = fields[9]
     .url_length = fields[10]
     .typed_count = fields[11]
