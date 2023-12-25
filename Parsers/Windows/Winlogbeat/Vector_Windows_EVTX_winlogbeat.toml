@@ -40,7 +40,7 @@ timezone = "Etc/UTC"
     }
 
     # Rename / remove fields in the ELK format introduced by Winlogbeat.
-    if (.timestamp, err = to_timestamp(.@timestamp); err != null) {
+    if (.timestamp, err = parse_timestamp(.@timestamp, format: "%+"); err != null) {
       log("Unable to convert timestamp: " + err, level: "warn")
     }
     del(.@timestamp)
