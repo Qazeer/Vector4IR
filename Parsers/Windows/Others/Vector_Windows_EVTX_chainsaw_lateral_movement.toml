@@ -32,14 +32,15 @@ timezone = "Etc/UTC"
   inputs = ["Windows_EVTX_chainsaw_lateral_movement_input"]
   source = '''
     # Expect CSV header:
-    # timestamp,detections,Event ID,Record ID,Computer,User,Logon Type,IP Address
+    # Old: timestamp,detections,Event ID,Record ID,Computer,User,Logon Type,IP Address
+    # New: timestamp,detections,path,Event ID,Record ID,Computer,User,Logon Type,IP Address
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
     if .__offset == 0 {
-      expected_header = "timestamp,detections,Event ID,Record ID,Computer,User,Logon Type,IP Address"
+      expected_header = "timestamp,detections,path,Event ID,Record ID,Computer,User,Logon Type,IP Address"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
@@ -49,12 +50,13 @@ timezone = "Etc/UTC"
 
     .timestamp = fields[0]
     .detections = fields[1]
-    .eventid = fields[2]
-    .recordid = fields[3]
-    .computer = fields[4]
-    .user = fields[5]
-    .logontype = fields[6]
-    .ip = fields[7]
+    .path = fields[2]
+    .eventid = fields[3]
+    .recordid = fields[4]
+    .computer = fields[5]
+    .user = fields[6]
+    .logontype = fields[7]
+    .ip = fields[8]
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"

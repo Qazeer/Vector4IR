@@ -32,14 +32,15 @@ timezone = "Etc/UTC"
   inputs = ["Windows_EVTX_chainsaw_login_attacks_input"]
   source = '''
     # Expect CSV header:
-    # timestamp,detections,count,Event ID,User
+    # Old: timestamp,detections,count,Event ID,User
+    # New: timestamp,detections,path,count,Event ID,User
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
     }
 
     if .__offset == 0 {
-      expected_header = "timestamp,detections,count,Event ID,User"
+      expected_header = "timestamp,detections,path,count,Event ID,User"
       current_header = strip_whitespace(string!(.message))
       if expected_header != current_header {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
@@ -49,9 +50,10 @@ timezone = "Etc/UTC"
 
     .timestamp = fields[0]
     .detections = fields[1]
-    .count = fields[2]
-    .eventid = fields[3]
-    .user = fields[4]
+    .path = fields[2]
+    .count = fields[3]
+    .eventid = fields[4]
+    .user = fields[5]
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
