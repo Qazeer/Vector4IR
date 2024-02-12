@@ -32,8 +32,8 @@ timezone = "Etc/UTC"
   inputs = ["Windows_EVTX_hayabusa_input"]
   source = '''
     # Expect CSV header:
-    # Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details
-    # "Timestamp","Computer","Channel","EventID","Level","RecordID","RuleTitle","Details"
+    # Old: Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details
+    # New (standard profile output): "Timestamp","Computer","Channel","EventID","Level","RecordID","RuleTitle","Details","ExtraFieldInfo"
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
@@ -41,7 +41,7 @@ timezone = "Etc/UTC"
 
     if .__offset == 0 {
       expected_header_old = "Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details"
-      expected_header_new = "\"Timestamp\",\"Computer\",\"Channel\",\"EventID\",\"Level\",\"RecordID\",\"RuleTitle\",\"Details\""
+      expected_header_new = "\"Timestamp\",\"Computer\",\"Channel\",\"EventID\",\"Level\",\"RecordID\",\"RuleTitle\",\"Details\",\"ExtraFieldInfo\""
       current_header = strip_whitespace(string!(.message))
       if expected_header_old != current_header && expected_header_new != current_header {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header_new + "\n=> Got CSV header:      " + current_header, level: "error")
@@ -57,6 +57,7 @@ timezone = "Etc/UTC"
     .recordid = fields[5]
     .ruletitle = fields[6]
     .details = fields[7]
+    .extrafieldinfo = fields[8]
 
     # Add the metadata fields following the parsing.
     .sourcehost = "${SOURCE_HOST:?The source host is required}"
