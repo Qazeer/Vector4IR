@@ -1,7 +1,7 @@
 Description: Compound module linked to the Vector4IR project.
 Category: Modules
 Author: Qazeer (Thomas DIOT)
-Version: 1.2
+Version: 1.3
 Id: f1ada04f-d562-4340-8f68-e258d2820946
 BinaryUrl:
 ExportFormat: csv
@@ -94,6 +94,11 @@ Processors:
         Executable: PowerShell_Execute-ThumbcacheViewer.mkape
         CommandLine: ""
         ExportFormat: ""
+    # Requires Execute-BmcTools.ps1 (https://gist.github.com/Qazeer/3a6d43a117bbece6d83e7e79687e0870) and bmc-tools.exe (compiled version of bmc-tools.py, from https://github.com/Qazeer/bmc-tools-compiled/) to be in "KAPE\Modules\bin\bmc-tools.exe".
+    -
+        Executable: PowerShell_Execute-BmcTools.mkape
+        CommandLine: ""
+        ExportFormat: ""
     # Requires Nirsoft's BrowsingHistoryView (https://www.nirsoft.net/utils/browsinghistoryview-x64.zip) to be in "KAPE\Modules\bin\browsinghistoryview.exe".
     -
         Executable: NirSoft_BrowsingHistoryView.mkape
@@ -119,12 +124,6 @@ Processors:
         Executable: SEPparser.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires bmc-tools.exe (compiled version of bmc-tools.py, from https://github.com/dingtoffee/bmc-tools/raw/master/dist/bmc-tools.exe) to be in "KAPE\Modules\bin\bmc-tools.exe".
-    # TODO: Fix non finishing execution.
-    #-
-    #    Executable: BMC-Tools_RDPBitmapCacheParser.mkape
-    #    CommandLine: ""
-    #    ExportFormat: ""
     # Requires woanware's wmi-parser (https://github.com/woanware/wmi-parser/releases/download/v0.0.2/wmi-parser.v0.0.2.zip) to be in "KAPE\Modules\bin\wmi-parser\wmi-parser.exe
     # TODO: Fix error "Unhandled Exception: System.IO.FileNotFoundException: Could not load file or assembly".
     #-
