@@ -12,7 +12,7 @@
   inputs = ["*to_sink"]
   mode="bulk"
   bulk.index = "${INDEX:?An index name must be specified for the ELK index}"
-  endpoint = "http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"
+  endpoints = ["http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"]
   auth.strategy = "basic"
   auth.user = "${ELK_USERNAME:?ELK_USERNAME is required}"
   auth.password = "${ELK_PASSWORD:?ELK_PASSWORD is required}"
