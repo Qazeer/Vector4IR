@@ -50,7 +50,7 @@ timezone = "Etc/UTC"
       timezone = "${UTC_OFFSET:?"The offset to UTC of the Fortigate timezone is required and will be used (only) if events do not specify a valid "tz" field. Expected format [+ | -]HH:MM."}"
     }
 
-    new_timestamp, err = to_timestamp(to_string!(.date) + "T" + to_string!(.time) + timezone)
+    new_timestamp, err = parse_timestamp(to_string!(.date) + "T" + to_string!(.time) + timezone, format: "%+")
     if (err == null) {
       .timestamp = new_timestamp
     } else {
