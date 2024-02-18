@@ -20,6 +20,7 @@ timezone = "Etc/UTC"
   ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = false
+  glob_minimum_cooldown_ms = 100000
   max_line_bytes = 100_000_000
 
 [transforms.FortiGate_traffic_parser]

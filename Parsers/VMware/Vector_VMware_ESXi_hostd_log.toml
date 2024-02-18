@@ -23,6 +23,7 @@ timezone = "Etc/UTC"
   include = ["${INPUT_FOLDER:?The input folder containing the ESXi hostd log files is required.}/**/*hostd.*"]
   read_from = "beginning"
   oldest_first = false
+  glob_minimum_cooldown_ms = 100000
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
 

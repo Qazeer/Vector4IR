@@ -21,6 +21,7 @@ data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is requi
   ignore_checkpoints = true
   read_from = "beginning"
   oldest_first = false
+  glob_minimum_cooldown_ms = 100000
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
   offset_key = "__offset"
