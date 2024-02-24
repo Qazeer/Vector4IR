@@ -6,7 +6,7 @@ Id: f1ada04f-d562-4340-8f68-e258d2820946
 BinaryUrl:
 ExportFormat: csv
 Processors:
-    # Requires LogParser.exe binary (https://www.microsoft.com/en-us/download/confirmation.aspx?id=24659) to be in "KAPE\Modules\bin\LogParser.exe"
+    # Requires LogParser.exe binary (https://www.microsoft.com/en-us/download/confirmation.aspx?id=24659) to be in "KAPE\Modules\bin\LogParser.exe".
     # -- LogParser_ApacheAccessLogs.mkape
     # -- LogParser_DetailedNetworkShareAccess.mkape
     # -- LogParser_LogonLogoffEvents.mkape
@@ -16,7 +16,7 @@ Processors:
         Executable: LogParser.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires Eric Zimmerman tools to be in "KAPE\Modules\bin\*.exe"
+    # Requires Eric Zimmerman tools to be in "KAPE\Modules\bin\*.exe".
     # -- AmcacheParser.mkape, AppCompatCacheParser.mkape
     # -- EvtxECmd.mkape
     # -- JLECmd.mkape
@@ -30,12 +30,17 @@ Processors:
         Executable: "!EZParser.mkape"
         CommandLine: ""
         ExportFormat: ""
-    # Requires SRUM-Repair.ps1 to be in (https://github.com/AndrewRathbun/DFIRPowerShellScripts/blob/main/SRUM-Repair.ps1).
+    # Requires SRUM-Repair.ps1 (https://github.com/AndrewRathbun/DFIRPowerShellScripts/blob/main/SRUM-Repair.ps1) to be in "KAPE\Modules\bin\SRUM-Repair.ps1".
     -
         Executable: PowerShell_SrumECmd_SRUM-RepairAndParse.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires SUM-Repair.ps1 to be in (https://github.com/AndrewRathbun/DFIRPowerShellScripts/blob/main/SRUM-Repair.ps1).
+    # Requires PCAParser.ps1 (https://github.com/AndrewRathbun/PCAParser/blob/main/PCAParser.ps1) to be in "KAPE\Modules\bin\PCAParser.ps1".
+    -
+        Executable: PowerShell_PCAParser.mkape
+        CommandLine: ""
+        ExportFormat: ""    
+    # Requires SUM-Repair.ps1 (https://github.com/AndrewRathbun/DFIRPowerShellScripts/blob/main/SUM-Repair.ps1) to be in "KAPE\Modules\bin\SUM-Repair.ps1".
     -
         Executable: PowerShell_SumECmd_SUM-RepairAndParse.mkape
         CommandLine: ""
@@ -44,7 +49,7 @@ Processors:
         Executable: EvtxECmd_RDP.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires Chainsaw.exe (https://github.com/WithSecureLabs/chainsaw/releases/download/v2.0.0/chainsaw_x86_64-pc-windows-msvc.zip) to be in "KAPE\Modules\bin\chainsaw\Chainsaw.exe."
+    # Requires Chainsaw.exe (https://github.com/WithSecureLabs/chainsaw/releases/) to be in "KAPE\Modules\bin\chainsaw\Chainsaw.exe".
     # Also requires Windows sigma rules (https://github.com/SigmaHQ/sigma) to be in "KAPE\Modules\bin\chainsaw\sigma".
     -
         Executable: Chainsaw.mkape
@@ -55,13 +60,13 @@ Processors:
         Executable: hayabusa_OfflineEventLogs.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires Execute-Winlogbeat.ps1 (https://gist.github.com/Qazeer/4936ec6c9fa511500f9496d0ceacab22) to be in "KAPE\Modules\bin\"
-    # And Winlogbeat (https://www.elastic.co/fr/downloads/beats/winlogbeat) full folder to be under "%kapeDirectory%\Modules\bin\Winlogbeat"
+    # Requires Execute-Winlogbeat.ps1 (https://gist.github.com/Qazeer/4936ec6c9fa511500f9496d0ceacab22) to be in "KAPE\Modules\bin\".
+    # And Winlogbeat (https://www.elastic.co/fr/downloads/beats/winlogbeat) full folder to be under "%kapeDirectory%\Modules\bin\Winlogbeat".
     -
         Executable: PowerShell_Execute-Winlogbeat.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires RECmd.exe binary
+    # Requires RECmd.exe binary to be in "KAPE\Modules\bin\RECmd.exe".
     # -- RECmd_AllRegExecutablesFoundOrRun.mkape
     # -- RECmd_BasicSystemInfo.mkape
     # -- RECmd_BCDBootVolume.mkape
@@ -79,22 +84,24 @@ Processors:
         Executable: RECmd_AllBatchFiles.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires ConvertPSHistoryTo-CSV.ps1 (https://gist.github.com/Qazeer/a0c1c14bb1eae233c1147d1d9dfb3e93) to be in "KAPE\Modules\bin\"
+    # Requires ConvertPSHistoryTo-CSV.ps1 (https://gist.github.com/Qazeer/a0c1c14bb1eae233c1147d1d9dfb3e93) to be in "KAPE\Modules\bin\ConvertPSHistoryTo-CSV.ps1".
     -
         Executable: PowerShell_ConvertPSHistoryTo-CSV.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires ConvertUsageLogsTo-CSV.ps1 (https://gist.github.com/Qazeer/6c655627962f034aa2b6e92594770ee2) to be in "KAPE\Modules\bin\"
+    # Requires ConvertUsageLogsTo-CSV.ps1 (https://gist.github.com/Qazeer/6c655627962f034aa2b6e92594770ee2) to be in "KAPE\Modules\bin\ConvertUsageLogsTo-CSV.ps1".
     -
         Executable: PowerShell_ConvertUsageLogsTo-CSV.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires Execute-ThumbcacheViewer.ps1 (https://gist.github.com/Qazeer/cb3a0cf306bc1f75a2d5a8cef5b9ffa9) and thumbcache_viewer_cmd.exe (https://github.com/thumbcacheviewer/thumbcacheviewer/releases/download/v1.0.1.8/thumbcache_viewer_cmd.zip) to be in "KAPE\Modules\bin\"
+    # Requires Execute-ThumbcacheViewer.ps1 (https://gist.github.com/Qazeer/cb3a0cf306bc1f75a2d5a8cef5b9ffa9) to be in "KAPE\Modules\bin\Execute-ThumbcacheViewer.ps1".
+    # And thumbcache_viewer_cmd.exe (https://github.com/thumbcacheviewer/thumbcacheviewer/releases/download/v1.0.1.8/thumbcache_viewer_cmd.zip) to be in "KAPE\Modules\bin\thumbcache_viewer_cmd.exe".
     -
         Executable: PowerShell_Execute-ThumbcacheViewer.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires Execute-BmcTools.ps1 (https://gist.github.com/Qazeer/3a6d43a117bbece6d83e7e79687e0870) and bmc-tools.exe (compiled version of bmc-tools.py, from https://github.com/Qazeer/bmc-tools-compiled/) to be in "KAPE\Modules\bin\bmc-tools.exe".
+    # Requires Execute-BmcTools.ps1 (https://gist.github.com/Qazeer/3a6d43a117bbece6d83e7e79687e0870) to be in "KAPE\Modules\bin\Execute-BmcTools.ps1".
+    # And bmc-tools.exe (compiled version of bmc-tools.py, from https://github.com/Qazeer/bmc-tools-compiled/) to be in "KAPE\Modules\bin\bmc-tools.exe".
     -
         Executable: PowerShell_Execute-BmcTools.mkape
         CommandLine: ""
@@ -119,12 +126,17 @@ Processors:
         Executable: DHParser.mkape
         CommandLine: ""
         ExportFormat: ""
+    # Requires the compiled version of mplog_parser (https://github.com/Qazeer/mplog_parser-compiled/releases/download/v1.0/mplog_parser.exe) to be in "KAPE\Modules\bin\mplog_parser.exe".
+    -
+        Executable: Mplog-Parser.mkape
+        CommandLine: ""
+        ExportFormat: ""
     # Requires SEPparser (https://github.com/Beercow/SEPparser/raw/master/bin/SEPparser.exe) to be in "KAPE\Modules\bin\SEPparser.exe".
     -
         Executable: SEPparser.mkape
         CommandLine: ""
         ExportFormat: ""
-    # Requires woanware's wmi-parser (https://github.com/woanware/wmi-parser/releases/download/v0.0.2/wmi-parser.v0.0.2.zip) to be in "KAPE\Modules\bin\wmi-parser\wmi-parser.exe
+    # Requires woanware's wmi-parser (https://github.com/woanware/wmi-parser/releases/download/v0.0.2/wmi-parser.v0.0.2.zip) to be in "KAPE\Modules\bin\wmi-parser\wmi-parser.exe".
     # TODO: Fix error "Unhandled Exception: System.IO.FileNotFoundException: Could not load file or assembly".
     #-
     #    Executable: WMI-Parser.mkape
