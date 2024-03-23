@@ -1,0 +1,3 @@
+scan_id,scan_source,start_time,end_time,resource_schema,resource_path,result_count,threat_name,id,severity,number_of_resources,extended_info_sigseq,extended_info_sigsha
+{6A51D647-0B4C-4760-BCF8-3E131B3F44B1},6,10-17-2022 04:14:31,10-17-2022 04:14:33,internalbehavior,123456789BA2AAAAAAAAAA139641DFA5,1,Behavior:Win32/CobaltStrike.D!sms,2147773426,5,3,000025b38bf05953,12345f72321bf14bbea3a6eda3302fa12345679
+{C3FD798A-0720-4B3A-B3EE-65F1E665554B},8,01-16-2023 04:07:10,01-16-2023 04:07:10,internalCmdLine,i n BASE64== 27 27 C:\Windows\System32\cmd.exe C:\Windows\system32\cmd.exe /c echo eb6cf01d350 > \\.\pipe\99d2c6,1,HackTool:Win32/NamedPipeImpers.A,2147735445,4,2,00004fd764f2f044,12354210576f2963037310fbb592147123456798

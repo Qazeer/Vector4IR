@@ -1,0 +1,3 @@
+timestamp,command_line
+2023-02-09T05:17:12.712Z,HackTool:Win32/NamedPipeImpers.A CmdLine:C:\Windows\System32\cmd.exe /c echo 123456789ab > \\.\pipe\99d2c6;internalCmdLine:i n BASE64== 27 27 C:\Windows\System32\cmd.exe C:\Windows\system32\cmd.exe /c echo eb6cf01d350 > \\.\pipe\99d2c6;
+2023-02-09T05:19:42.712Z,HackTool:Win32/NamedPipeImpers.A CmdLine:C:\Windows\System32\cmd.exe /c echo ab123456789 > \\.\pipe\43e07f;internalCmdLine:i n BASE64== 27 27 C:\Windows\System32\cmd.exe C:\Windows\system32\cmd.exe /c echo 0f127bff279 > \\.\pipe\43e07f;

@@ -1,0 +1,3 @@
+timestamp,process_image_name,pid,total_time,count,max_time,full_path,estimated_impact
+2023-07-19T19:33:04.042Z,svchost.exe,748,61,3,31,\Device\HarddiskVolume2\Windows\System32\InstallAgent.exe,0%
+2023-07-20T01:33:04.476Z,WmiPrvSE.exe,3804,441,26,46,\Device\HarddiskVolume2\Windows\System32\wbem\mgmtprovider.dll,0%

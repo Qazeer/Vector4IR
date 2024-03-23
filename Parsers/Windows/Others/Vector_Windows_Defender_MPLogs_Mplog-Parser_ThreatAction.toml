@@ -1,0 +1,110 @@
+# Vector_Windows_Defender_MPLogs_Mplog-Parser_ThreatAction config.
+# Description: Process Windows Defender MPLogs ThreatAction artefacts parsed with Mplog-Parser (CSV output).
+#              For more information on Windows Defender Microsoft Protection Log (MPLog): https://artefacts.help/windows_defender_support_logs.html
+#              Filename should match: "*MPLog_ThreatAction*.csv"
+#              source = "windows_mplog_threataction" & sourcetype = "windows_artefact"
+# Author(s): Thomas DIOT (Qazeer)
+# Version: 1.0
+# Last modified: 2024-03-23
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.MPLog_Mplog-Parser_ThreatAction_csv_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the Windows Defender MPLog files is required.}/**/*MPLog_ThreatAction*.csv"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  glob_minimum_cooldown_ms = 100000
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  offset_key = "__offset"
+  encoding.charset = "utf-16le"
+
+[transforms.MPLog_Mplog-Parser_ThreatAction_csv_parser]
+  type = "remap"
+  inputs = ["MPLog_Mplog-Parser_ThreatAction_csv_input"]
+  source = '''
+    # Expect CSV header:
+    # start_time,threat_name,threat_id,action,resource_action_complete,schema,path,resource_refcount,result,finished_threat_id,threat_result,threat_status_flags,threat_effective_removalpolicy
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("Unable to split CSV: " + err, level: "error")
+    }
+
+    if .__offset == 0 {
+      expected_header = "start_time,threat_name,threat_id,action,resource_action_complete,schema,path,resource_refcount,result,finished_threat_id,threat_result,threat_status_flags,threat_effective_removalpolicy"
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      }
+      abort
+    }
+
+    .start_time = parse_timestamp(fields[0], format: "%m-%d-%Y %H:%M:%S") ?? parse_timestamp(fields[0], format: "%d-%m-%Y %H:%M:%S") ?? fields[0]
+    .threat_name = fields[1]
+    .threat_id = fields[2]
+    .action = fields[3]
+    .resource_action_complete = fields[4]
+    .schema = fields[5]
+    .path = fields[6]
+    .resource_refcount = fields[7]
+    .result = fields[8]
+    .finished_threat_id = fields[9]
+    .threat_result = fields[10]
+    .threat_status_flags = fields[11]
+    .threat_effective_removalpolicy = fields[12]
+
+    .timestamp = .start_time
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .category = "detection"
+    .source = "windows_mplog_threataction"
+    .sourcetype = "windows_artefact"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+    del(.__offset)
+  '''
+
+[transforms.MPLog_Mplog-Parser_ThreatAction_csv_coerce_to_sink]
+  type = "remap"
+  inputs = ["MPLog_Mplog-Parser_ThreatAction_csv_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
