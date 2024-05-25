@@ -1,0 +1,145 @@
+# Description: Process Forcepoint logs exported in CSV formated-files.
+#              Filename should match "*fwlogs*.csv"
+#              source = "forcepoint_fw" & sourcetype = "network_event"
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2024-05-22
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+#   SOURCE_HOST = "<SOURCE_HOST>"
+
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+# timezone = "Etc/GMT-2"
+timezone = "Etc/UTC"
+
+[sources.Forcepoint_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the Palo Alto traffic CSV files is required.}/**/*fwlogs*.csv"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  glob_minimum_cooldown_ms = 100000
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  offset_key = "__offset"
+
+[transforms.Forcepoint_parser]
+  type = "remap"
+  inputs = ["Forcepoint_input"]
+  source = '''
+    # Expect CSV header:
+    # "Creation Time","Data Identifier","Sender","Facility","Type","Event","Action","Src Addr","Dst Addr","Service","IP Protocol","Src Port","Dst Port","Rule Tag","Nat Src","Nat Dst","Nat Src Port","Nat Dst Port","FLAG Only There For Compatibility Reason","Src IF","Protocol Agent","Alert","Syslog","ICMP Type","ICMP Code","ICMP Id","Inbound SPI","Round Trip","Elapsed Time","Bytes Sent","Bytes Rcvd","User","Src VLAN","Component ID","Information Message","Nat Rule Tag","Auth. Rule Tag","Acknowledged","Reception Time","Sender Type","Situation","FP Situation","Severity","Event ID","QoS Class","DSCP Mark","QoS Priority","IKE Cookie","Inbound SPI","User Domain"
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("Unable to split CSV: " + err, level: "error")
+    }
+
+    if .__offset == 0 {
+      expected_header = "\"Creation Time\",\"Data Identifier\",\"Sender\",\"Facility\",\"Type\",\"Event\",\"Action\",\"Src Addr\",\"Dst Addr\",\"Service\",\"IP Protocol\",\"Src Port\",\"Dst Port\",\"Rule Tag\",\"Nat Src\",\"Nat Dst\",\"Nat Src Port\",\"Nat Dst Port\",\"FLAG Only There For Compatibility Reason\",\"Src IF\",\"Protocol Agent\",\"Alert\",\"Syslog\",\"ICMP Type\",\"ICMP Code\",\"ICMP Id\",\"Inbound SPI\",\"Round Trip\",\"Elapsed Time\",\"Bytes Sent\",\"Bytes Rcvd\",\"User\",\"Src VLAN\",\"Component ID\",\"Information Message\",\"Nat Rule Tag\",\"Auth. Rule Tag\",\"Acknowledged\",\"Reception Time\",\"Sender Type\",\"Situation\",\"FP Situation\",\"Severity\",\"Event ID\",\"QoS Class\",\"DSCP Mark\",\"QoS Priority\",\"IKE Cookie\",\"Inbound SPI\",\"User Domain\""
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      }
+      abort
+    }
+
+    .creationtime = fields[0]
+    .dataidentifier = fields[1]
+    .sender = fields[2]        
+    .facility = fields[3]      
+    .type = fields[4]
+    .event = fields[5]
+    .action = fields[6]
+    .srcaddr = fields[7]
+    .dstaddr = fields[8]
+    .service = fields[9]
+    .ipprotocol = fields[10]
+    .srcport = fields[11]
+    .dstport = fields[12]
+    .ruletag = fields[13]
+    .natsrc = fields[14]
+    .natdst = fields[15]
+    .natsrcport = fields[16]
+    .natdstport = fields[17]
+    .flagonlythereforcompatibilityreason = fields[18]
+    .srcif = fields[19]
+    .protocolagent = fields[20]
+    .alert = fields[21]
+    .syslog = fields[22]
+    .icmptype = fields[23]
+    .icmpcode = fields[24]
+    .icmpid = fields[25]
+    .inboundspi = fields[26]
+    .roundtrip = fields[27]
+    .elapsedtime = fields[28]
+    .bytessent = fields[29]
+    .bytesrcvd = fields[30]
+    .user = fields[31]
+    .srcvlan = fields[32]
+    .componentid = fields[33]
+    .informationmessage = fields[34]
+    .natruletag = fields[35]
+    .auth.ruletag = fields[36]
+    .acknowledged = fields[37]
+    .receptiontime = fields[38]
+    .sendertype = fields[39]
+    .situation = fields[40]
+    .fpsituation = fields[41]
+    .severity = fields[42]
+    .eventid = fields[43]
+    .qosclass = fields[44]
+    .dscpmark = fields[45]
+    .qospriority = fields[46]
+    .ikecookie = fields[47]
+    .inboundspi = fields[48]
+    .userdomain = fields[49]
+
+    .timestamp = .creationtime
+
+    # Add the metadata fields following the parsing.
+    .sourcehost = "${SOURCE_HOST:?The source host is required}"
+    .host = .sourcehost
+    .source = "forcepoint_fw"
+    .sourcetype = "network_event"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+    del(.__offset)
+  '''
+
+[transforms.Forcepoint_coerce_to_sink]
+  type = "remap"
+  inputs = ["Forcepoint_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}[-|/](0[1-9]|1[0-2])[-|/](0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y/%m/%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
