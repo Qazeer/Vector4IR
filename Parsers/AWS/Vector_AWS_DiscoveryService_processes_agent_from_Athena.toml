@@ -1,0 +1,126 @@
+# Description: AWS Discovery Service process execution exported as CSV.
+#              Information from processes_agent table enriched with os_info_agent's host_name field. 
+#              Filename should match: "*aws_discovery_process*.csv"
+#              source = "aws_discovery_process" & sourcetype = "aws_discovery"
+#              The CSV header is based on the Athena query below.
+#              If a different query is used, the CSV header should and fields defintion should be updated accordingly.
+#SELECT  
+#        processes_agent.agent_provided_timestamp,
+#        id_mapping_agent.agent_id,
+#        os_info_agent.host_name,
+#        processes_agent.process_id,
+#        processes_agent.process_name,
+#        processes_agent.process_cmd_line,
+#        processes_agent.process_path
+#FROM    (SELECT DISTINCT agent_id FROM "id_mapping_agent") id_mapping_agent
+#INNER JOIN (SELECT DISTINCT 
+#                   agent_id,
+#                   host_name
+#            FROM "os_info_agent"
+#            ) os_info_agent ON
+#              id_mapping_agent.agent_id = os_info_agent.agent_id
+#INNER JOIN (SELECT agent_id,
+#                   agent_provided_timestamp,
+#                   agent_assigned_process_id AS process_id,
+#                   name AS process_name,
+#                   cmd_line AS process_cmd_line,
+#                   path AS process_path
+#            FROM   "processes_agent"
+#            ) processes_agent ON
+#              id_mapping_agent.agent_id = processes_agent.agent_id
+# Author(s): Thomas DIOT (_Qazeer)
+# Version: 1.0
+# Last modified: 2024-05-28
+# Required environment variables:
+#   INPUT_FOLDER = "<INPUT_FOLDER>"
+#   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
+
+# Temporary folder used by Vector.
+data_dir = "${VECTOR_TEMP_FOLDER:?A directory for Vector temporary data is required}"
+
+# Set the default timezone to UTC+0 for timestamps that do not include a timezone.
+timezone = "Etc/UTC"
+
+[sources.AWS_DiscoveryService_process_input]
+  type = "file"
+  include = ["${INPUT_FOLDER:?The input folder containing the CSV output files is required.}/**/*aws_discovery_process*.csv"]
+  ignore_checkpoints = true
+  read_from = "beginning"
+  oldest_first = false
+  glob_minimum_cooldown_ms = 100000
+  fingerprint.strategy = "device_and_inode"
+  max_line_bytes = 100_000_000
+  offset_key = "_offset"
+
+[transforms.AWS_DiscoveryService_process_parser]
+  type = "remap"
+  inputs = ["AWS_DiscoveryService_process_input"]
+  source = '''
+    # Expect CSV header:
+    # \"agent_provided_timestamp\",\"agent_id\",\"host_name\",\"process_id\",\"process_name\",\"process_cmd_line\",\"process_path\"
+    fields, err = parse_csv(.message, delimiter: ",")
+    if err != null {
+      log("Unable to split CSV: " + err, level: "error")
+    }
+
+    if ._offset == 0 {
+      expected_header = "\"agent_provided_timestamp\",\"agent_id\",\"host_name\",\"process_id\",\"process_name\",\"process_cmd_line\",\"process_path\""
+      current_header = strip_whitespace(string!(.message))
+      if expected_header != current_header {
+        log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header + "\n=> Got CSV header:      " + current_header, level: "error")
+      }
+      abort
+    }
+
+    .agent_provided_timestamp = fields[0]
+    .agent_id = fields[1]
+    .host_name = fields[2]
+    .process_id = fields[3]
+    .process_name = fields[4]
+    .process_cmd_line = fields[5]
+    .process_path = fields[6]
+
+    .timestamp = .agent_provided_timestamp
+    .sourcehost = .host_name
+
+    # Add the metadata fields following the parsing.
+    .host = .sourcehost
+    .source = "aws_discovery_process"
+    .sourcetype = "aws_discovery"
+
+    # Delete irrelevant default fields.
+    del(.source_type)
+    del(.file)
+    del(.message)
+    del(._offset)
+  '''
+
+[transforms.AWS_DiscoveryService_process_coerce_to_sink]
+  type = "remap"
+  inputs = ["AWS_DiscoveryService_process_parser"]
+  source = '''
+    . = map_values(.) -> |value| {
+      value_string, convert_err = string(value)
+      # Only coerce string (and not already casted types, such as int, timestamps, etc.).
+      if convert_err != null {
+        value
+      # Matches a timestamp in various format ("T" or space separated, with or without post second precision, and with or without a timezone identifier).
+      } else if (match(value_string, r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[0-1])[T|\s]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{1,9})?(\s?[\+|\-]([01][0-9]|2[0-4]):?([0-5][0-9]))?$')) {
+        tmp_value = parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f%z") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f %z") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S") ?? parse_timestamp(value_string, format: "%Y-%m-%dT%H:%M:%S%.f") ?? parse_timestamp(value_string, format: "%Y-%m-%d %H:%M:%S%.f") ?? value_string
+        if is_string(tmp_value) {
+          log("Failed to convert timestamp: " + value_string, level: "warn")
+          value
+        } else {
+          tmp_value
+        }
+      } else if (tmp_value, err = parse_int(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_bool(value); err == null) {
+        tmp_value
+      } else if (tmp_value, err = to_float(value); err == null) {
+        tmp_value
+      } else {
+        value
+      }
+    }
+  '''
