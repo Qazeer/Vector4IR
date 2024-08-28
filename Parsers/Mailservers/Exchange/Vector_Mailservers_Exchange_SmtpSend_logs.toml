@@ -1,5 +1,5 @@
 # Vector_Mailservers_Exchange_SmtpSend_logs config.
-# Description: Process Exchange SMTP Receive Protocol logs, which contains inbound SMTP requests.
+# Description: Process Exchange SMTP Send Protocol logs, which contains outbound SMTP requests.
 #              Filename should match: "SmtpSend/SEND*.LOG"
 #              Path %SystemDrive%/Program Files/Microsoft/Exchange Server/V15/TransportRoles/Logs/FrontEnd/ProtocolLog/SmtpSend
 #              source = "exchange_smtpsend" & sourcetype = "exchange_artefacts"
