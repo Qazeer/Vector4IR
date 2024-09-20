@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [ $# -eq 0 ]
   then
     echo "[-] A file or folder to process must be specified"
@@ -24,7 +26,7 @@ elif [[ -f $input ]]; then
     echo "[*] Processing file '$input'"
     dos2unix $input
     # sed -i -e ':a' -e 'N' -e '$!ba' -e 's/\n//g' $input
-    jq -c . "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+    jq -c . "$input" > "$input.tmp" && mv "$input.tmp" "$input"
     echo "[+] File onelinified!"
 
 else
