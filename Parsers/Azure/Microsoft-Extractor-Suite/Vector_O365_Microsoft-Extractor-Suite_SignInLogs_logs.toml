@@ -24,7 +24,7 @@ timezone = "Etc/UTC"
   oldest_first = false
   glob_minimum_cooldown_ms = 100000
   fingerprint.strategy = "device_and_inode"
-  max_line_bytes = 100_000_000
+  max_line_bytes = 100_000_000_000_000
   encoding.charset = "utf-16le"
 
 # Double remap as events are stored as JSON objects in a single-line JSON array.
@@ -44,7 +44,7 @@ timezone = "Etc/UTC"
   type = "remap"
   source = '''
     if is_null(.CreatedDateTime) == false {
-      .CreatedDateTime, err1 = to_timestamp(.CreatedDateTime)
+      .CreatedDateTime, err1 = parse_timestamp(.CreatedDateTime, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(.CreatedDateTime, format: "%+")
       if err1 != null {
         log("Unable to convert to timestamp: " + err1, level: "error")
       }

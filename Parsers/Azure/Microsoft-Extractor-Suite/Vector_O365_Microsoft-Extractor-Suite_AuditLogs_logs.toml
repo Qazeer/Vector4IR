@@ -44,7 +44,7 @@ timezone = "Etc/UTC"
   type = "remap"
   source = '''
     if is_null(.ActivityDateTime) == false {
-      .ActivityDateTime, err = to_timestamp(.ActivityDateTime)
+      .ActivityDateTime, err = parse_timestamp(.ActivityDateTime, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(.ActivityDateTime, format: "%+")
       if err != null {
         log("Unable to convert to timestamp: " + err, level: "error")
       }

@@ -88,7 +88,7 @@ timezone = "Etc/UTC"
 
       # Fix the timezone as parse_linux_authorization uses the timezone of the current system while the timezone of the original system (the one that emitted the logs) may be different.
       # Issue opened on GitHub: https://github.com/vectordotdev/vector/issues/14492
-      new_timestamp, err = to_timestamp(format_timestamp!(.timestamp, format: "%FT%T") + "${UTC_OFFSET:?"The offset of (the local time of the original system - the local time of the current system) to UTC is required. Exemple: original system timezone UTC+1, current system timezone UTC+2, offset to specify: 1-2 => -01:00. Expected format [+ | -]HH:MM."}")
+      new_timestamp, err = parse_timestamp(format_timestamp!(.timestamp, format: "%FT%T") + "${UTC_OFFSET:?"The offset of (the local time of the original system - the local time of the current system) to UTC is required. Example: original system timezone UTC+1, current system timezone UTC+2, offset to specify: 1-2 => -01:00. Expected format [+ | -]HH:MM."}", format: "%+")
       if (err == null) {
         .timestamp = new_timestamp
       } else {
@@ -103,7 +103,7 @@ timezone = "Etc/UTC"
       # This check verify that the timestamp is not in the future. If so, a year is substracted from the timestamp.
       if (to_float(.timestamp) > to_float(now())) {
         previous_year = to_string(to_int!(format_timestamp!(.timestamp, format: "%Y")) - 1)
-        .timestamp = to_timestamp!(previous_year + slice!(format_timestamp!(.timestamp, format: "%+"), start: 4))
+        .timestamp = parse_timestamp!(previous_year + slice!(format_timestamp!(.timestamp, format: "%+"), start: 4), format: "%+")
       }
 
       # Add the metadata fields following the parsing.

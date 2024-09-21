@@ -52,7 +52,7 @@ timezone = "Etc/UTC"
   type = "remap"
   source = '''
     if is_null(.CreationTime) == false {
-      .CreationTime, err1 = to_timestamp(.CreationTime)
+      .CreationTime, err1 = parse_timestamp(.CreationTime, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(.CreationTime, format: "%+")
       if err1 != null {
         log("Unable to convert to timestamp: " + err1, level: "error")
       }

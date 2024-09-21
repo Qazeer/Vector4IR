@@ -140,7 +140,7 @@ timezone = "Etc/UTC"
       } else if (tmp_value, err = to_float(value); err == null) {
         tmp_value
       } else {
-        value
+        value_string
       }
     }
   '''
