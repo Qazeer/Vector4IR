@@ -74,7 +74,7 @@ vector -q -c .\Parsers\Windows\EZTools\*,.\Parsers\Windows\LogParser\*,.\Parsers
 #### Onelinifying JSON files
 
 Some JSON outputs, such as the ones produced by
-[`DFIR-O365RC`](https://github.com/ANSSI-FR/DFIR-O365RC), are "pretty printed",
+[`DFIR-O365RC`](https://github.com/ANSSI-FR/DFIR-O365RC) or [`Microsoft-Extractor-Suite`](https://github.com/invictus-ir/Microsoft-Extractor-Suite), are "pretty printed",
 and thus not directly valid JSON objects for `Vector`.
 
 The `Onelinifying_JSON.sh` bash script of this repository can be used to
