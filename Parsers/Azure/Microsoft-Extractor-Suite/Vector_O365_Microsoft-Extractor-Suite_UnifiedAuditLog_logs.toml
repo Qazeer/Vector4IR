@@ -24,28 +24,18 @@ timezone = "Etc/UTC"
   glob_minimum_cooldown_ms = 100000
   fingerprint.strategy = "device_and_inode"
   max_line_bytes = 100_000_000
-  encoding.charset = "utf-16le"
+  # encoding.charset = "utf-16le"
 
 [transforms.Azure_O365_UnifiedAuditLog_Microsoft-Extractor-Suite_parser]
   inputs = ["Azure_O365_UnifiedAuditLog_Microsoft-Extractor-Suite_JSON_input"]
   type = "remap"
   source = '''
-    splitted, err = split(.message, "\n")
+    message_parsed, err = parse_json(.message)
     if err != null {
-      log("Unable to split message on newlines: " + err, level: "error")
-    }
-
-    . = map_values(splitted, true) -> |value| {
-      is_value_json = value != null && is_json(value)
-      if (err == null && is_value_json) {
-        parsed_value, err = parse_json(value)
-        if err != null {
-          log("Unable to parse JSON: " + err, level: "error")
-          null
-        } else {
-          parsed_value
-        }
-      }
+      log("Unable to parse log line: '" + string!(.message) + "'. Error: " + err, level: "error")
+      abort
+    } else {
+      . = message_parsed
     }
   '''
 
@@ -53,6 +43,11 @@ timezone = "Etc/UTC"
   inputs = ["Azure_O365_UnifiedAuditLog_Microsoft-Extractor-Suite_parser"]
   type = "remap"
   source = '''
+
+    # Flatten the AuditData field.
+    ., err |= flatten(.AuditData)
+    del(.AuditData)
+
     if is_null(.CreationTime) == false {
       .CreationTime, err1 = parse_timestamp(.CreationTime, format: "%Y-%m-%dT%H:%M:%S") ?? parse_timestamp(.CreationTime, format: "%+")
       if err1 != null {
