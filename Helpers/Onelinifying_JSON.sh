@@ -11,10 +11,6 @@ input=$1
 if [[ -d $input ]]; then
     for file in $(find $input -name '*.json');
     do
-        # Skip non JSON files and UnifiedAuditLog_*.json files as they are already one-line.
-        if [[ $file == *UnifiedAuditLog* ]] || ! [[ $file == *json ]]; then
-            continue
-        fi
         echo "[*] Processing file '$file'"
         dos2unix $file
         # sed -i -e ':a' -e 'N' -e '$!ba' -e 's/\n//g' $file
