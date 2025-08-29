@@ -7,9 +7,16 @@
 #   ELK_USERNAME = "<USERNAME>"
 #   ELK_PASSWORD = "<PASSWORD>"
 
+[transforms.delete_nullish_to_elk]
+  type = "remap" 
+  inputs = ["*to_sink"]
+  source = '''
+    . = compact(., recursive: true, string: true)
+  '''
+
 [sinks.elk_sink]
   type = "elasticsearch"
-  inputs = ["*to_sink"]
+  inputs = ["*to_elk"]
   mode="bulk"
   bulk.index = "${INDEX:?An index name must be specified for the ELK index}"
   endpoints = ["http://${ELK_IP:?ELK IP is required}:${ELK_PORT:-9200}"]
