@@ -3,9 +3,9 @@
 #              Hayabusa: https://github.com/Yamato-Security/hayabusa
 #              Hayabusa command: hayabusa.exe -d %sourceDirectory% --RFC-3339 --quiet -U -o %destinationDirectory%\hayabusa.csv
 #              source = "windows_evtx_hayabusa" & sourcetype = "windows_artefact"
-# Author(s): Thomas DIOT (_Qazeer)
-# Version: 1.0
-# Last modified: 2022-09-01
+# Author(s): Thomas DIOT (_Qazeer), Clement GONNAUD (Nefraxor)
+# Version: 2.0
+# Last modified: 2026-03-12
 # Required environment variables:
 #   INPUT_FOLDER = "<INPUT_FOLDER>"
 #   VECTOR_TEMP_FOLDER = "<VECTOR_TEMP_FOLDER>"
@@ -34,7 +34,8 @@ timezone = "Etc/UTC"
   source = '''
     # Expect CSV header:
     # Old: Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details
-    # New (standard profile output): "Timestamp","Computer","Channel","EventID","Level","RecordID","RuleTitle","Details","ExtraFieldInfo"
+    # Old2 (standard profile output): "Timestamp","Computer","Channel","EventID","Level","RecordID","RuleTitle","Details","ExtraFieldInfo"
+    # New: "Timestamp","RuleTitle","Level","Computer","Channel","EventID","RecordID","Details","ExtraFieldInfo"
     fields, err = parse_csv(.message, delimiter: ",")
     if err != null {
       log("Unable to split CSV: " + err, level: "error")
@@ -42,21 +43,25 @@ timezone = "Etc/UTC"
 
     if .__offset == 0 {
       expected_header_old = "Timestamp,Computer,Channel,EventID,Level,RecordID,RuleTitle,Details"
-      expected_header_new = "\"Timestamp\",\"Computer\",\"Channel\",\"EventID\",\"Level\",\"RecordID\",\"RuleTitle\",\"Details\",\"ExtraFieldInfo\""
+      expected_header_old2 = "\"Timestamp\",\"Computer\",\"Channel\",\"EventID\",\"Level\",\"RecordID\",\"RuleTitle\",\"Details\",\"ExtraFieldInfo\""
+	  expected_header_new = "\"Timestamp\",\"RuleTitle\",\"Level\",\"Computer\",\"Channel\",\"EventID\",\"RecordID\",\"Details\",\"ExtraFieldInfo\""
       current_header = strip_whitespace(string!(.message))
-      if expected_header_old != current_header && expected_header_new != current_header {
+      if expected_header_old == current_header || expected_header_old2 == current_header {
+        log("Old CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header_new + "\n=> Got CSV header:      " + current_header, level: "error")
+      }
+      if expected_header_new != current_header {
         log("Unexpected CSV header, possible non-integrated tool update!\n=> Expected CSV header: " + expected_header_new + "\n=> Got CSV header:      " + current_header, level: "error")
       }
       abort
     }
 
     .timestamp = fields[0]
-    .computer = fields[1]
-    .channel = fields[2]
-    .eventid = fields[3]
-    .level = fields[4]
-    .recordid = fields[5]
-    .ruletitle = fields[6]
+    .computer = fields[3]
+    .channel = fields[4]
+    .eventid = fields[5]
+    .level = fields[2]
+    .recordid = fields[6]
+    .ruletitle = fields[1]
     .details = fields[7]
     .extrafieldinfo = fields[8]
 
